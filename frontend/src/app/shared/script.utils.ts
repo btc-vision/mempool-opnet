@@ -250,7 +250,50 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
     return ScriptTemplates.multisig(multisig.m, multisig.n);
   }
 
+  console.log(script_asm);
+  const p2tr_ms = parseP2TRMultisigScript(script_asm);
+  if (p2tr_ms) {
+    return ScriptTemplates.multisig(p2tr_ms.m, p2tr_ms.n);
+  }
+
   return;
+}
+
+export function parseP2TRMultisigScript(script: string): undefined | { m: number, n: number } {
+  if (!script) {
+    return;
+  }
+  const ops = script.split(' ');
+  if (ops.length < 3 || ops.pop() !== 'OP_NUMEQUAL') {
+    return;
+  }
+  const opM = ops.pop();
+  if (!opM || !opM.startsWith('OP_PUSHNUM_')) {
+    return;
+  }
+  const m = parseInt(opM.match(/[0-9]+/)?.[0] || '', 10);
+
+  let n = 0;
+  while (ops.length > 0) {
+    const op = ops.pop();
+    if (op === 'OP_CHECKSIGADD') {
+      n++;
+    } else if (op && op.startsWith('OP_PUSHBYTES_') && ops.length > 0) {
+      const publicKey = ops.pop();
+      if (!/^0((2|3)\w{64}|4\w{128})$/.test(publicKey || '')) {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
+
+  // Check that the correct number of signatures (m) is less than or equal to total public keys (n)
+  if (m > n) {
+    return;
+  }
+
+  return { m, n };
 }
 
 /** extracts m and n from a multisig script (asm), returns nothing if it is not a multisig script */
@@ -361,7 +404,7 @@ export function isPoint(pointHex: string): boolean {
   }
 
   // Function modified slightly from noble-curves
-  
+
 
   // Now we know that pointHex is a 33 or 65 byte hex string.
   const isCompressed = pointHex.length === 66;
