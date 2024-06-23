@@ -115,7 +115,7 @@ export function detectAddressType(address: string, network: string): AddressType
       return 'confidential';
     }
   }
-  
+
   return 'unknown';
 }
 
@@ -203,7 +203,6 @@ export class AddressTypeInfo {
     if (script.template?.type === 'multisig') {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
     } else if(script.template?.type === 'smart_contract') {
-      console.log('smart contract found');
       this.smart_contract = true;
       this.type = 'smart_contract';
     }
