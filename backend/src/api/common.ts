@@ -414,7 +414,7 @@ export class Common {
       // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
       const isInscription = asm.includes('OP_0 OP_IF');
       const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
-      const isSmartContract = Common.isSmartContract(asm);
+      const isSmartContract = Common.checkIsSmartContract(asm);
 
       if(isInscription) {
         flags |= TransactionFlags.inscription;
