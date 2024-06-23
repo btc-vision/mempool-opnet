@@ -166,6 +166,7 @@ export const ScriptTemplates: { [type: string]: (...args: any) => ScriptTemplate
   ln_anchor: () => ({ type: 'ln_anchor', label: 'Lightning Anchor' }),
   ln_anchor_swept: () => ({ type: 'ln_anchor_swept', label: 'Swept Lightning Anchor' }),
   multisig: (m: number, n: number) => ({ type: 'multisig', m, n, label: $localize`:@@address-label.multisig:Multisig ${m}:multisigM: of ${n}:multisigN:` }),
+  vault: (m: number, n: number) => ({ type: 'vault', m, n, label: $localize`:@@address-label.multisig:Vault ${m}:multisigM: of ${n}:multisigN:` }),
   smart_contract: () => ({ type: 'smart_contract', label: `Smart Contract` }),
   interaction: () => ({ type: 'interaction', label: `Interaction` }),
 };
@@ -316,9 +317,9 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
   }
 
   // taproot multisig
-  const p2tr_ms = parseP2TRMultisigScript(script_asm);
-  if (p2tr_ms) {
-    return ScriptTemplates.multisig(p2tr_ms.m, p2tr_ms.n);
+  const p2tr_v = parseP2TRMultisigVaultScript(script_asm);
+  if (p2tr_v) {
+    return ScriptTemplates.vault(p2tr_v.m, p2tr_v.n);
   }
 
   // Legacy OP_NET smart contract
@@ -334,7 +335,7 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
   return;
 }
 
-export function parseP2TRMultisigScript(script: string): undefined | { m: number, n: number } {
+export function parseP2TRMultisigVaultScript(script: string): undefined | { m: number, n: number } {
   if (!script) {
     return;
   }
