@@ -305,7 +305,9 @@ export function checkIsSmartContract(script: string): boolean {
   ];
 
   // Extracting the necessary part of the script for comparison
-  const firstPart = ops.slice(0, requiredSequence.length);
+  const firstPart = ops.filter((op) => {
+    return op.startsWith('OP_');
+  });
 
   // Check the structure matches the required sequence
   for (let i = 0; i < requiredSequence.length; i++) {
