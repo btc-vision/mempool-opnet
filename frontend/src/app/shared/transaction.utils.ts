@@ -348,6 +348,8 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
           // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
           if (asm?.includes('OP_0 OP_IF')) {
             flags |= TransactionFlags.inscription;
+          } else if(asm?.includes('OP_DEPTH OP_1 OP_NUMEQUAL OP_IF')) {
+            flags |= TransactionFlags.opnet;
           }
         }
       } break;
@@ -421,7 +423,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
   if (hasFakePubkey) {
     flags |= TransactionFlags.fake_pubkey;
   }
-  
+
   // fast but bad heuristic to detect possible coinjoins
   // (at least 5 inputs and 5 outputs, less than half of which are unique amounts, with no address reuse)
   const addressReuse = Object.keys(reusedOutputAddresses).reduce((acc, key) => Math.max(acc, (reusedInputAddresses[key] || 0) + (reusedOutputAddresses[key] || 0)), 0) > 1;

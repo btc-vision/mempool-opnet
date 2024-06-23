@@ -415,6 +415,21 @@ export class Common {
     return flags;
   }
 
+  static isOP_NET(vin, flags): bigint {
+    // in taproot, if the last witness item begins with 0x50, it's an annex
+    const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
+    // script spends have more than one witness item, not counting the annex (if present)
+    if (vin.witness.length > (hasAnnex ? 2 : 1)) {
+      // the script itself is the second-to-last witness item, not counting the annex
+      const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
+      // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
+      if (asm?.includes('OP_DEPTH OP_1 OP_NUMEQUAL OP_IF')) {
+        flags |= TransactionFlags.opnet;
+      }
+    }
+    return flags;
+  }
+
   static getTransactionFlags(tx: TransactionExtended): number {
     let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
@@ -465,6 +480,7 @@ export class Common {
             }
             flags |= TransactionFlags.p2tr;
             flags = Common.isInscription(vin, flags);
+            flags = Common.isOP_NET(vin, flags);
           } break;
         }
       } else {
@@ -472,6 +488,7 @@ export class Common {
         if (vin.witness?.length >= 2) {
           try {
             flags = Common.isInscription(vin, flags);
+            flags = Common.isOP_NET(vin, flags);
           } catch {
             // witness script parsing will fail if this isn't really a taproot output
           }
@@ -546,7 +563,7 @@ export class Common {
     if (hasFakePubkey) {
       flags |= TransactionFlags.fake_pubkey;
     }
-    
+
     // fast but bad heuristic to detect possible coinjoins
     // (at least 5 inputs and 5 outputs, less than half of which are unique amounts, with no address reuse)
     const addressReuse = Object.keys(reusedOutputAddresses).reduce((acc, key) => Math.max(acc, (reusedInputAddresses[key] || 0) + (reusedOutputAddresses[key] || 0)), 0) > 1;
@@ -710,7 +727,7 @@ export class Common {
     if (id.indexOf('/') !== -1) {
       id = id.slice(0, -2);
     }
-    
+
     if (id.indexOf('x') !== -1) { // Already a short id
       return id;
     }
@@ -1092,14 +1109,14 @@ export class Common {
 /**
  * Class to calculate average fee rates of a list of transactions
  * at certain weight percentiles, in a single pass
- * 
+ *
  * init with:
  *   maxWeight - the total weight to measure percentiles relative to (e.g. 4MW for a single block)
  *   percentileBandWidth - how many weight units to average over for each percentile (as a % of maxWeight)
  *   percentiles - an array of weight percentiles to compute, in %
- * 
+ *
  * then call .processNext(tx) for each transaction, in descending order
- * 
+ *
  * retrieve the final results with .getFeeStats()
  */
 export class OnlineFeeStatsCalculator {
