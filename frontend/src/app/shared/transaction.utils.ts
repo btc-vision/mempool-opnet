@@ -1,5 +1,5 @@
 import { TransactionFlags } from './filters.utils';
-import { getVarIntLength, opcodes, parseMultisigScript, isPoint } from './script.utils';
+import { getVarIntLength, opcodes, parseMultisigScript, isPoint, checkIsSmartContract } from './script.utils';
 import { Transaction, Vin } from '../interfaces/electrs.interface';
 import { CpfpInfo, RbfInfo } from '../interfaces/node-api.interface';
 
@@ -287,37 +287,6 @@ export function isBurnKey(pubkey: string): boolean {
     '020202020202020202020202020202020202020202020202020202020202020202',
     '030303030303030303030303030303030303030303030303030303030303030303',
   ].includes(pubkey);
-}
-
-export function checkIsSmartContract(script: string): boolean {
-  if (!script) {
-    return false;
-  }
-
-  const ops = script.split(' ');
-
-  // Check the script structure
-  const requiredSequence = [
-    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
-    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
-    'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
-    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
-  ];
-
-  // Extracting the necessary part of the script for comparison
-  const firstPart = ops.filter((op) => {
-    return op.startsWith('OP_');
-  });
-
-  // Check the structure matches the required sequence
-  for (let i = 0; i < requiredSequence.length; i++) {
-    if (firstPart[i] !== requiredSequence[i]) {
-      return false;
-    }
-  }
-
-  // Legacy OP_NET smart contract
-  return true;
 }
 
 export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
