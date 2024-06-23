@@ -245,12 +245,13 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
     }
   }
 
+  // classic multisig
   const multisig = parseMultisigScript(script_asm);
   if (multisig) {
     return ScriptTemplates.multisig(multisig.m, multisig.n);
   }
 
-  console.log(script_asm);
+  // taproot multisig
   const p2tr_ms = parseP2TRMultisigScript(script_asm);
   if (p2tr_ms) {
     return ScriptTemplates.multisig(p2tr_ms.m, p2tr_ms.n);
@@ -263,15 +264,23 @@ export function parseP2TRMultisigScript(script: string): undefined | { m: number
   if (!script) {
     return;
   }
-  const ops = script.split(' ');
+
+  let ops = script.split(' ');
   if (ops.length < 3 || ops.pop() !== 'OP_NUMEQUAL') {
     return;
   }
+
   const opM = ops.pop();
   if (!opM || !opM.startsWith('OP_PUSHNUM_')) {
     return;
   }
+
   const m = parseInt(opM.match(/[0-9]+/)?.[0] || '', 10);
+  ops = ops.reverse();
+
+  if(ops.pop() !== 'OP_0') {
+    return;
+  }
 
   let n = 0;
   while (ops.length > 0) {
@@ -280,7 +289,7 @@ export function parseP2TRMultisigScript(script: string): undefined | { m: number
       n++;
     } else if (op && op.startsWith('OP_PUSHBYTES_') && ops.length > 0) {
       const publicKey = ops.pop();
-      if (!/^0((2|3)\w{64}|4\w{128})$/.test(publicKey || '')) {
+      if (!(publicKey.length === 65 || publicKey.length === 64)) {
         return;
       }
     } else {
