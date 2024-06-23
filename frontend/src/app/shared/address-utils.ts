@@ -126,6 +126,7 @@ export class AddressTypeInfo {
   // flags
   isMultisig?: { m: number, n: number };
   tapscript?: boolean;
+  smart_contract?: boolean;
 
   constructor (network: string, address: string, type?: AddressType, vin?: Vin[]) {
     this.network = network;
@@ -144,6 +145,7 @@ export class AddressTypeInfo {
     cloned.scripts = new Map(Array.from(this.scripts, ([key, value]) => [key, value?.clone()]));
     cloned.isMultisig = this.isMultisig;
     cloned.tapscript = this.tapscript;
+    cloned.smart_contract = this.smart_contract;
     return cloned;
   }
 
@@ -188,6 +190,8 @@ export class AddressTypeInfo {
     this.scripts.set(script.key, script);
     if (script.template?.type === 'multisig') {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
+    } else if(script.template?.type === 'smart_contract') {
+      this.smart_contract = true;
     }
   }
 }
