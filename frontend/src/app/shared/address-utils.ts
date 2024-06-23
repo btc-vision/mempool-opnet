@@ -47,7 +47,7 @@ const ADDRESS_PREFIXES = {
       pubkey: ['m', 'n'],
       script: '2',
     },
-    bech32: 'bcrt',
+    bech32: 'bcrt1',
   },
   signet: {
     base58: {
@@ -144,10 +144,9 @@ export class AddressTypeInfo {
       this.type = type;
     } else {
       this.type = detectAddressType(address, network);
-
-      if(this.type === 'unknown' && network === 'testnet4') {
-        this.type = detectAddressType(address, 'regtest');
-      }
+    }
+    if(this.type === 'unknown' && network === 'testnet4') {
+      this.type = detectAddressType(address, 'regtest');
     }
     this.processInputs(vin);
   }
