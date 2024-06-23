@@ -211,7 +211,7 @@ export function checkIsInteraction(script: string): boolean {
     'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
     'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
     'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
-    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3'
   ];
 
   // Extracting the necessary part of the script for comparison
