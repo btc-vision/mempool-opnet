@@ -400,34 +400,39 @@ export class Common {
     ].includes(pubkey);
   }
 
-  static isInscription(vin, flags): bigint {
+  static decodeTaprootFlags(vin, flags): bigint {
     // in taproot, if the last witness item begins with 0x50, it's an annex
     const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
     // script spends have more than one witness item, not counting the annex (if present)
     if (vin.witness.length > (hasAnnex ? 2 : 1)) {
       // the script itself is the second-to-last witness item, not counting the annex
       const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
+      if(!asm) return flags;
+
       // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-      if (asm?.includes('OP_0 OP_IF')) {
+      const isInscription = asm.includes('OP_0 OP_IF');
+      const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
+      const isSmartContract = Common.isSmartContract(asm);
+
+      if(isInscription) {
         flags |= TransactionFlags.inscription;
+      }
+
+      if(isOP_NET) {
+        flags |= TransactionFlags.opnet;
+      }
+
+      if(isSmartContract) {
+        flags |= TransactionFlags.smart_contract;
       }
     }
     return flags;
   }
 
-  static isOP_NET(vin, flags): bigint {
-    // in taproot, if the last witness item begins with 0x50, it's an annex
-    const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
-    // script spends have more than one witness item, not counting the annex (if present)
-    if (vin.witness.length > (hasAnnex ? 2 : 1)) {
-      // the script itself is the second-to-last witness item, not counting the annex
-      const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
-      // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-      if (asm?.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF')) {
-        flags |= TransactionFlags.opnet;
-      }
-    }
-    return flags;
+  static isSmartContract(asm: string): boolean {
+    console.log(asm);
+
+    return false;
   }
 
   static getTransactionFlags(tx: TransactionExtended): number {
@@ -479,22 +484,17 @@ export class Common {
               throw new Error('Taproot input missing witness data');
             }
             flags |= TransactionFlags.p2tr;
-            flags = Common.isInscription(vin, flags);
-            flags = Common.isOP_NET(vin, flags);
+            flags = Common.decodeTaprootFlags(vin, flags);
           } break;
         }
       } else {
         // no prevouts, optimistically check witness-bearing inputs
         if (vin.witness?.length >= 2) {
           try {
-            flags = Common.isInscription(vin, flags);
+            flags = Common.decodeTaprootFlags(vin, flags);
           } catch {
             // witness script parsing will fail if this isn't really a taproot output
           }
-
-          try {
-            flags = Common.isOP_NET(vin, flags);
-          } catch {}
         }
       }
 
