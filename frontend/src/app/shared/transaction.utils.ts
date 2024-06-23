@@ -1,6 +1,6 @@
 import { TransactionFlags } from './filters.utils';
 import { getVarIntLength, opcodes, parseMultisigScript, isPoint } from './script.utils';
-import { Transaction } from '../interfaces/electrs.interface';
+import { Transaction, Vin } from '../interfaces/electrs.interface';
 import { CpfpInfo, RbfInfo } from '../interfaces/node-api.interface';
 
 // Bitcoin Core default policy settings
@@ -289,6 +289,66 @@ export function isBurnKey(pubkey: string): boolean {
   ].includes(pubkey);
 }
 
+export function checkIsSmartContract(script: string): boolean {
+  if (!script) {
+    return false;
+  }
+
+  const ops = script.split(' ');
+
+  // Check the script structure
+  const requiredSequence = [
+    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
+    'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+  ];
+
+  // Extracting the necessary part of the script for comparison
+  const firstPart = ops.slice(0, requiredSequence.length);
+
+  // Check the structure matches the required sequence
+  for (let i = 0; i < requiredSequence.length; i++) {
+    if (firstPart[i] !== requiredSequence[i]) {
+      return false;
+    }
+  }
+
+  // Legacy OP_NET smart contract
+  return true;
+}
+
+export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
+  // in taproot, if the last witness item begins with 0x50, it's an annex
+  const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
+  // script spends have more than one witness item, not counting the annex (if present)
+  if (vin.witness?.length > (hasAnnex ? 2 : 1)) {
+    // the script itself is the second-to-last witness item, not counting the annex
+    const asm = vin.inner_witnessscript_asm;
+    if(!asm) {
+      return flags;
+    }
+
+    // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
+    const isInscription = asm.includes('OP_0 OP_IF');
+    const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
+    const isSmartContract = checkIsSmartContract(asm);
+
+    if(isInscription) {
+      flags |= TransactionFlags.inscription;
+    }
+
+    if(isOP_NET) {
+      flags |= TransactionFlags.opnet;
+    }
+
+    if(isSmartContract) {
+      flags |= TransactionFlags.smart_contract;
+    }
+  }
+  return flags;
+}
+
 export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replacement?: boolean): bigint {
   let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
@@ -338,20 +398,11 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
         if (!vin.witness?.length) {
           throw new Error('Taproot input missing witness data');
         }
+
         flags |= TransactionFlags.p2tr;
-        // in taproot, if the last witness item begins with 0x50, it's an annex
-        const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
-        // script spends have more than one witness item, not counting the annex (if present)
-        if (vin.witness.length > (hasAnnex ? 2 : 1)) {
-          // the script itself is the second-to-last witness item, not counting the annex
-          const asm = vin.inner_witnessscript_asm;
-          // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-          if (asm?.includes('OP_0 OP_IF')) {
-            flags |= TransactionFlags.inscription;
-          } else if(asm?.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF')) {
-            flags |= TransactionFlags.opnet;
-          }
-        }
+
+        // decode taproot flags
+        flags = decodeTaprootFlags(vin, flags);
       } break;
     }
 

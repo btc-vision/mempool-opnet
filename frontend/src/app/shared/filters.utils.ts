@@ -22,41 +22,43 @@ export interface ActiveFilter {
 // binary flags for transaction classification
 export const TransactionFlags = {
   // features
-  rbf:                                                         0b00000001n,
-  no_rbf:                                                      0b00000010n,
-  v1:                                                          0b00000100n,
-  v2:                                                          0b00001000n,
-  v3:                                                          0b00010000n,
-  nonstandard:                                                 0b00100000n,
+  rbf:                                                                      0b00000001n,
+  no_rbf:                                                                   0b00000010n,
+  v1:                                                                       0b00000100n,
+  v2:                                                                       0b00001000n,
+  v3:                                                                       0b00010000n,
+  nonstandard:                                                              0b00100000n,
   // address types
-  p2pk:                                               0b00000001_00000000n,
-  p2ms:                                               0b00000010_00000000n,
-  p2pkh:                                              0b00000100_00000000n,
-  p2sh:                                               0b00001000_00000000n,
-  p2wpkh:                                             0b00010000_00000000n,
-  p2wsh:                                              0b00100000_00000000n,
-  p2tr:                                               0b01000000_00000000n,
+  p2pk:                                                            0b00000001_00000000n,
+  p2ms:                                                            0b00000010_00000000n,
+  p2pkh:                                                           0b00000100_00000000n,
+  p2sh:                                                            0b00001000_00000000n,
+  p2wpkh:                                                          0b00010000_00000000n,
+  p2wsh:                                                           0b00100000_00000000n,
+  p2tr:                                                            0b01000000_00000000n,
   // behavior
-  cpfp_parent:                               0b00000001_00000000_00000000n,
-  cpfp_child:                                0b00000010_00000000_00000000n,
-  replacement:                               0b00000100_00000000_00000000n,
-  acceleration:                              0b00001000_00000000_00000000n,
+  cpfp_parent:                                            0b00000001_00000000_00000000n,
+  cpfp_child:                                             0b00000010_00000000_00000000n,
+  replacement:                                            0b00000100_00000000_00000000n,
+  acceleration:                                           0b00001000_00000000_00000000n,
   // data
-  op_return:                        0b00000001_00000000_00000000_00000000n,
-  fake_pubkey:                      0b00000010_00000000_00000000_00000000n,
-  inscription:                      0b00000100_00000000_00000000_00000000n,
-  fake_scripthash:                  0b00001000_00000000_00000000_00000000n,
-  opnet:                            0b00010000_00000000_00000000_00000000n,
+  op_return:                                     0b00000001_00000000_00000000_00000000n,
+  fake_pubkey:                                   0b00000010_00000000_00000000_00000000n,
+  inscription:                                   0b00000100_00000000_00000000_00000000n,
+  fake_scripthash:                               0b00001000_00000000_00000000_00000000n,
+  opnet:                                         0b00010000_00000000_00000000_00000000n,
   // heuristics
-  coinjoin:                0b00000001_00000000_00000000_00000000_00000000n,
-  consolidation:           0b00000010_00000000_00000000_00000000_00000000n,
-  batch_payout:            0b00000100_00000000_00000000_00000000_00000000n,
+  coinjoin:                             0b00000001_00000000_00000000_00000000_00000000n,
+  consolidation:                        0b00000010_00000000_00000000_00000000_00000000n,
+  batch_payout:                         0b00000100_00000000_00000000_00000000_00000000n,
   // sighash
-  sighash_all:    0b00000001_00000000_00000000_00000000_00000000_00000000n,
-  sighash_none:   0b00000010_00000000_00000000_00000000_00000000_00000000n,
-  sighash_single: 0b00000100_00000000_00000000_00000000_00000000_00000000n,
-  sighash_default:0b00001000_00000000_00000000_00000000_00000000_00000000n,
-  sighash_acp:    0b00010000_00000000_00000000_00000000_00000000_00000000n,
+  sighash_all:                 0b00000001_00000000_00000000_00000000_00000000_00000000n,
+  sighash_none:                0b00000010_00000000_00000000_00000000_00000000_00000000n,
+  sighash_single:              0b00000100_00000000_00000000_00000000_00000000_00000000n,
+  sighash_default:             0b00001000_00000000_00000000_00000000_00000000_00000000n,
+  sighash_acp:                 0b00010000_00000000_00000000_00000000_00000000_00000000n,
+  // opnet
+  smart_contract:     0b00000001_00000000_00000000_00000000_00000000_00000000_00000000n,
 };
 
 export function toFlags(filters: string[]): bigint {
@@ -114,6 +116,8 @@ export const TransactionFilters: { [key: string]: Filter } = {
     sighash_single: { key: 'sighash_single', label: 'sighash_single', flag: TransactionFlags.sighash_single, tooltip: true },
     sighash_default: { key: 'sighash_default', label: 'sighash_default', flag: TransactionFlags.sighash_default },
     sighash_acp: { key: 'sighash_acp', label: 'sighash_anyonecanpay', flag: TransactionFlags.sighash_acp, tooltip: true },
+    /* opnet */
+    smart_contract: { key: 'smart_contract', label: 'Smart Contract', flag: TransactionFlags.smart_contract, important: true, tooltip: true, txPage: true, },
 };
 
 export const FilterGroups: { label: string, filters: Filter[]}[] = [
@@ -123,4 +127,5 @@ export const FilterGroups: { label: string, filters: Filter[]}[] = [
   { label: $localize`Data`, filters: ['op_return', 'fake_pubkey', 'fake_scripthash', 'inscription', 'opnet'] },
   { label: $localize`Heuristics`, filters: ['coinjoin', 'consolidation', 'batch_payout'] },
   { label: $localize`Sighash Flags`, filters: ['sighash_all', 'sighash_none', 'sighash_single', 'sighash_default', 'sighash_acp'] },
+  { label: $localize`Contract`, filters: ['smart_contract'] },
 ].map(group => ({ label: group.label, filters: group.filters.map(filter => TransactionFilters[filter] || null).filter(f => f != null) }));

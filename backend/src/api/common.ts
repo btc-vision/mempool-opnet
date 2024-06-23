@@ -407,7 +407,9 @@ export class Common {
     if (vin.witness.length > (hasAnnex ? 2 : 1)) {
       // the script itself is the second-to-last witness item, not counting the annex
       const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
-      if(!asm) return flags;
+      if(!asm) {
+        return flags;
+      }
 
       // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
       const isInscription = asm.includes('OP_0 OP_IF');
@@ -429,10 +431,33 @@ export class Common {
     return flags;
   }
 
-  static isSmartContract(asm: string): boolean {
-    console.log(asm);
+  static isSmartContract(script: string): boolean {
+    if (!script) {
+      return false;
+    }
 
-    return false;
+    const ops = script.split(' ');
+
+    // Check the script structure
+    const requiredSequence = [
+      'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+      'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
+      'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+      'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+    ];
+
+    // Extracting the necessary part of the script for comparison
+    const firstPart = ops.slice(0, requiredSequence.length);
+
+    // Check the structure matches the required sequence
+    for (let i = 0; i < requiredSequence.length; i++) {
+      if (firstPart[i] !== requiredSequence[i]) {
+        return false;
+      }
+    }
+
+    // Legacy OP_NET smart contract
+    return true;
   }
 
   static getTransactionFlags(tx: TransactionExtended): number {
