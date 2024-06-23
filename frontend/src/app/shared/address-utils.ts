@@ -19,6 +19,7 @@ export type AddressType = 'fee'
   | 'confidential'
   | 'unknown'
   | 'smart_contract'
+  | 'interaction';
 
 const ADDRESS_PREFIXES = {
   mainnet: {

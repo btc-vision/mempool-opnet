@@ -415,6 +415,7 @@ export class Common {
       const isInscription = asm.includes('OP_0 OP_IF');
       const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
       const isSmartContract = Common.checkIsSmartContract(asm);
+      const isInteraction = Common.checkIsInteraction(asm);
 
       if(isInscription) {
         flags |= TransactionFlags.inscription;
@@ -427,8 +428,44 @@ export class Common {
       if(isSmartContract) {
         flags |= TransactionFlags.smart_contract;
       }
+
+      if(isInteraction) {
+        flags |= TransactionFlags.interaction;
+      }
     }
+
     return flags;
+  }
+
+  static checkIsInteraction(script: string): boolean {
+    if (!script) {
+      return false;
+    }
+
+    const ops = script.split(' ');
+
+    // Check the script structure
+    const requiredSequence = [
+      'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+      'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
+      'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+      'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+    ];
+
+    // Extracting the necessary part of the script for comparison
+    const firstPart = ops.filter((op) => {
+      return op.startsWith('OP_');
+    });
+
+    // Check the structure matches the required sequence
+    for (let i = 0; i < requiredSequence.length; i++) {
+      if (firstPart[i] !== requiredSequence[i]) {
+        return false;
+      }
+    }
+
+    // Legacy OP_NET interaction
+    return true;
   }
 
   static checkIsSmartContract(script: string): boolean {

@@ -1,5 +1,12 @@
 import { TransactionFlags } from './filters.utils';
-import { getVarIntLength, opcodes, parseMultisigScript, isPoint, checkIsSmartContract } from './script.utils';
+import {
+  getVarIntLength,
+  opcodes,
+  parseMultisigScript,
+  isPoint,
+  checkIsSmartContract,
+  checkIsInteraction
+} from './script.utils';
 import { Transaction, Vin } from '../interfaces/electrs.interface';
 import { CpfpInfo, RbfInfo } from '../interfaces/node-api.interface';
 
@@ -304,6 +311,7 @@ export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
     const isInscription = asm.includes('OP_0 OP_IF');
     const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
     const isSmartContract = checkIsSmartContract(asm);
+    const isInteraction = checkIsInteraction(asm);
 
     if(isInscription) {
       flags |= TransactionFlags.inscription;
@@ -315,6 +323,10 @@ export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
 
     if(isSmartContract) {
       flags |= TransactionFlags.smart_contract;
+    }
+
+    if(isInteraction) {
+      flags |= TransactionFlags.interaction;
     }
   }
   return flags;

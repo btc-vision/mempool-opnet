@@ -167,6 +167,7 @@ export const ScriptTemplates: { [type: string]: (...args: any) => ScriptTemplate
   ln_anchor_swept: () => ({ type: 'ln_anchor_swept', label: 'Swept Lightning Anchor' }),
   multisig: (m: number, n: number) => ({ type: 'multisig', m, n, label: $localize`:@@address-label.multisig:Multisig ${m}:multisigM: of ${n}:multisigN:` }),
   smart_contract: () => ({ type: 'smart_contract', label: `Smart Contract` }),
+  interaction: () => ({ type: 'interaction', label: `Interaction` }),
 };
 
 export class ScriptInfo {
@@ -195,6 +196,37 @@ export class ScriptInfo {
   get key(): string {
     return this.type + (this.scriptPath || '');
   }
+}
+
+export function checkIsInteraction(script: string): boolean {
+  if (!script) {
+    return false;
+  }
+
+  const ops = script.split(' ');
+
+  // Check the script structure
+  const requiredSequence = [
+    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
+    'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+  ];
+
+  // Extracting the necessary part of the script for comparison
+  const firstPart = ops.filter((op) => {
+    return op.startsWith('OP_');
+  });
+
+  // Check the structure matches the required sequence
+  for (let i = 0; i < requiredSequence.length; i++) {
+    if (firstPart[i] !== requiredSequence[i]) {
+      return false;
+    }
+  }
+
+  // Legacy OP_NET interaction
+  return true;
 }
 
 export function checkIsSmartContract(script: string): boolean {
@@ -289,8 +321,14 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
     return ScriptTemplates.multisig(p2tr_ms.m, p2tr_ms.n);
   }
 
+  // Legacy OP_NET smart contract
   if(checkIsSmartContract(script_asm)) {
     return ScriptTemplates.smart_contract();
+  }
+
+  // Legacy OP_NET interaction
+  if(checkIsInteraction(script_asm)) {
+    return ScriptTemplates.interaction();
   }
 
   return;

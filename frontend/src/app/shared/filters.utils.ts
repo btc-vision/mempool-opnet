@@ -59,6 +59,7 @@ export const TransactionFlags = {
   sighash_acp:                 0b00010000_00000000_00000000_00000000_00000000_00000000n,
   // opnet
   smart_contract:     0b00000001_00000000_00000000_00000000_00000000_00000000_00000000n,
+  interaction:        0b00000010_00000000_00000000_00000000_00000000_00000000_00000000n,
 };
 
 export function toFlags(filters: string[]): bigint {
@@ -118,6 +119,7 @@ export const TransactionFilters: { [key: string]: Filter } = {
     sighash_acp: { key: 'sighash_acp', label: 'sighash_anyonecanpay', flag: TransactionFlags.sighash_acp, tooltip: true },
     /* opnet */
     smart_contract: { key: 'smart_contract', label: 'Smart Contract', flag: TransactionFlags.smart_contract, important: true, tooltip: true, txPage: true, },
+    interaction: { key: 'interaction', label: 'Interaction', flag: TransactionFlags.interaction, important: true, tooltip: true, txPage: true, },
 };
 
 export const FilterGroups: { label: string, filters: Filter[]}[] = [
@@ -127,5 +129,5 @@ export const FilterGroups: { label: string, filters: Filter[]}[] = [
   { label: $localize`Data`, filters: ['op_return', 'fake_pubkey', 'fake_scripthash', 'inscription', 'opnet'] },
   { label: $localize`Heuristics`, filters: ['coinjoin', 'consolidation', 'batch_payout'] },
   { label: $localize`Sighash Flags`, filters: ['sighash_all', 'sighash_none', 'sighash_single', 'sighash_default', 'sighash_acp'] },
-  { label: $localize`Contract`, filters: ['smart_contract'] },
+  { label: $localize`Contract`, filters: ['smart_contract', 'interaction'] },
 ].map(group => ({ label: group.label, filters: group.filters.map(filter => TransactionFilters[filter] || null).filter(f => f != null) }));

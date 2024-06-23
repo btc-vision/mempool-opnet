@@ -72,7 +72,7 @@ export class CustomDashboardComponent implements OnInit, OnDestroy, AfterViewIni
     { index: 1, name: $localize`Consolidation`, mode: 'and', filters: ['consolidation'], gradient: 'fee' },
     { index: 2, name: $localize`Coinjoin`, mode: 'and', filters: ['coinjoin'], gradient: 'fee' },
     { index: 3, name: $localize`Data`, mode: 'or', filters: ['inscription', 'opnet', 'fake_pubkey', 'op_return'], gradient: 'fee' },
-    { index: 4, name: $localize`Contract`, mode: 'or', filters: ['smart_contract'], gradient: 'age' },
+    { index: 4, name: $localize`Contract`, mode: 'and', filters: ['smart_contract', 'interaction'], gradient: 'fee' },
   ];
   goggleFlags = 0n;
   goggleMode: FilterMode = 'and';
