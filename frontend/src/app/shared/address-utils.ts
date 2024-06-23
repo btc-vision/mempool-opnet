@@ -18,6 +18,7 @@ export type AddressType = 'fee'
   | 'v1_p2tr'
   | 'confidential'
   | 'unknown'
+  | 'smart_contract'
 
 const ADDRESS_PREFIXES = {
   mainnet: {
