@@ -193,6 +193,7 @@ export class AddressTypeInfo {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
     } else if(script.template?.type === 'smart_contract') {
       this.smart_contract = true;
+      this.type = 'smart_contract';
     }
   }
 }
