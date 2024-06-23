@@ -197,6 +197,37 @@ export class ScriptInfo {
   }
 }
 
+export function checkIsSmartContract(script: string): boolean {
+  if (!script) {
+    return false;
+  }
+
+  const ops = script.split(' ');
+
+  // Check the script structure
+  const requiredSequence = [
+    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
+    'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+  ];
+
+  // Extracting the necessary part of the script for comparison
+  const firstPart = ops.filter((op) => {
+    return op.startsWith('OP_');
+  });
+
+  // Check the structure matches the required sequence
+  for (let i = 0; i < requiredSequence.length; i++) {
+    if (firstPart[i] !== requiredSequence[i]) {
+      return false;
+    }
+  }
+
+  // Legacy OP_NET smart contract
+  return true;
+}
+
 /** parses an inner_witnessscript + witness stack, and detects named script types */
 export function detectScriptTemplate(type: ScriptType, script_asm: string, witness?: string[]): ScriptTemplate | undefined {
   if (type === 'inner_witnessscript' && witness?.length) {
@@ -256,6 +287,10 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
   const p2tr_ms = parseP2TRMultisigScript(script_asm);
   if (p2tr_ms) {
     return ScriptTemplates.multisig(p2tr_ms.m, p2tr_ms.n);
+  }
+
+  if(checkIsSmartContract(script_asm)) {
+    return ScriptTemplates.smart_contract();
   }
 
   return;
