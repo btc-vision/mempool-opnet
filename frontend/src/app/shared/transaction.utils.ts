@@ -348,7 +348,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
           // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
           if (asm?.includes('OP_0 OP_IF')) {
             flags |= TransactionFlags.inscription;
-          } else if(asm?.includes('OP_DEPTH OP_1 OP_NUMEQUAL OP_IF')) {
+          } else if(asm?.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF')) {
             flags |= TransactionFlags.opnet;
           }
         }

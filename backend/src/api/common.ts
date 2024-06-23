@@ -422,9 +422,8 @@ export class Common {
     if (vin.witness.length > (hasAnnex ? 2 : 1)) {
       // the script itself is the second-to-last witness item, not counting the annex
       const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
-      console.log(asm);
       // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-      if (asm?.includes('OP_DEPTH OP_1 OP_NUMEQUAL OP_IF')) {
+      if (asm?.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF')) {
         flags |= TransactionFlags.opnet;
       }
     }
