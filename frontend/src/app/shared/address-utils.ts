@@ -42,6 +42,13 @@ const ADDRESS_PREFIXES = {
     },
     bech32: 'tb1',
   },
+  regtest: {
+    base58: {
+      pubkey: ['m', 'n'],
+      script: '2',
+    },
+    bech32: 'bcrt',
+  },
   signet: {
     base58: {
       pubkey: ['m', 'n'],
@@ -108,7 +115,7 @@ export function detectAddressType(address: string, network: string): AddressType
       return 'confidential';
     }
   }
-
+  
   return 'unknown';
 }
 
@@ -137,6 +144,10 @@ export class AddressTypeInfo {
       this.type = type;
     } else {
       this.type = detectAddressType(address, network);
+
+      if(this.type === 'unknown' && network === 'testnet4') {
+        this.type = detectAddressType(address, 'regtest');
+      }
     }
     this.processInputs(vin);
   }
@@ -192,6 +203,7 @@ export class AddressTypeInfo {
     if (script.template?.type === 'multisig') {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
     } else if(script.template?.type === 'smart_contract') {
+      console.log('smart contract found');
       this.smart_contract = true;
       this.type = 'smart_contract';
     }
