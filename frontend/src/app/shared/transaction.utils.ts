@@ -1,6 +1,13 @@
 import { TransactionFlags } from './filters.utils';
-import { getVarIntLength, opcodes, parseMultisigScript, isPoint } from './script.utils';
-import { Transaction } from '../interfaces/electrs.interface';
+import {
+  getVarIntLength,
+  opcodes,
+  parseMultisigScript,
+  isPoint,
+  checkIsSmartContract,
+  checkIsInteraction
+} from './script.utils';
+import { Transaction, Vin } from '../interfaces/electrs.interface';
 import { CpfpInfo, RbfInfo } from '../interfaces/node-api.interface';
 
 // Bitcoin Core default policy settings
@@ -289,6 +296,42 @@ export function isBurnKey(pubkey: string): boolean {
   ].includes(pubkey);
 }
 
+export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
+  // in taproot, if the last witness item begins with 0x50, it's an annex
+  const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
+  // script spends have more than one witness item, not counting the annex (if present)
+  if (vin.witness?.length > (hasAnnex ? 2 : 1)) {
+    // the script itself is the second-to-last witness item, not counting the annex
+    const asm = vin.inner_witnessscript_asm;
+    if(!asm) {
+      return flags;
+    }
+
+    // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
+    const isInscription = asm.includes('OP_0 OP_IF');
+    const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
+    const isSmartContract = checkIsSmartContract(asm);
+    const isInteraction = checkIsInteraction(asm);
+
+    if(isInscription) {
+      flags |= TransactionFlags.inscription;
+    }
+
+    if(isOP_NET) {
+      flags |= TransactionFlags.opnet;
+    }
+
+    if(isSmartContract) {
+      flags |= TransactionFlags.smart_contract;
+    }
+
+    if(isInteraction) {
+      flags |= TransactionFlags.interaction;
+    }
+  }
+  return flags;
+}
+
 export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replacement?: boolean): bigint {
   let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
@@ -340,17 +383,8 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
         // created before taproot activation don't need to have any witness data
         // (see https://mempool.space/tx/b10c007c60e14f9d087e0291d4d0c7869697c6681d979c6639dbd960792b4d41)
         if (vin.witness?.length) {
-          // in taproot, if the last witness item begins with 0x50, it's an annex
-          const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
-          // script spends have more than one witness item, not counting the annex (if present)
-          if (vin.witness.length > (hasAnnex ? 2 : 1)) {
-            // the script itself is the second-to-last witness item, not counting the annex
-            const asm = vin.inner_witnessscript_asm;
-            // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-            if (asm?.includes('OP_0 OP_IF')) {
-              flags |= TransactionFlags.inscription;
-            }
-          }
+          // decode taproot flags
+          flags = decodeTaprootFlags(vin, flags);
         }
       } break;
     }
@@ -423,7 +457,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
   if (hasFakePubkey) {
     flags |= TransactionFlags.fake_pubkey;
   }
-  
+
   // fast but bad heuristic to detect possible coinjoins
   // (at least 5 inputs and 5 outputs, less than half of which are unique amounts, with no address reuse)
   const addressReuse = Object.keys(reusedOutputAddresses).reduce((acc, key) => Math.max(acc, (reusedInputAddresses[key] || 0) + (reusedOutputAddresses[key] || 0)), 0) > 1;

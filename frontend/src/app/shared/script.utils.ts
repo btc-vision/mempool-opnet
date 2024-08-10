@@ -166,6 +166,9 @@ export const ScriptTemplates: { [type: string]: (...args: any) => ScriptTemplate
   ln_anchor: () => ({ type: 'ln_anchor', label: 'Lightning Anchor' }),
   ln_anchor_swept: () => ({ type: 'ln_anchor_swept', label: 'Swept Lightning Anchor' }),
   multisig: (m: number, n: number) => ({ type: 'multisig', m, n, label: $localize`:@@address-label.multisig:Multisig ${m}:multisigM: of ${n}:multisigN:` }),
+  vault: (m: number, n: number) => ({ type: 'vault', m, n, label: $localize`:@@address-label.multisig:Vault ${m}:multisigM: of ${n}:multisigN:` }),
+  smart_contract: () => ({ type: 'smart_contract', label: `Smart Contract` }),
+  interaction: () => ({ type: 'interaction', label: `Interaction` }),
 };
 
 export class ScriptInfo {
@@ -194,6 +197,68 @@ export class ScriptInfo {
   get key(): string {
     return this.type + (this.scriptPath || '');
   }
+}
+
+export function checkIsInteraction(script: string): boolean {
+  if (!script) {
+    return false;
+  }
+
+  const ops = script.split(' ');
+
+  // Check the script structure
+  const requiredSequence = [
+    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
+    'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3'
+  ];
+
+  // Extracting the necessary part of the script for comparison
+  const firstPart = ops.filter((op) => {
+    return op.startsWith('OP_');
+  });
+
+  // Check the structure matches the required sequence
+  for (let i = 0; i < requiredSequence.length; i++) {
+    if (firstPart[i] !== requiredSequence[i]) {
+      return false;
+    }
+  }
+
+  // Legacy OP_NET interaction
+  return true;
+}
+
+export function checkIsSmartContract(script: string): boolean {
+  if (!script) {
+    return false;
+  }
+
+  const ops = script.split(' ');
+
+  // Check the script structure
+  const requiredSequence = [
+    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
+    'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+  ];
+
+  // Extracting the necessary part of the script for comparison
+  const firstPart = ops.filter((op) => {
+    return op.startsWith('OP_');
+  });
+
+  // Check the structure matches the required sequence
+  for (let i = 0; i < requiredSequence.length; i++) {
+    if (firstPart[i] !== requiredSequence[i]) {
+      return false;
+    }
+  }
+
+  // Legacy OP_NET smart contract
+  return true;
 }
 
 /** parses an inner_witnessscript + witness stack, and detects named script types */
@@ -245,12 +310,74 @@ export function detectScriptTemplate(type: ScriptType, script_asm: string, witne
     }
   }
 
+  // classic multisig
   const multisig = parseMultisigScript(script_asm);
   if (multisig) {
     return ScriptTemplates.multisig(multisig.m, multisig.n);
   }
 
+  // taproot multisig
+  const p2tr_v = parseP2TRMultisigVaultScript(script_asm);
+  if (p2tr_v) {
+    return ScriptTemplates.vault(p2tr_v.m, p2tr_v.n);
+  }
+
+  // Legacy OP_NET smart contract
+  if(checkIsSmartContract(script_asm)) {
+    return ScriptTemplates.smart_contract();
+  }
+
+  // Legacy OP_NET interaction
+  if(checkIsInteraction(script_asm)) {
+    return ScriptTemplates.interaction();
+  }
+
   return;
+}
+
+export function parseP2TRMultisigVaultScript(script: string): undefined | { m: number, n: number } {
+  if (!script) {
+    return;
+  }
+
+  let ops = script.split(' ');
+  if (ops.length < 3 || ops.pop() !== 'OP_NUMEQUAL') {
+    return;
+  }
+
+  const opM = ops.pop();
+  if (!opM || !opM.startsWith('OP_PUSHNUM_')) {
+    return;
+  }
+
+  const m = parseInt(opM.match(/[0-9]+/)?.[0] || '', 10);
+  ops = ops.reverse();
+
+  if(ops.pop() !== 'OP_0') {
+    return;
+  }
+
+  let n = 0;
+  while (ops.length > 0) {
+    const op = ops.pop();
+    if (op === 'OP_CHECKSIGADD') {
+      n++;
+    } else if (op && op.startsWith('OP_PUSHBYTES_') && ops.length > 0) {
+      const publicKey = ops.pop();
+      if (!(publicKey.length === 65 || publicKey.length === 64)) {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
+
+  // Check that the correct number of signatures (m) is less than or equal to total public keys (n)
+  if (m > n) {
+    return;
+  }
+
+  return { m, n };
 }
 
 /** extracts m and n from a multisig script (asm), returns nothing if it is not a multisig script */
@@ -361,7 +488,7 @@ export function isPoint(pointHex: string): boolean {
   }
 
   // Function modified slightly from noble-curves
-  
+
 
   // Now we know that pointHex is a 33 or 65 byte hex string.
   const isCompressed = pointHex.length === 66;

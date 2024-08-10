@@ -18,6 +18,8 @@ export type AddressType = 'fee'
   | 'v1_p2tr'
   | 'confidential'
   | 'unknown'
+  | 'smart_contract'
+  | 'interaction';
 
 const ADDRESS_PREFIXES = {
   mainnet: {
@@ -40,6 +42,13 @@ const ADDRESS_PREFIXES = {
       script: '2',
     },
     bech32: 'tb1',
+  },
+  regtest: {
+    base58: {
+      pubkey: ['m', 'n'],
+      script: '2',
+    },
+    bech32: 'bcrt1',
   },
   signet: {
     base58: {
@@ -126,6 +135,7 @@ export class AddressTypeInfo {
   // flags
   isMultisig?: { m: number, n: number };
   tapscript?: boolean;
+  smart_contract?: boolean;
 
   constructor (network: string, address: string, type?: AddressType, vin?: Vin[], vout?: Vout) {
     this.network = network;
@@ -135,6 +145,9 @@ export class AddressTypeInfo {
       this.type = type;
     } else {
       this.type = detectAddressType(address, network);
+    }
+    if(this.type === 'unknown' && network === 'testnet4') {
+      this.type = detectAddressType(address, 'regtest');
     }
     this.processInputs(vin);
     if (vout) {
@@ -147,6 +160,7 @@ export class AddressTypeInfo {
     cloned.scripts = new Map(Array.from(this.scripts, ([key, value]) => [key, value?.clone()]));
     cloned.isMultisig = this.isMultisig;
     cloned.tapscript = this.tapscript;
+    cloned.smart_contract = this.smart_contract;
     return cloned;
   }
 
@@ -204,6 +218,9 @@ export class AddressTypeInfo {
     this.scripts.set(script.key, script);
     if (script.template?.type === 'multisig') {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
+    } else if(script.template?.type === 'smart_contract') {
+      this.smart_contract = true;
+      this.type = 'smart_contract';
     }
   }
 }

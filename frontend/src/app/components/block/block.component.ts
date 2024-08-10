@@ -80,7 +80,7 @@ export class BlockComponent implements OnInit, OnDestroy {
   childChangeSubscription: Subscription;
   auditPrefSubscription: Subscription;
   oobSubscription: Subscription;
-  
+
   priceSubscription: Subscription;
   blockConversion: Price;
 
@@ -459,6 +459,7 @@ export class BlockComponent implements OnInit, OnDestroy {
     if (this.stateService.network !== '') {
       return false;
     }
+
     return this.block && this.block.height > 681393 && (new Date().getTime() / 1000) < 1628640000;
   }
 
@@ -718,7 +719,7 @@ export class BlockComponent implements OnInit, OnDestroy {
       if (queryString) {
         newUrl += '?' + queryString;
       }
-  
+
       this.location.replaceState(newUrl);
     });
 
@@ -738,7 +739,7 @@ export class BlockComponent implements OnInit, OnDestroy {
     return this.route.queryParams.pipe(
       map(params => {
         this.auditParamEnabled = 'audit' in params;
-        
+
         return this.auditParamEnabled ? !(params['audit'] === 'false') : true;
       })
     );
