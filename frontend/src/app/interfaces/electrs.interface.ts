@@ -17,10 +17,13 @@ export interface Transaction {
   feePerVsize?: number;
   effectiveFeePerVsize?: number;
   ancestors?: Ancestor[];
+  descendants?: Ancestor[];
   bestDescendant?: BestDescendant | null;
   cpfpChecked?: boolean;
   acceleration?: boolean;
   acceleratedBy?: number[];
+  acceleratedAt?: number;
+  feeDelta?: number;
   deleteAfter?: number;
   _unblinded?: any;
   _deduced?: boolean;

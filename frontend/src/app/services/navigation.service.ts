@@ -3,6 +3,7 @@ import { Router, NavigationEnd, ActivatedRouteSnapshot } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { StateService } from './state.service';
+import { RelativeUrlPipe } from '../shared/pipes/relative-url/relative-url.pipe';
 
 @Injectable({
   providedIn: 'root'
@@ -26,17 +27,37 @@ export class NavigationService {
     }
   };
   networks = Object.keys(this.networkModules);
+  initialLoad = true;
 
   constructor(
     private stateService: StateService,
     private router: Router,
+    private relativeUrlPipe: RelativeUrlPipe,
   ) {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
       map(() => this.router.routerState.snapshot.root),
     ).subscribe((state) => {
+      if (this.enforceSubnetRestrictions(state)) {
+        this.updateSubnetPaths(state);
+      }
+      if (this.initialLoad) {
+        this.initialLoad = false;
+      }
       this.updateSubnetPaths(state);
     });
+  }
+
+  enforceSubnetRestrictions(root: ActivatedRouteSnapshot): boolean {
+    let route = root;
+    while (route) {
+      if (route.data.onlySubnet && !route.data.onlySubnet.includes(this.stateService.network)) {
+        this.router.navigate([this.relativeUrlPipe.transform('')]);
+        return false;
+      }
+      route = route.firstChild;
+    }
+    return true;
   }
 
   // For each network (bitcoin/liquid), find and save the longest url path compatible with the current route
@@ -81,5 +102,9 @@ export class NavigationService {
       });
     });
     this.subnetPaths.next(subnetPaths);
+  }
+
+  isInitialLoad(): boolean {
+    return this.initialLoad;
   }
 }

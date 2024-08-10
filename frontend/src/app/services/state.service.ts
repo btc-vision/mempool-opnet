@@ -71,10 +71,12 @@ export interface Env {
   SIGNET_BLOCK_AUDIT_START_HEIGHT: number;
   HISTORICAL_PRICE: boolean;
   ACCELERATOR: boolean;
+  ACCELERATOR_BUTTON: boolean;
   PUBLIC_ACCELERATIONS: boolean;
   ADDITIONAL_CURRENCIES: boolean;
   GIT_COMMIT_HASH_MEMPOOL_SPACE?: string;
   PACKAGE_JSON_VERSION_MEMPOOL_SPACE?: string;
+  SERVICES_API?: string;
   customize?: Customization;
 }
 
@@ -107,8 +109,10 @@ const defaultEnv: Env = {
   'SIGNET_BLOCK_AUDIT_START_HEIGHT': 0,
   'HISTORICAL_PRICE': true,
   'ACCELERATOR': false,
+  'ACCELERATOR_BUTTON': true,
   'PUBLIC_ACCELERATIONS': false,
   'ADDITIONAL_CURRENCIES': false,
+  'SERVICES_API': 'https://mempool.space/api/v1/services',
 };
 
 @Injectable({
@@ -134,7 +138,7 @@ export class StateService {
   blocksSubject$ = new BehaviorSubject<BlockExtended[]>([]);
   blocks$: Observable<BlockExtended[]>;
   transactions$ = new BehaviorSubject<TransactionStripped[]>(null);
-  conversions$ = new ReplaySubject<any>(1);
+  conversions$ = new ReplaySubject<Record<string, number>>(1);
   bsqPrice$ = new ReplaySubject<number>(1);
   mempoolInfo$ = new ReplaySubject<MempoolInfo>(1);
   mempoolBlocks$ = new ReplaySubject<MempoolBlock[]>(1);
@@ -150,7 +154,7 @@ export class StateService {
   utxoSpent$ = new Subject<object>();
   difficultyAdjustment$ = new ReplaySubject<DifficultyAdjustment>(1);
   mempoolTransactions$ = new Subject<Transaction>();
-  mempoolTxPosition$ = new Subject<{ txid: string, position: MempoolPosition, cpfp: CpfpInfo | null, accelerationPositions?: AccelerationPosition[] }>();
+  mempoolTxPosition$ = new BehaviorSubject<{ txid: string, position: MempoolPosition, cpfp: CpfpInfo | null, accelerationPositions?: AccelerationPosition[] }>(null);
   mempoolRemovedTransactions$ = new Subject<Transaction>();
   multiAddressTransactions$ = new Subject<{ [address: string]: { mempool: Transaction[], confirmed: Transaction[], removed: Transaction[] }}>();
   blockTransactions$ = new Subject<Transaction>();
@@ -206,6 +210,10 @@ export class StateService {
       this.env.MINING_DASHBOARD = false;
     }
 
+    if (document.location.hostname.endsWith('.onion')) {
+      this.env.SERVICES_API = 'http://mempoolhqx4isw62xs7abwphsq7ldayuidyx2v2oethdhhj6mlo2r6ad.onion/api/v1/services';
+    }
+
     if (this.isBrowser) {
       this.setNetworkBasedonUrl(window.location.pathname);
       this.setLightningBasedonUrl(window.location.pathname);
@@ -222,10 +230,6 @@ export class StateService {
         this.setLightningBasedonUrl(event.url);
       }
     });
-
-    if (this.referrer === 'https://cash.app/' && window.innerWidth < 850 && window.location.pathname.startsWith('/tx/')) {
-      this.router.navigate(['/tracker/' + window.location.pathname.slice(4)]);
-    }
 
     this.liveMempoolBlockTransactions$ = this.mempoolBlockUpdate$.pipe(scan((transactions: { [txid: string]: TransactionStripped }, change: MempoolBlockUpdate): { [txid: string]: TransactionStripped } => {
       if (isMempoolState(change)) {
@@ -408,6 +412,10 @@ export class StateService {
 
   isLiquid() {
     return this.network === 'liquid' || this.network === 'liquidtestnet';
+  }
+
+  isMainnet(): boolean {
+    return this.env.ROOT_NETWORK === '' && this.network === '';
   }
 
   isAnyTestnet(): boolean {

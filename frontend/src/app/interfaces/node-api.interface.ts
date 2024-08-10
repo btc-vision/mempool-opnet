@@ -30,6 +30,8 @@ export interface CpfpInfo {
   adjustedVsize?: number;
   acceleration?: boolean;
   acceleratedBy?: number[];
+  acceleratedAt?: number;
+  feeDelta?: number;
 }
 
 export interface RbfInfo {
@@ -140,7 +142,7 @@ export interface SinglePoolStats {
   emptyBlocks: number;
   rank: number;
   share: number;
-  lastEstimatedHashrate: string;
+  lastEstimatedHashrate: number;
   emptyBlockRatio: string;
   logo: string;
   slug: string;
@@ -209,6 +211,8 @@ export interface BlockExtended extends Block {
 }
 
 export interface BlockAudit extends BlockExtended {
+  version: number,
+  unseenTxs?: string[],
   missingTxs: string[],
   addedTxs: string[],
   prioritizedTxs: string[],
@@ -235,7 +239,7 @@ export interface TransactionStripped {
   acc?: boolean;
   flags?: number | null;
   time?: number;
-  status?: 'found' | 'missing' | 'sigop' | 'fresh' | 'freshcpfp' | 'added' | 'prioritized' | 'censored' | 'selected' | 'rbf' | 'accelerated';
+  status?: 'found' | 'missing' | 'sigop' | 'fresh' | 'freshcpfp' | 'added' | 'added_prioritized' | 'prioritized' | 'censored' | 'selected' | 'rbf' | 'accelerated';
   context?: 'projected' | 'actual';
 }
 
@@ -249,10 +253,12 @@ export interface MempoolPosition {
   vsize: number,
   accelerated?: boolean,
   acceleratedBy?: number[],
+  acceleratedAt?: number,
+  feeDelta?: number,
 }
 
 export interface AccelerationPosition extends MempoolPosition {
-  pool: string;
+  poolId: number;
   offset?: number;
 }
 
@@ -407,10 +413,11 @@ export interface Acceleration {
   bidBoost?: number;
   boostCost?: number;
   boostRate?: number;
+  minedByPoolUniqueId?: number;
 }
 
 export interface AccelerationHistoryParams {
-  status?: string;
+  status?: string; // Single status or comma separated list of status
   timeframe?: string;
   poolUniqueId?: number;
   blockHash?: string;

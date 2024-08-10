@@ -188,7 +188,7 @@ export function isNonStandard(tx: Transaction): boolean {
       dustSize += getVarIntLength(dustSize);
       // add value size
       dustSize += 8;
-      if (['v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr'].includes(vout.scriptpubkey_type)) {
+      if (isWitnessProgram(vout.scriptpubkey)) {
         dustSize += 67;
       } else {
         dustSize += 148;
@@ -378,14 +378,14 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
       case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
       case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
       case 'v1_p2tr': {
-        if (!vin.witness?.length) {
-          throw new Error('Taproot input missing witness data');
-        }
-
         flags |= TransactionFlags.p2tr;
-
-        // decode taproot flags
-        flags = decodeTaprootFlags(vin, flags);
+        // every valid taproot input has at least one witness item, however transactions
+        // created before taproot activation don't need to have any witness data
+        // (see https://mempool.space/tx/b10c007c60e14f9d087e0291d4d0c7869697c6681d979c6639dbd960792b4d41)
+        if (vin.witness?.length) {
+          // decode taproot flags
+          flags = decodeTaprootFlags(vin, flags);
+        }
       } break;
     }
 
@@ -478,4 +478,18 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
   }
 
   return flags;
+}
+
+export function getUnacceleratedFeeRate(tx: Transaction, accelerated: boolean): number {
+  if (accelerated) {
+    let ancestorVsize = tx.weight / 4;
+    let ancestorFee = tx.fee;
+    for (const ancestor of tx.ancestors || []) {
+      ancestorVsize += (ancestor.weight / 4);
+      ancestorFee += ancestor.fee;
+    }
+    return Math.min(tx.fee / (tx.weight / 4), (ancestorFee / ancestorVsize));
+  } else {
+    return tx.effectiveFeePerVsize;
+  }
 }

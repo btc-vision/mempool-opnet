@@ -29,9 +29,11 @@ export interface PoolStats extends PoolInfo {
 }
 
 export interface BlockAudit {
+  version: number,
   time: number,
   height: number,
   hash: string,
+  unseenTxs: string[],
   missingTxs: string[],
   freshTxs: string[],
   sigopTxs: string[],
@@ -42,6 +44,19 @@ export interface BlockAudit {
   matchRate: number,
   expectedFees?: number,
   expectedWeight?: number,
+  template?: any[];
+}
+
+export interface TransactionAudit {
+  seen?: boolean;
+  expected?: boolean;
+  added?: boolean;
+  prioritized?: boolean;
+  delayed?: number;
+  accelerated?: boolean;
+  conflict?: boolean;
+  coinbase?: boolean;
+  firstSeen?: number;
 }
 
 export interface AuditScore {
@@ -112,6 +127,8 @@ export interface TransactionExtended extends IEsploraApi.Transaction {
   };
   acceleration?: boolean;
   acceleratedBy?: number[];
+  acceleratedAt?: number;
+  feeDelta?: number;
   replacement?: boolean;
   uid?: number;
   flags?: number;
@@ -209,6 +226,7 @@ export interface CpfpInfo {
   sigops?: number;
   adjustedVsize?: number,
   acceleration?: boolean,
+  fee?: number;
 }
 
 export interface TransactionStripped {
@@ -292,6 +310,7 @@ export interface BlockExtension {
   coinbaseRaw: string;
   orphans: OrphanedBlock[] | null;
   coinbaseAddress: string | null;
+  coinbaseAddresses: string[] | null;
   coinbaseSignature: string | null;
   coinbaseSignatureAscii: string | null;
   virtualSize: number;
@@ -371,8 +390,9 @@ export interface CpfpCluster {
 }
 
 export interface CpfpSummary {
-  transactions: TransactionExtended[];
+  transactions: MempoolTransactionExtended[];
   clusters: CpfpCluster[];
+  version: number;
 }
 
 export interface Statistic {
@@ -438,7 +458,7 @@ export interface OptimizedStatistic {
 
 export interface TxTrackingInfo {
   replacedBy?: string,
-  position?: { block: number, vsize: number, accelerated?: boolean, acceleratedBy?: number[] },
+  position?: { block: number, vsize: number, accelerated?: boolean, acceleratedBy?: number[], acceleratedAt?: number, feeDelta?: number },
   cpfp?: {
     ancestors?: Ancestor[],
     bestDescendant?: Ancestor | null,
@@ -450,6 +470,8 @@ export interface TxTrackingInfo {
   utxoSpent?: { [vout: number]: { vin: number, txid: string } },
   accelerated?: boolean,
   acceleratedBy?: number[],
+  acceleratedAt?: number,
+  feeDelta?: number,
   confirmed?: boolean
 }
 

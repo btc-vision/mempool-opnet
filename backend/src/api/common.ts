@@ -1,6 +1,6 @@
 import * as bitcoinjs from 'bitcoinjs-lib';
 import { Request } from 'express';
-import { CpfpInfo, CpfpSummary, CpfpCluster, EffectiveFeeStats, MempoolBlockWithTransactions, TransactionExtended, MempoolTransactionExtended, TransactionStripped, WorkingEffectiveFeeStats, TransactionClassified, TransactionFlags } from '../mempool.interfaces';
+import { EffectiveFeeStats, MempoolBlockWithTransactions, TransactionExtended, MempoolTransactionExtended, TransactionStripped, WorkingEffectiveFeeStats, TransactionClassified, TransactionFlags } from '../mempool.interfaces';
 import config from '../config';
 import { NodeSocket } from '../repositories/NodesSocketsRepository';
 import { isIP } from 'net';
@@ -292,7 +292,7 @@ export class Common {
         dustSize += getVarIntLength(dustSize);
         // add value size
         dustSize += 8;
-        if (['v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr'].includes(vout.scriptpubkey_type)) {
+        if (Common.isWitnessProgram(vout.scriptpubkey)) {
           dustSize += 67;
         } else {
           dustSize += 148;
@@ -503,12 +503,15 @@ export class Common {
     let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
     // Update variable flags (CPFP, RBF)
+    flags &= ~TransactionFlags.cpfp_child;
     if (tx.ancestors?.length) {
       flags |= TransactionFlags.cpfp_child;
     }
+    flags &= ~TransactionFlags.cpfp_parent;
     if (tx.descendants?.length) {
       flags |= TransactionFlags.cpfp_parent;
     }
+    flags &= ~TransactionFlags.replacement;
     if (tx.replacement) {
       flags |= TransactionFlags.replacement;
     }
@@ -544,11 +547,10 @@ export class Common {
           case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
           case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
           case 'v1_p2tr': {
-            if (!vin.witness?.length) {
-              throw new Error('Taproot input missing witness data');
-            }
             flags |= TransactionFlags.p2tr;
-            flags = Common.decodeTaprootFlags(vin, flags);
+            if (vin.witness?.length) {
+              flags = Common.decodeTaprootFlags(vin, flags);
+            }
           } break;
         }
       } else {
@@ -889,96 +891,6 @@ export class Common {
         addr: formatted.url,
       };
     }
-  }
-
-  static calculateCpfp(height: number, transactions: TransactionExtended[], saveRelatives: boolean = false): CpfpSummary {
-    const clusters: CpfpCluster[] = []; // list of all cpfp clusters in this block
-    const clusterMap: { [txid: string]: CpfpCluster } = {}; // map transactions to their cpfp cluster
-    let clusterTxs: TransactionExtended[] = []; // working list of elements of the current cluster
-    let ancestors: { [txid: string]: boolean } = {}; // working set of ancestors of the current cluster root
-    const txMap: { [txid: string]: TransactionExtended } = {};
-    // initialize the txMap
-    for (const tx of transactions) {
-      txMap[tx.txid] = tx;
-    }
-    // reverse pass to identify CPFP clusters
-    for (let i = transactions.length - 1; i >= 0; i--) {
-      const tx = transactions[i];
-      if (!ancestors[tx.txid]) {
-        let totalFee = 0;
-        let totalVSize = 0;
-        clusterTxs.forEach(tx => {
-          totalFee += tx?.fee || 0;
-          totalVSize += (tx.weight / 4);
-        });
-        const effectiveFeePerVsize = totalFee / totalVSize;
-        let cluster: CpfpCluster;
-        if (clusterTxs.length > 1) {
-          cluster = {
-            root: clusterTxs[0].txid,
-            height,
-            txs: clusterTxs.map(tx => { return { txid: tx.txid, weight: tx.weight, fee: tx.fee || 0 }; }),
-            effectiveFeePerVsize,
-          };
-          clusters.push(cluster);
-        }
-        clusterTxs.forEach(tx => {
-          txMap[tx.txid].effectiveFeePerVsize = effectiveFeePerVsize;
-          if (cluster) {
-            clusterMap[tx.txid] = cluster;
-          }
-        });
-        // reset working vars
-        clusterTxs = [];
-        ancestors = {};
-      }
-      clusterTxs.push(tx);
-      tx.vin.forEach(vin => {
-        ancestors[vin.txid] = true;
-      });
-    }
-    // forward pass to enforce ancestor rate caps
-    for (const tx of transactions) {
-      let minAncestorRate = tx.effectiveFeePerVsize;
-      for (const vin of tx.vin) {
-        if (txMap[vin.txid]?.effectiveFeePerVsize) {
-          minAncestorRate = Math.min(minAncestorRate, txMap[vin.txid].effectiveFeePerVsize);
-        }
-      }
-      // check rounded values to skip cases with almost identical fees
-      const roundedMinAncestorRate = Math.ceil(minAncestorRate);
-      const roundedEffectiveFeeRate = Math.floor(tx.effectiveFeePerVsize);
-      if (roundedMinAncestorRate < roundedEffectiveFeeRate) {
-        tx.effectiveFeePerVsize = minAncestorRate;
-        if (!clusterMap[tx.txid]) {
-          // add a single-tx cluster to record the dependent rate
-          const cluster = {
-            root: tx.txid,
-            height,
-            txs: [{ txid: tx.txid, weight: tx.weight, fee: tx.fee || 0 }],
-            effectiveFeePerVsize: minAncestorRate,
-          };
-          clusterMap[tx.txid] = cluster;
-          clusters.push(cluster);
-        } else {
-          // update the existing cluster with the dependent rate
-          clusterMap[tx.txid].effectiveFeePerVsize = minAncestorRate;
-        }
-      }
-    }
-    if (saveRelatives) {
-      for (const cluster of clusters) {
-        cluster.txs.forEach((member, index) => {
-          txMap[member.txid].descendants = cluster.txs.slice(0, index).reverse();
-          txMap[member.txid].ancestors = cluster.txs.slice(index + 1).reverse();
-          txMap[member.txid].effectiveFeePerVsize = cluster.effectiveFeePerVsize;
-        });
-      }
-    }
-    return {
-      transactions,
-      clusters,
-    };
   }
 
   static calcEffectiveFeeStatistics(transactions: { weight: number, fee: number, effectiveFeePerVsize?: number, txid: string, acceleration?: boolean }[]): EffectiveFeeStats {

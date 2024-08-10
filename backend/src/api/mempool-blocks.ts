@@ -353,6 +353,9 @@ class MempoolBlocks {
     for (const txid of Object.keys(candidates?.txs ?? mempool)) {
       if (txid in mempool) {
         mempool[txid].cpfpDirty = false;
+        mempool[txid].ancestors = [];
+        mempool[txid].descendants = [];
+        mempool[txid].bestDescendant = null;
       }
     }
     for (const [txid, rate] of rates) {
@@ -449,12 +452,16 @@ class MempoolBlocks {
             }
             mempoolTx.acceleration = true;
             mempoolTx.acceleratedBy = isAcceleratedBy[txid] || acceleration?.pools;
+            mempoolTx.acceleratedAt = acceleration?.added;
+            mempoolTx.feeDelta = acceleration?.feeDelta;
             for (const ancestor of mempoolTx.ancestors || []) {
               if (!mempool[ancestor.txid].acceleration) {
                 mempool[ancestor.txid].cpfpDirty = true;
               }
               mempool[ancestor.txid].acceleration = true;
               mempool[ancestor.txid].acceleratedBy = mempoolTx.acceleratedBy;
+              mempool[ancestor.txid].acceleratedAt = mempoolTx.acceleratedAt;
+              mempool[ancestor.txid].feeDelta = mempoolTx.feeDelta;
               isAcceleratedBy[ancestor.txid] = mempoolTx.acceleratedBy;
             }
           } else {
