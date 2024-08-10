@@ -215,8 +215,6 @@ export class AddressTypeInfo {
   }
 
   private processScript(script: ScriptInfo): void {
-    console.log(script);
-
     this.scripts.set(script.key, script);
     if (script.template?.type === 'multisig') {
       this.isMultisig = { m: script.template['m'], n: script.template['n'] };
