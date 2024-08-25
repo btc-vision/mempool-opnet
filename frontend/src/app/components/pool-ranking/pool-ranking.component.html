@@ -37,7 +37,7 @@
       <button class="btn p-0 pl-2" style="margin: 0 0 4px 0px" (click)="onSaveChart()">
         <fa-icon [icon]="['fas', 'download']" [fixedWidth]="true"></fa-icon>
       </button>
-    </div>  
+    </div>
     <form [formGroup]="radioGroupForm" class="formRadioGroup"
       *ngIf="!widget && (miningStatsObservable$ | async) as stats">
       <div class="btn-group btn-group-toggle" name="radioBasic">
@@ -102,35 +102,35 @@
         <tr *ngFor="let pool of miningStats.pools">
           <td class="d-none d-md-table-cell">{{ pool.rank }}</td>
           <td class="text-right">
-            <img width="25" height="25" src="{{ pool.logo }}" [alt]="pool.name + ' mining pool logo'" onError="this.onerror=null; this.src = '/resources/mining-pools/default.svg'">
+            <img width="25" height="25" src="{{ pool.logo }}" [alt]="pool?.name + ' mining pool logo'" onError="this.onerror=null; this.src = '/resources/mining-pools/default.svg'">
           </td>
-          <td class="pool-name"><a [routerLink]="[('/mining/pool/' + pool.slug) | relativeUrl]">{{ pool.name }}</a></td>
-          <td class="" *ngIf="this.miningWindowPreference === '24h'">{{ pool.lastEstimatedHashrate | number: '1.2-2' }} {{
+          <td class="pool-name"><a [routerLink]="[('/mining/pool/' + pool?.slug) | relativeUrl]">{{ pool?.name }}</a></td>
+          <td class="" *ngIf="this.miningWindowPreference === '24h'">{{ pool?.lastEstimatedHashrate | number: '1.2-2' }} {{
             miningStats.miningUnits.hashrateUnit }}</td>
           <td class="d-flex justify-content-center">
-            {{ pool.blockCount }}<span class="d-none d-md-table-cell">&nbsp;({{ pool.share }}%)</span>
+            {{ pool?.blockCount }}<span class="d-none d-md-table-cell">&nbsp;({{ pool?.share }}%)</span>
           </td>
           <td *ngIf="auditAvailable" class="health text-right" [ngClass]="{'widget': widget, 'legacy': !indexingAvailable, 'health-column': this.miningWindowPreference === '24h'}">
             <a
               class="health-badge badge"
-              [class.badge-success]="pool.avgMatchRate >= 99"
-              [class.badge-warning]="pool.avgMatchRate >= 75 && pool.avgMatchRate < 99"
-              [class.badge-danger]="pool.avgMatchRate < 75"
-              *ngIf="pool.avgMatchRate != null; else nullHealth"
-            >{{ pool.avgMatchRate }}%</a>
+              [class.badge-success]="pool?.avgMatchRate >= 99"
+              [class.badge-warning]="pool?.avgMatchRate >= 75 && pool?.avgMatchRate < 99"
+              [class.badge-danger]="pool?.avgMatchRate < 75"
+              *ngIf="pool?.avgMatchRate != null; else nullHealth"
+            >{{ pool?.avgMatchRate }}%</a>
             <ng-template #nullHealth>
               <span class="health-badge badge badge-secondary" i18n="unknown">Unknown</span>
             </ng-template>
           </td>
           <td *ngIf="auditAvailable" class="d-none d-sm-table-cell">
-            <span *ngIf="pool.avgFeeDelta != null; else nullFeeDelta" class="difference" [class.positive]="pool.avgFeeDelta >= 0" [class.negative]="pool.avgFeeDelta < 0">
-              {{ pool.avgFeeDelta > 0 ? '+' : '' }}{{ (pool.avgFeeDelta * 100) | amountShortener: 2 }}%
+            <span *ngIf="pool.avgFeeDelta != null; else nullFeeDelta" class="difference" [class.positive]="pool?.avgFeeDelta >= 0" [class.negative]="pool?.avgFeeDelta < 0">
+              {{ pool.avgFeeDelta > 0 ? '+' : '' }}{{ (pool?.avgFeeDelta * 100) | amountShortener: 2 }}%
             </span>
             <ng-template #nullFeeDelta>
               -
             </ng-template>
-          </td>        
-          <td class="d-none d-lg-table-cell">{{ pool.emptyBlocks }} ({{ pool.emptyBlockRatio }}%)</td>
+          </td>
+          <td class="d-none d-lg-table-cell">{{ pool?.emptyBlocks }} ({{ pool?.emptyBlockRatio }}%)</td>
         </tr>
         <tr style="border-top: 1px solid #555">
           <td class="d-none d-md-table-cell"></td>

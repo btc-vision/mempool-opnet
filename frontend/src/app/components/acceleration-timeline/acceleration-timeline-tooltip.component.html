@@ -48,11 +48,11 @@
         <td class="label" i18n="transaction.accelerated-by-hashrate|Accelerated to hashrate">Accelerated by</td>
         <td class="value" *ngIf="accelerationInfo.pools">
           <ng-container *ngFor="let pool of accelerationInfo.pools">
-            <img *ngIf="accelerationInfo.poolsData[pool]" 
-              class="pool-logo" 
+            <img *ngIf="accelerationInfo.poolsData[pool]"
+              class="pool-logo"
               [style.opacity]="accelerationInfo?.minedByPoolUniqueId && pool !== accelerationInfo?.minedByPoolUniqueId ? '0.3' : '1'"
-              [src]="'/resources/mining-pools/' + accelerationInfo.poolsData[pool].slug + '.svg'" 
-              onError="this.src = '/resources/mining-pools/default.svg'" 
+              [src]="'/resources/mining-pools/' + accelerationInfo.poolsData[pool]?.slug + '.svg'"
+              onError="this.src = '/resources/mining-pools/default.svg'"
               [alt]="'Logo of ' + pool.name + ' mining pool'">
           </ng-container>
         </td>

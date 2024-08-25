@@ -60,9 +60,9 @@
           </ng-container>
         </div>
         <div class="animated" *ngIf="block.extras?.pool != undefined && showPools">
-          <a [attr.data-cy]="'bitcoin-block-' + offset + '-index-' + i + '-pool'" class="badge" [routerLink]="[('/mining/pool/' + block.extras.pool.slug) | relativeUrl]">
-            <img class="pool-logo" [src]="'/resources/mining-pools/' + block.extras.pool.slug + '.svg'" onError="this.src = '/resources/mining-pools/default.svg'" [alt]="'Logo of ' + block.extras.pool.name + ' mining pool'"> 
-            {{ block.extras.pool.name}}
+          <a [attr.data-cy]="'bitcoin-block-' + offset + '-index-' + i + '-pool'" class="badge" [routerLink]="[('/mining/pool/' + block.extras.pool?.slug) | relativeUrl]">
+            <img class="pool-logo" [src]="'/resources/mining-pools/' + block.extras.pool?.slug + '.svg'" onError="this.src = '/resources/mining-pools/default.svg'" [alt]="'Logo of ' + block.extras.pool?.name + ' mining pool'">
+            {{ block.extras.pool?.name}}
           </a>
         </div>
       </div>
@@ -72,7 +72,7 @@
         <div [attr.data-cy]="'bitcoin-block-' + offset + '-index-' + i"
           class="text-center bitcoin-block mined-block placeholder-block blockchain-blocks-{{ i }}"
           id="bitcoin-block-{{ block.height }}" [ngStyle]="blockStyles[i]">
- 
+
         </div>
       </ng-container>
     </ng-template>
