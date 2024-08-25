@@ -59,7 +59,7 @@ export class PoolComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.slugSubscription = this.route.params.pipe(map((params) => params.slug)).subscribe((slug) => {
+    this.slugSubscription = this.route.params.pipe(map((params) => params?.slug)).subscribe((slug) => {
       this.isLoading = true;
       this.blocks = [];
       this.chartOptions = {};
@@ -88,7 +88,7 @@ export class PoolComponent implements OnInit {
           poolStats.pool.regexes = regexes.slice(0, -3);
 
           return Object.assign({
-            logo: `/resources/mining-pools/` + poolStats.pool.slug + '.svg'
+            logo: `/resources/mining-pools/` + poolStats.pool?.slug + '.svg'
           }, poolStats);
         }),
         catchError(() => {

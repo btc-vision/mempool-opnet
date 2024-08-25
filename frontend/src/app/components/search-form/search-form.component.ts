@@ -328,7 +328,7 @@ export class SearchFormComponent implements OnInit {
       this.apiService.listPools$('1y')
     ]).pipe(
       map(([poolsResponse, activePoolsResponse]) => {
-        const activePoolSlugs = new Set(activePoolsResponse.body.pools.map(pool => pool.slug));
+        const activePoolSlugs = new Set(activePoolsResponse.body.pools.map(pool => pool?.slug));
 
         return poolsResponse.body.map(pool => ({
           name: pool?.name,
@@ -339,7 +339,7 @@ export class SearchFormComponent implements OnInit {
           .sort((a, b) => {
             if (a.active && !b.active) return -1;
             if (!a.active && b.active) return 1;
-            return a.slug < b.slug ? -1 : 1;
+            return a?.slug < b?.slug ? -1 : 1;
           });
 
       }),
