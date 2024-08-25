@@ -162,7 +162,7 @@ export class BlocksList implements OnInit {
             this.blocksCount = Math.max(this.blocksCount, blocks[1][0].height) + 1;
             if (this.isMempoolModule) {
               // @ts-ignore: Need to add an extra field for the template
-              blocks[1][0].extras.pool?.logo = `/resources/mining-pools/` +
+              blocks[1][0].extras.pool.logo = `/resources/mining-pools/` +
                 blocks[1][0].extras.pool?.slug + '.svg';
             }
             acc.unshift(blocks[1][0]);
