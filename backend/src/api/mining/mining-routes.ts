@@ -58,7 +58,7 @@ class MiningRoutes {
       }
       const timestamp = parseInt(req.query.timestamp as string, 10) || 0;
       const currency = req.query.currency as string;
-      
+
       let response;
       if (timestamp && currency) {
         response = await PricesRepository.$getNearestHistoricalPrice(timestamp, currency);
@@ -77,7 +77,7 @@ class MiningRoutes {
 
   private async $getPool(req: Request, res: Response): Promise<void> {
     try {
-      const stats = await mining.$getPoolStat(req.params.slug);
+      const stats = await mining.$getPoolStat(req.params?.slug);
       res.header('Pragma', 'public');
       res.header('Cache-control', 'public');
       res.setHeader('Expires', new Date(Date.now() + 1000 * 60).toUTCString());
@@ -94,7 +94,7 @@ class MiningRoutes {
   private async $getPoolBlocks(req: Request, res: Response) {
     try {
       const poolBlocks = await BlocksRepository.$getBlocksByPool(
-        req.params.slug,
+        req.params?.slug,
         req.params.height === undefined ? undefined : parseInt(req.params.height, 10),
       );
       res.header('Pragma', 'public');

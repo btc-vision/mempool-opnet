@@ -31,6 +31,7 @@ class PoolsParser {
 
   public setMiningPools(pools): void {
     for (const pool of pools) {
+      if(!pool) continue;
       pool.regexes = pool.tags;
       pool.slug = pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
       delete(pool.tags);
