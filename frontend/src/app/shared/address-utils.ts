@@ -29,6 +29,13 @@ const ADDRESS_PREFIXES = {
     },
     bech32: 'bc1',
   },
+  luckycoin: {
+    base58: {
+      pubkey: ['47'],
+      script: ['5'],
+    },
+    bech32: 'bc1',
+  },
   testnet: {
     base58: {
       pubkey: ['m', 'n'],
