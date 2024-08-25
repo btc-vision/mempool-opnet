@@ -62,7 +62,7 @@ export class PoolComponent implements OnInit {
     this.slugSubscription = this.route.params.pipe(map((params) => params.slug)).subscribe((slug) => {
       this.isLoading = true;
       this.blocks = [];
-      this.chartOptions = {};  
+      this.chartOptions = {};
       this.slug = slug;
       this.initializeObservables();
     });
@@ -118,7 +118,7 @@ export class PoolComponent implements OnInit {
         share(),
       );
 
-    this.oobFees$ = this.route.params.pipe(map((params) => params.slug)).pipe(
+    this.oobFees$ = this.route.params.pipe(map((params) => params?.slug)).pipe(
       filter(() => this.stateService.env.PUBLIC_ACCELERATIONS === true && this.stateService.network === ''),
       switchMap(slug => {
         return combineLatest([
@@ -188,9 +188,9 @@ export class PoolComponent implements OnInit {
               hashrateString = `${tick.marker} ${tick.seriesName}: ${formatNumber(hashrateData, this.locale, '1.0-0')} ${hashratePowerOfTen.unit}H/s<br>`;
             } else if (tick.seriesIndex === 1) {
               dominanceString = `${tick.marker} ${tick.seriesName}: ${formatNumber(tick.data[1], this.locale, '1.0-2')}%`;
-            }             
+            }
           }
-          
+
           return `
             <b style="color: white; margin-left: 18px">${ticks[0].axisValueLabel}</b><br>
             <span>${hashrateString}</span>

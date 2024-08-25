@@ -132,6 +132,10 @@ export class PoolRankingComponent implements OnInit {
     }
 
     miningStats.pools.forEach((pool) => {
+      if(!pool) {
+        return;
+      }
+
       if (parseFloat(pool.share) < poolShareThreshold) {
         totalShareOther += parseFloat(pool.share);
         totalBlockOther += pool.blockCount;
@@ -171,7 +175,7 @@ export class PoolRankingComponent implements OnInit {
             }
           }
         },
-        data: pool.slug,
+        data: pool?.slug,
       } as PieSeriesOption);
     });
 

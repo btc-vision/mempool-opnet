@@ -62,8 +62,8 @@ export class MiningService {
       );
     }
   }
-  
-  /** 
+
+  /**
    * Get names and slugs of all pools
    */
   public getPools(): Observable<any[]> {
@@ -73,7 +73,7 @@ export class MiningService {
         return this.poolsData;
       })
     );
-    
+
   }
   /**
    * Set the hashrate power of ten we want to display
@@ -130,7 +130,7 @@ export class MiningService {
         share: parseFloat((poolStat.blockCount / stats.blockCount * 100).toFixed(2)),
         lastEstimatedHashrate: poolStat.blockCount / stats.blockCount * stats.lastEstimatedHashrate / hashrateDivider,
         emptyBlockRatio: (poolStat.emptyBlocks / poolStat.blockCount * 100).toFixed(2),
-        logo: `/resources/mining-pools/` + poolStat.slug + '.svg',
+        logo: `/resources/mining-pools/` + poolStat?.slug + '.svg',
         ...poolStat
       };
     });
