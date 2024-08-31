@@ -51,7 +51,7 @@ export class NodesPerISPChartComponent implements OnInit {
   ngOnInit(): void {
     if (!this.widget) {
       this.seoService.setTitle($localize`:@@8573a1576789bd2c4faeaed23037c4917812c6cf:Lightning Nodes Per ISP`);
-      this.seoService.setDescription($localize`:@@meta.description.lightning.nodes-per-isp:Browse the top 100 ISPs hosting Lightning nodes along with stats like total number of nodes per ISP, aggregate BTC capacity per ISP, and more`);
+      this.seoService.setDescription($localize`:@@meta.description.lightning.nodes-per-isp:Browse the top 100 ISPs hosting Lightning nodes along with stats like total number of nodes per ISP, aggregate tFB capacity per ISP, and more`);
     }
 
     this.nodesPerAsObservable$ = combineLatest([
@@ -161,7 +161,7 @@ export class NodesPerISPChartComponent implements OnInit {
             const nodeCount = isp[4].toString();
             return `<b style="color: white">${isp[1]} (${this.sortBy === 'capacity' ? isp[7] : isp[6]}%)</b><br>` +
               $localize`${nodeCount} nodes` + `<br>` +
-              $localize`${this.amountShortenerPipe.transform(isp[2] / 100000000, 2)} BTC`
+              $localize`${this.amountShortenerPipe.transform(isp[2] / 100000000, 2)} tFB`
             ;
           }
         },
@@ -194,7 +194,7 @@ export class NodesPerISPChartComponent implements OnInit {
           const nodeCount = nodeCountOther.toString();
           return `<b style="color: white">` + $localize`Other (${totalShareOther.toFixed(2) + '%'})` + `</b><br>` +
             $localize`${nodeCount} nodes` + `<br>` +
-            $localize`${this.amountShortenerPipe.transform(capacityOther / 100000000, 2)} BTC`;
+            $localize`${this.amountShortenerPipe.transform(capacityOther / 100000000, 2)} tFB`;
         }
       },
       data: 9999 as any,

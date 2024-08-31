@@ -76,7 +76,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setTitle($localize`:@@41545303ec98792b738d6237adbd1f3b54a22196:Block Fees Vs Subsidy`);
-    this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.block-fees-subsidy:See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in BTC and USD over time.`);
+    this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.block-fees-subsidy:See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in tFB and USD over time.`);
 
     this.miningWindowPreference = this.miningService.getDefaultTimespan('24h');
     this.radioGroupForm = this.formBuilder.group({ dateSpan: this.miningWindowPreference });
@@ -111,7 +111,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
                   blockSubsidyFiat: response.body.filter(val => val['USD'] > 0).map(val => this.subsidyAt(val.avgHeight) / 100_000_000 * val['USD']),
                   blockSubsidyPercent: response.body.map(val => this.subsidyAt(val.avgHeight) / (val.avgFees + this.subsidyAt(val.avgHeight)) * 100),
                 };
-                
+
                 this.prepareChartOptions();
                 this.isLoading = false;
               }),
@@ -175,11 +175,11 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
           for (let i = data.length - 1; i >= 0; i--) {
             const tick = data[i];
             tooltip += `${tick.marker} ${tick.seriesName.split(' ')[0]}: `;
-            if (this.displayMode === 'normal') tooltip += `${formatNumber(tick.data, this.locale, '1.0-3')} BTC<br>`;
+            if (this.displayMode === 'normal') tooltip += `${formatNumber(tick.data, this.locale, '1.0-3')} tFB<br>`;
             else if (this.displayMode === 'fiat') tooltip += `${this.fiatCurrencyPipe.transform(tick.data, null, 'USD') }<br>`;
             else tooltip += `${formatNumber(tick.data, this.locale, '1.0-2')}%<br>`;
           }
-          if (this.displayMode === 'normal') tooltip += `<div style="margin-left: 2px">${formatNumber(data.reduce((acc, val) => acc + val.data, 0), this.locale, '1.0-3')} BTC</div>`;
+          if (this.displayMode === 'normal') tooltip += `<div style="margin-left: 2px">${formatNumber(data.reduce((acc, val) => acc + val.data, 0), this.locale, '1.0-3')} tFB</div>`;
           else if (this.displayMode === 'fiat') tooltip += `<div style="margin-left: 2px">${this.fiatCurrencyPipe.transform(data.reduce((acc, val) => acc + val.data, 0), null, 'USD')}</div>`;
           if (['24h', '3d'].includes(this.zoomTimeSpan)) {
             tooltip += `<small>` + $localize`At block ${'<b style="color: white; margin-left: 2px">' + data[0].axisValue}` + `</small>`;
@@ -286,7 +286,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
           axisLabel: {
             color: 'var(--grey)',
             formatter: (val) => {
-              return `${val}${this.displayMode === 'percentage' ? '%' : ' BTC'}`;
+              return `${val}${this.displayMode === 'percentage' ? '%' : ' tFB'}`;
             }
           },
           min: 0,
@@ -485,7 +485,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
       tap((response) => {
         const startIndex = option.dataZoom[0].startValue;
         const endIndex = option.dataZoom[0].endValue;
-        
+
         // Update series with more granular data
         const lengthBefore = this.data.timestamp.length;
         this.data.timestamp.splice(startIndex, endIndex - startIndex, ...response.body.map(val => val.timestamp * 1000));
@@ -536,7 +536,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
   }
 
   getTimeRangeFromTimespan(from: number, to: number): string {
-    const timespan = to - from; 
+    const timespan = to - from;
     switch (true) {
       case timespan >= 3600 * 24 * 365 * 4: return 'all';
       case timespan >= 3600 * 24 * 365 * 3: return '4y';

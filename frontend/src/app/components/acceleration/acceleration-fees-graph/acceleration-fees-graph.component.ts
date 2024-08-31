@@ -79,7 +79,7 @@ export class AccelerationFeesGraphComponent implements OnInit, OnChanges, OnDest
     }
     this.radioGroupForm = this.formBuilder.group({ dateSpan: this.miningWindowPreference });
     this.radioGroupForm.controls.dateSpan.setValue(this.miningWindowPreference);
-    
+
     this.route.fragment.subscribe((fragment) => {
       if (['24h', '3d', '1w', '1m', '3m', 'all'].indexOf(fragment) > -1) {
         this.radioGroupForm.controls.dateSpan.setValue(fragment, { emitEvent: false });
@@ -168,7 +168,7 @@ export class AccelerationFeesGraphComponent implements OnInit, OnChanges, OnDest
           let tooltip = `<b style="color: white; margin-left: 2px">${formatterXAxis(this.locale, this.timespan, parseInt(ticks[0].axisValue, 10))}</b><br>`;
 
           if (ticks[0].data[1] > 10_000_000) {
-            tooltip += `${ticks[0].marker} ${ticks[0].seriesName}: ${formatNumber(ticks[0].data[1] / 100_000_000, this.locale, '1.0-8')} BTC<br>`;
+            tooltip += `${ticks[0].marker} ${ticks[0].seriesName}: ${formatNumber(ticks[0].data[1] / 100_000_000, this.locale, '1.0-8')} tFB<br>`;
           } else {
             tooltip += `${ticks[0].marker} ${ticks[0].seriesName}: ${formatNumber(ticks[0].data[1], this.locale, '1.0-0')} sats<br>`;
           }
@@ -224,7 +224,7 @@ export class AccelerationFeesGraphComponent implements OnInit, OnChanges, OnDest
             color: 'rgb(110, 112, 121)',
             formatter: (val) => {
               if (val >= 100_000) {
-                return `${(val / 100_000_000).toFixed(3)} BTC`;
+                return `${(val / 100_000_000).toFixed(3)} tFB`;
               } else {
                 return `${val} sats`;
               }

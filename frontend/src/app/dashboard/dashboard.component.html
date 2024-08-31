@@ -178,18 +178,18 @@
           </div>
         </div>
       </div>
-  
+
       <div class="col">
         <div class="card-liquid card">
-          <h5 class="card-title" style="padding-top: 20px;" i18n="dashboard.lbtc-supply-against-btc-holdings">L-BTC Supply Against BTC Holdings</h5>
+          <h5 class="card-title" style="padding-top: 20px;" i18n="dashboard.lbtc-supply-against-btc-holdings">L-tFB Supply Against tFB Holdings</h5>
           <div class="card-body pl-0" style="padding-top: 10px;">
             <app-lbtc-pegs-graph [data]="fullHistory$ | async" [height]="lbtcPegGraphHeight"></app-lbtc-pegs-graph>
           </div>
         </div>
       </div>
-  
+
       <div class="col" style="margin-bottom: 1.47rem">
-        <div class="card-liquid card"> 
+        <div class="card-liquid card">
           <div class="card-body">
             <app-reserves-ratio-stats [fullHistory$]="fullHistory$" [emergencyUtxosStats$]="emergencySpentUtxosStats$"></app-reserves-ratio-stats>
             <app-reserves-ratio [currentPeg]="currentPeg$ | async" [currentReserves]="currentReserves$ | async"></app-reserves-ratio>
@@ -318,18 +318,18 @@
           </div>
         </div>
       </div>
-  
+
       <div class="col">
         <div class="card-liquid card">
-          <h5 class="card-title" style="padding-top: 20px;" i18n="dashboard.lbtc-supply-against-btc-holdings">L-BTC Supply Against BTC Holdings</h5>
+          <h5 class="card-title" style="padding-top: 20px;" i18n="dashboard.lbtc-supply-against-btc-holdings">L-tFB Supply Against tFB Holdings</h5>
           <div class="card-body pl-0" style="padding-top: 25px;">
             <app-lbtc-pegs-graph [height]="lbtcPegGraphHeight"></app-lbtc-pegs-graph>
           </div>
         </div>
       </div>
-  
+
       <div class="col" style="margin-bottom: 1.47rem">
-        <div class="card-liquid card"> 
+        <div class="card-liquid card">
           <div class="card-body">
             <app-reserves-ratio-stats></app-reserves-ratio-stats>
             <app-reserves-ratio></app-reserves-ratio>
