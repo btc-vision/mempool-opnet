@@ -45,6 +45,7 @@ class PoolsUpdater {
 
       logger.debug(`pools-v2.json sha | Current: ${this.currentSha} | Github: ${githubSha}`);
       if (this.currentSha !== null && this.currentSha === githubSha) {
+        console.log('equal');
         return;
       }
 
@@ -66,8 +67,10 @@ class PoolsUpdater {
       }
       const poolsJson = await this.query(this.poolsUrl);
       if (poolsJson === undefined) {
+        console.log('unable to fetch poolsJson');
         return;
       }
+      console.log(this.poolsUrl);
       poolsParser.setMiningPools(poolsJson);
 
       if (config.DATABASE.ENABLED === false) { // Don't run db operations
