@@ -44,7 +44,7 @@ class PoolsUpdater {
       }
 
       logger.debug(`pools-v2.json sha | Current: ${this.currentSha} | Github: ${githubSha}`);
-      if (this.currentSha !== null && this.currentSha === githubSha) {
+      if (this.currentSha !== null) { //&& this.currentSha === githubSha
         console.log('equal');
         return;
       }
