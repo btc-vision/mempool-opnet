@@ -43,7 +43,7 @@ class PoolsUpdater {
         this.currentSha = await this.getShaFromDb();
       }
 
-      logger.debug(`pools-v2.json sha | Current: ${this.currentSha} | Github: ${githubSha}`);
+      logger.debug(`pools-v2.json sha | Current: ${this.currentSha} | Github: ${githubSha} | Updated.`);
       if (this.currentSha !== null) { //&& this.currentSha === githubSha
         console.log('equal');
         return;
