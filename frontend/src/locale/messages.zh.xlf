@@ -1583,7 +1583,7 @@
         <note priority="1" from="description">accelerator.total-boost</note>
       </trans-unit>
       <trans-unit id="53475bdf4a94f0103f33211d02102859e9a8fe3e" datatype="html">
-        <source>tFB</source>
+        <source>FB</source>
         <target>比特币</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/acceleration/acceleration-stats/acceleration-stats.component.html</context>
@@ -1613,7 +1613,7 @@
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/recent-pegs-stats/recent-pegs-stats.component.html</context>
           <context context-type="linenumber">18</context>
         </context-group>
-        <note priority="1" from="description">tFB</note>
+        <note priority="1" from="description">FB</note>
         <note priority="1" from="meaning">shared.btc</note>
       </trans-unit>
       <trans-unit id="cf2ec414465d65ab24b354663d94d051a67e26e9" datatype="html">
@@ -2663,8 +2663,8 @@
         <note priority="1" from="description">Search Clear Button</note>
       </trans-unit>
       <trans-unit id="meta.description.liquid.assets" datatype="html">
-        <source>Explore all the assets issued on the Liquid network like L-tFB, L-CAD, USDT, and more.</source>
-        <target>探索 Liquid 网络上发行的所有资产，如 L-tFB、L-CAD、USDT 等。</target>
+        <source>Explore all the assets issued on the Liquid network like L-FB, L-CAD, USDT, and more.</source>
+        <target>探索 Liquid 网络上发行的所有资产，如 L-FB、L-CAD、USDT 等。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/assets/assets-nav/assets-nav.component.ts</context>
           <context context-type="linenumber">43</context>
@@ -2719,7 +2719,7 @@
         <note priority="1" from="description">Asset data load error</note>
       </trans-unit>
       <trans-unit id="0ae529953ee15ef7af41fe3a3c30a10de5347f34" datatype="html">
-        <source>tFB Holdings</source>
+        <source>FB Holdings</source>
         <target>BTC控股</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/balance-widget/balance-widget.component.html</context>
@@ -2830,8 +2830,8 @@
         <note priority="1" from="description">mining.block-fees</note>
       </trans-unit>
       <trans-unit id="meta.description.bitcoin.graphs.block-fees" datatype="html">
-        <source>See the average mining fees earned per Bitcoin block visualized in tFB and USD over time.</source>
-        <target>以 tFB 和美元为单位，查看每个比特币区块在一段时间内赚取的平均采矿费。</target>
+        <source>See the average mining fees earned per Bitcoin block visualized in FB and USD over time.</source>
+        <target>以 FB 和美元为单位，查看每个比特币区块在一段时间内赚取的平均采矿费。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/block-fees-graph/block-fees-graph.component.ts</context>
           <context context-type="linenumber">70</context>
@@ -2891,7 +2891,7 @@
         <note priority="1" from="description">mining.block-fees-subsidy-subsidy</note>
       </trans-unit>
       <trans-unit id="meta.description.bitcoin.graphs.block-fees-subsidy" datatype="html">
-        <source>See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in tFB and USD over time.</source>
+        <source>See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in FB and USD over time.</source>
         <target>查看每个比特币区块赚取的采矿费与比特币区块补贴的比较，以比特币和美元为单位，可视化显示一段时间内的情况。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/block-fees-subsidy-graph/block-fees-subsidy-graph.component.ts</context>
@@ -3306,8 +3306,8 @@
         <note priority="1" from="description">mining.block-rewards</note>
       </trans-unit>
       <trans-unit id="meta.description.bitcoin.graphs.block-rewards" datatype="html">
-        <source>See Bitcoin block rewards in tFB and USD visualized over time. Block rewards are the total funds miners earn from the block subsidy and fees.</source>
-        <target>查看比特币区块奖励（以 tFB 和 USD 为单位）随时间的变化。区块奖励是矿工从区块补贴和转账费用中获得的总资金。</target>
+        <source>See Bitcoin block rewards in FB and USD visualized over time. Block rewards are the total funds miners earn from the block subsidy and fees.</source>
+        <target>查看比特币区块奖励（以 FB 和 USD 为单位）随时间的变化。区块奖励是矿工从区块补贴和转账费用中获得的总资金。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/block-rewards-graph/block-rewards-graph.component.ts</context>
           <context context-type="linenumber">68</context>
@@ -5328,8 +5328,8 @@
         <note priority="1" from="description">liquid.non-dust-expired</note>
       </trans-unit>
       <trans-unit id="506d3b3e461d170c39745288b9ea96b9ac9b7f78" datatype="html">
-        <source>Total amount of tFB held in non-dust Federation UTXOs that have expired timelocks</source>
-        <target>非尘联邦UTXO持有的已过期时间锁的 tFB 总量</target>
+        <source>Total amount of FB held in non-dust Federation UTXOs that have expired timelocks</source>
+        <target>非尘联邦UTXO持有的已过期时间锁的 FB 总量</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/expired-utxos-stats/expired-utxos-stats.component.html</context>
           <context context-type="linenumber">5</context>
@@ -5363,8 +5363,8 @@
         <note priority="1" from="description">liquid.total-expired</note>
       </trans-unit>
       <trans-unit id="a1351919fe237825d7d5844cff22192f88bd1eb4" datatype="html">
-        <source>Total amount of tFB held in Federation UTXOs that have expired timelocks</source>
-        <target>已过期时间锁的联邦未花费输出中持有的 tFB 总量</target>
+        <source>Total amount of FB held in Federation UTXOs that have expired timelocks</source>
+        <target>已过期时间锁的联邦未花费输出中持有的 FB 总量</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/expired-utxos-stats/expired-utxos-stats.component.html</context>
           <context context-type="linenumber">15</context>
@@ -5537,7 +5537,7 @@
         <note priority="1" from="description">liquid.fund-redemption-tx</note>
       </trans-unit>
       <trans-unit id="4dbfcaee1d2f0308bd20b3b6b6655ba1e04330dc" datatype="html">
-        <source>tFB Address</source>
+        <source>FB Address</source>
         <target>比特币地址</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/recent-pegs-list/recent-pegs-list.component.html</context>
@@ -5600,8 +5600,8 @@
         <note priority="1" from="description">liquid.unpeg</note>
       </trans-unit>
       <trans-unit id="52b32e9a8be459e6539a9b9214c2a17b23206a6c" datatype="html">
-        <source>Number of times that the Federation's tFB holdings fall below 95% of the total L-tFB supply</source>
-        <target>联邦 tFB 持有量低于 L-tFB 总供应量 95% 的次数</target>
+        <source>Number of times that the Federation's FB holdings fall below 95% of the total L-FB supply</source>
+        <target>联邦 FB 持有量低于 L-FB 总供应量 95% 的次数</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/reserves-ratio-stats/reserves-ratio-stats.component.html</context>
           <context context-type="linenumber">6</context>
@@ -5653,8 +5653,8 @@
         </context-group>
       </trans-unit>
       <trans-unit id="eb7a000cd340b44291d790f7b56f7b926edc275b" datatype="html">
-        <source>L-tFB in circulation</source>
-        <target>流通中的L-tFB</target>
+        <source>L-FB in circulation</source>
+        <target>流通中的L-FB</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/liquid-reserves-audit/reserves-supply-stats/reserves-supply-stats.component.html</context>
           <context context-type="linenumber">3</context>
@@ -6405,13 +6405,13 @@
         <note priority="1" from="description">mining.fees-per-block-desc</note>
       </trans-unit>
       <trans-unit id="0705223420d290a218e4ed83bd4d904454a9cee8" datatype="html">
-        <source>tFB/block</source>
-        <target>tFB/块</target>
+        <source>FB/block</source>
+        <target>FB/块</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/reward-stats/reward-stats.component.html</context>
           <context context-type="linenumber">21</context>
         </context-group>
-        <note priority="1" from="description">tFB/block</note>
+        <note priority="1" from="description">FB/block</note>
         <note priority="1" from="meaning">shared.btc-block</note>
       </trans-unit>
       <trans-unit id="cf3a97b1c1546b843411cfe101bc55ba2ac46bac" datatype="html">
@@ -7927,8 +7927,8 @@
         <note priority="1" from="description">liquid.federation-expired-utxos</note>
       </trans-unit>
       <trans-unit id="061051c88f1c686bcf3b40a81c8e824ef2ca7ae0" datatype="html">
-        <source>L-tFB Supply Against tFB Holdings</source>
-        <target>L-tFB 供应量与 tFB 持有量对比</target>
+        <source>L-FB Supply Against FB Holdings</source>
+        <target>L-FB 供应量与 FB 持有量对比</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/dashboard/dashboard.component.html</context>
           <context context-type="linenumber">184</context>
@@ -9481,8 +9481,8 @@
         <note priority="1" from="description">lightning.share</note>
       </trans-unit>
       <trans-unit id="meta.description.lightning.nodes-country-overview" datatype="html">
-        <source>See a geographical breakdown of the Lightning network: how many Lightning nodes are hosted in countries around the world, aggregate tFB capacity for each country, and more.</source>
-        <target>查看闪电网络的地理分布：世界各国托管着多少个闪电节点、每个国家的总 tFB 容量等等。</target>
+        <source>See a geographical breakdown of the Lightning network: how many Lightning nodes are hosted in countries around the world, aggregate FB capacity for each country, and more.</source>
+        <target>查看闪电网络的地理分布：世界各国托管着多少个闪电节点、每个国家的总 FB 容量等等。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/lightning/nodes-per-country-chart/nodes-per-country-chart.component.ts</context>
           <context context-type="linenumber">47</context>
@@ -9509,8 +9509,8 @@
         </context-group>
       </trans-unit>
       <trans-unit id="7032954508645880700" datatype="html">
-        <source><x id="PH" equiv-text="this.amountShortenerPipe.transform(country.capacity / 100000000, 2)"/> tFB capacity</source>
-        <target><x id="PH" equiv-text="this.amountShortenerPipe.transform(country.capacity / 100000000, 2)"/>tFB 容量</target>
+        <source><x id="PH" equiv-text="this.amountShortenerPipe.transform(country.capacity / 100000000, 2)"/> FB capacity</source>
+        <target><x id="PH" equiv-text="this.amountShortenerPipe.transform(country.capacity / 100000000, 2)"/>FB 容量</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/lightning/nodes-per-country-chart/nodes-per-country-chart.component.ts</context>
           <context context-type="linenumber">105</context>
@@ -9635,16 +9635,16 @@
         <note priority="1" from="description">lightning.top-100-isp-ln</note>
       </trans-unit>
       <trans-unit id="meta.description.lightning.nodes-per-isp" datatype="html">
-        <source>Browse the top 100 ISPs hosting Lightning nodes along with stats like total number of nodes per ISP, aggregate tFB capacity per ISP, and more</source>
-        <target>浏览托管闪电节点的前 100 家 ISP，以及每个 ISP 的节点总数、每个 ISP 的 tFB 总容量等统计数据</target>
+        <source>Browse the top 100 ISPs hosting Lightning nodes along with stats like total number of nodes per ISP, aggregate FB capacity per ISP, and more</source>
+        <target>浏览托管闪电节点的前 100 家 ISP，以及每个 ISP 的节点总数、每个 ISP 的 FB 总容量等统计数据</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/lightning/nodes-per-isp-chart/nodes-per-isp-chart.component.ts</context>
           <context context-type="linenumber">54</context>
         </context-group>
       </trans-unit>
       <trans-unit id="3627306100664959238" datatype="html">
-        <source><x id="PH" equiv-text="this.amountShortenerPipe.transform(isp[2] / 100000000, 2)"/> tFB</source>
-        <target><x id="PH" equiv-text="this.amountShortenerPipe.transform(isp[2] / 100000000, 2)"/> tFB</target>
+        <source><x id="PH" equiv-text="this.amountShortenerPipe.transform(isp[2] / 100000000, 2)"/> FB</source>
+        <target><x id="PH" equiv-text="this.amountShortenerPipe.transform(isp[2] / 100000000, 2)"/> FB</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/lightning/nodes-per-isp-chart/nodes-per-isp-chart.component.ts</context>
           <context context-type="linenumber">164</context>
@@ -9762,8 +9762,8 @@
         </context-group>
       </trans-unit>
       <trans-unit id="meta.description.lightning.ranking.liquidity" datatype="html">
-        <source>See Lightning nodes with the most tFB liquidity deployed along with high-level stats like number of open channels, location, node age, and more.</source>
-        <target>查看部署了最多 tFB 流动性的闪电节点以及开放通道数量、位置、节点年龄等高级统计数据。</target>
+        <source>See Lightning nodes with the most FB liquidity deployed along with high-level stats like number of open channels, location, node age, and more.</source>
+        <target>查看部署了最多 FB 流动性的闪电节点以及开放通道数量、位置、节点年龄等高级统计数据。</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/lightning/nodes-ranking/top-nodes-per-capacity/top-nodes-per-capacity.component.ts</context>
           <context context-type="linenumber">35</context>

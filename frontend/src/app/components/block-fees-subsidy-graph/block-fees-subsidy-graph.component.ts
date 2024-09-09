@@ -76,7 +76,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setTitle($localize`:@@41545303ec98792b738d6237adbd1f3b54a22196:Block Fees Vs Subsidy`);
-    this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.block-fees-subsidy:See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in tFB and USD over time.`);
+    this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.block-fees-subsidy:See the mining fees earned per Bitcoin block compared to the Bitcoin block subsidy, visualized in FB and USD over time.`);
 
     this.miningWindowPreference = this.miningService.getDefaultTimespan('24h');
     this.radioGroupForm = this.formBuilder.group({ dateSpan: this.miningWindowPreference });
@@ -175,11 +175,11 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
           for (let i = data.length - 1; i >= 0; i--) {
             const tick = data[i];
             tooltip += `${tick.marker} ${tick.seriesName.split(' ')[0]}: `;
-            if (this.displayMode === 'normal') tooltip += `${formatNumber(tick.data, this.locale, '1.0-3')} tFB<br>`;
+            if (this.displayMode === 'normal') tooltip += `${formatNumber(tick.data, this.locale, '1.0-3')} FB<br>`;
             else if (this.displayMode === 'fiat') tooltip += `${this.fiatCurrencyPipe.transform(tick.data, null, 'USD') }<br>`;
             else tooltip += `${formatNumber(tick.data, this.locale, '1.0-2')}%<br>`;
           }
-          if (this.displayMode === 'normal') tooltip += `<div style="margin-left: 2px">${formatNumber(data.reduce((acc, val) => acc + val.data, 0), this.locale, '1.0-3')} tFB</div>`;
+          if (this.displayMode === 'normal') tooltip += `<div style="margin-left: 2px">${formatNumber(data.reduce((acc, val) => acc + val.data, 0), this.locale, '1.0-3')} FB</div>`;
           else if (this.displayMode === 'fiat') tooltip += `<div style="margin-left: 2px">${this.fiatCurrencyPipe.transform(data.reduce((acc, val) => acc + val.data, 0), null, 'USD')}</div>`;
           if (['24h', '3d'].includes(this.zoomTimeSpan)) {
             tooltip += `<small>` + $localize`At block ${'<b style="color: white; margin-left: 2px">' + data[0].axisValue}` + `</small>`;
@@ -286,7 +286,7 @@ export class BlockFeesSubsidyGraphComponent implements OnInit {
           axisLabel: {
             color: 'var(--grey)',
             formatter: (val) => {
-              return `${val}${this.displayMode === 'percentage' ? '%' : ' tFB'}`;
+              return `${val}${this.displayMode === 'percentage' ? '%' : ' FB'}`;
             }
           },
           min: 0,

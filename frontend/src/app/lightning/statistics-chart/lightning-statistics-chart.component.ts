@@ -176,7 +176,7 @@ export class LightningStatisticsChartComponent implements OnInit, OnChanges {
             if (tick.seriesIndex === 0) { // Channels
               sizeString = `${tick.marker} ${tick.seriesName}: ${formatNumber(tick.data[1], this.locale, '1.0-0')}`;
             } else if (tick.seriesIndex === 1) { // Capacity
-              weightString = `${tick.marker} ${tick.seriesName}: ${formatNumber(tick.data[1] / 100000000, this.locale, '1.0-0')} tFB`;
+              weightString = `${tick.marker} ${tick.seriesName}: ${formatNumber(tick.data[1] / 100000000, this.locale, '1.0-0')} FB`;
             }
           }
 

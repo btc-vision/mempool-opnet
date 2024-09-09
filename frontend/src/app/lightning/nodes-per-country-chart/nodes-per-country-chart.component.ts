@@ -44,7 +44,7 @@ export class NodesPerCountryChartComponent implements OnInit {
 
   ngOnInit(): void {
     this.seoService.setTitle($localize`:@@9d3ad4c6623870d96b65fb7a708fed6ce7c20044:Lightning Nodes Per Country`);
-    this.seoService.setDescription($localize`:@@meta.description.lightning.nodes-country-overview:See a geographical breakdown of the Lightning network: how many Lightning nodes are hosted in countries around the world, aggregate tFB capacity for each country, and more.`);
+    this.seoService.setDescription($localize`:@@meta.description.lightning.nodes-country-overview:See a geographical breakdown of the Lightning network: how many Lightning nodes are hosted in countries around the world, aggregate FB capacity for each country, and more.`);
     this.nodesPerCountryObservable$ = this.apiService.getNodesPerCountry$()
       .pipe(
         map(data => {
@@ -102,7 +102,7 @@ export class NodesPerCountryChartComponent implements OnInit {
             const nodeCount = country.count.toString();
             return `<b style="color: white">${country.name.en} (${country.share}%)</b><br>` +
               $localize`${nodeCount} nodes` + `<br>` +
-              $localize`${this.amountShortenerPipe.transform(country.capacity / 100000000, 2)} tFB capacity`
+              $localize`${this.amountShortenerPipe.transform(country.capacity / 100000000, 2)} FB capacity`
             ;
           }
         },

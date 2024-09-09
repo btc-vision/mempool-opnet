@@ -18,7 +18,7 @@
 
         <div class="input-group input-group-lg mb-1">
           <div class="input-group-prepend">
-            <span class="input-group-text">tFB</span>
+            <span class="input-group-text">FB</span>
           </div>
           <input type="text" class="form-control" formControlName="bitcoin" (input)="transformInput('bitcoin')" (click)="selectAll($event)">
           <app-clipboard [button]="true" [text]="form.get('bitcoin').value" [class]="'btn btn-lg btn-secondary ml-1'"></app-clipboard>
