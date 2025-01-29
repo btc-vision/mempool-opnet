@@ -929,6 +929,10 @@ class Blocks {
       const blockSummary: BlockSummary = this.summarizeBlockTransactions(block.id, block.height, cpfpSummary.transactions);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
+      if(blockHeightTip === 4594) {
+        console.log('0', blockExtended);
+      }
+
       if (Common.indexingEnabled()) {
         if (!fastForwarded) {
           const lastBlock = await blocksRepository.$getBlockByHeight(blockExtended.height - 1);
@@ -997,6 +1001,10 @@ class Blocks {
             this.updateTimerProgress(timer, `saved cpfp for ${this.currentBlockHeight}`);
           }
         }
+      }
+
+      if(blockHeightTip === 4594) {
+        console.log('0.5', blockExtended);
       }
 
       // start async callbacks
