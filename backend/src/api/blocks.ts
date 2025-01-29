@@ -929,11 +929,14 @@ class Blocks {
       const blockSummary: BlockSummary = this.summarizeBlockTransactions(block.id, block.height, cpfpSummary.transactions);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
+      if(blockExtended.height === 4594) {
+        console.log('blockExtended', blockExtended);
+      }
+
       if (Common.indexingEnabled()) {
         if (!fastForwarded) {
           const lastBlock = await blocksRepository.$getBlockByHeight(blockExtended.height - 1);
           if(blockExtended.height === 4594) {
-            console.log('blockExtended', blockExtended);
             console.log('lastBlock', lastBlock);
           }
 
