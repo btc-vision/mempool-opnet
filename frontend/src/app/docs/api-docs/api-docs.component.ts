@@ -1,10 +1,10 @@
 import { Component, OnInit, Input, QueryList, AfterViewInit, ViewChildren } from '@angular/core';
-import { Env, StateService } from '../../services/state.service';
+import { Env, StateService } from '@app/services/state.service';
 import { Observable, merge, of, Subject, Subscription } from 'rxjs';
 import { tap, takeUntil } from 'rxjs/operators';
 import { ActivatedRoute } from "@angular/router";
-import { faqData, restApiDocsData, wsApiDocsData } from './api-docs-data';
-import { FaqTemplateDirective } from '../faq-template/faq-template.component';
+import { faqData, restApiDocsData, wsApiDocsData } from '@app/docs/api-docs/api-docs-data';
+import { FaqTemplateDirective } from '@app/docs/faq-template/faq-template.component';
 
 @Component({
   selector: 'app-api-docs',
@@ -145,7 +145,7 @@ export class ApiDocsComponent implements OnInit, AfterViewInit {
     if (document.getElementById( targetId + "-tab-header" )) {
       tabHeaderHeight = document.getElementById( targetId + "-tab-header" ).scrollHeight;
     }
-    if( ( window.innerWidth <= 992 ) && ( ( this.whichTab === 'rest' ) || ( this.whichTab === 'faq' ) ) && targetId ) {
+    if( ( window.innerWidth <= 992 ) && ( ( this.whichTab === 'rest' ) || ( this.whichTab === 'faq' ) || ( this.whichTab === 'websocket' ) ) && targetId ) {
       const endpointContainerEl = document.querySelector<HTMLElement>( "#" + targetId );
       const endpointContentEl = document.querySelector<HTMLElement>( "#" + targetId + " .endpoint-content" );
       const endPointContentElHeight = endpointContentEl.clientHeight;
@@ -207,12 +207,28 @@ export class ApiDocsComponent implements OnInit, AfterViewInit {
       text = text.replace('%{' + indexNumber + '}', curlText);
     }
 
-    if (websocket) {
-      const wsHostname = this.hostname.replace('https://', 'wss://');
-      wsHostname.replace('http://', 'ws://');
-      return `${wsHostname}${curlNetwork}${text}`;
-    }
     return `${this.hostname}${curlNetwork}${text}`;
+  }
+
+  websocketUrl(network: string) {
+    let curlNetwork = '';
+    if (this.env.BASE_MODULE === 'mempool') {
+      if (!['', 'mainnet'].includes(network)) {
+        curlNetwork = `/${network}`;
+      }
+    } else if (this.env.BASE_MODULE === 'liquid') {
+      if (!['', 'liquid'].includes(network)) {
+        curlNetwork = `/${network}`;
+      }
+    }
+
+    if (network === this.env.ROOT_NETWORK) {
+      curlNetwork = '';
+    }
+
+    let wsHostname = this.hostname.replace('https://', 'wss://');
+    wsHostname = wsHostname.replace('http://', 'ws://');
+    return `${wsHostname}${curlNetwork}/api/v1/ws`;
   }
 
 }

@@ -4,9 +4,8 @@
   <nav class="navbar navbar-expand-md navbar-dark">
   <!-- Hamburger -->
   <ng-container *ngIf="servicesEnabled">
-    <div *ngIf="user" class="profile_image_container" [class]="{'anon': !user.imageMd5}" (click)="hamburgerClick($event)">
-      <img *ngIf="user.imageMd5" [src]="'/api/v1/services/account/images/' + user.username + '/md5=' + user.imageMd5" class="profile_image">
-      <app-svg-images style="color: lightgrey; fill: lightgray" *ngIf="!user.imageMd5" name="anon"></app-svg-images>
+    <div *ngIf="user" class="profile_image_container" (click)="hamburgerClick($event)">
+      <img [src]="'/api/v1/services/account/images/' + user.username" class="profile_image" onError="this.src = '/resources/anon.svg'; this.className = 'anon'" />
     </div>
     <div *ngIf="false && user === null" class="profile_image_container" (click)="hamburgerClick($event)">
       <app-svg-images name="hamburger" height="40"></app-svg-images>
@@ -19,11 +18,11 @@
   <a class="navbar-brand d-none d-md-flex" [ngClass]="{'dual-logos': subdomain}" [routerLink]="['/' | relativeUrl]" (click)="brandClick($event)">
     <ng-container *ngIf="{ val: connectionState$ | async } as connectionState">
       @if (enterpriseInfo?.header_img) {
-        <img [src]="enterpriseInfo?.header_img" alt="enterpriseInfo.title" height="48px" class="mr-3">
+        <img [src]="enterpriseInfo?.header_img" [alt]="enterpriseInfo.title" height="48px" class="mr-3">
       } @else {
         <ng-template [ngIf]="subdomain && enterpriseInfo">
           <div class="subdomain_container">
-            <img [src]="enterpriseInfo.img || '/api/v1/services/enterprise/images/' + subdomain + '/logo?imageMd5=' + enterpriseInfo.imageMd5" class="subdomain_logo" [class]="{'rounded': enterpriseInfo.rounded_corner}">
+            <img [src]="enterpriseInfo.img || '/api/v1/services/enterprise/images/' + subdomain + '/logo'" class="subdomain_logo" [class]="{'rounded': enterpriseInfo.rounded_corner}">
           </div>
           <div class="vertical-line"></div>
         </ng-template>
@@ -39,17 +38,17 @@
   <!-- Mobile -->
   <a class="navbar-brand d-flex d-md-none justify-content-center" [ngClass]="{'dual-logos': subdomain, 'mr-0': subdomain}" [routerLink]="['/' | relativeUrl]" (click)="brandClick($event)">
     @if (enterpriseInfo?.header_img) {
-      <img [src]="enterpriseInfo?.header_img" alt="enterpriseInfo.title" height="42px">
+      <img [src]="enterpriseInfo?.header_img" [alt]="enterpriseInfo.title" height="42px">
     } @else {
       <ng-template [ngIf]="subdomain && enterpriseInfo">
         <div class="subdomain_container">
-          <img [src]="enterpriseInfo.img || '/api/v1/services/enterprise/images/' + subdomain + '/logo?imageMd5=' + enterpriseInfo.imageMd5" class="subdomain_logo" [class]="{'rounded': enterpriseInfo.rounded_corner}">
+          <img [src]="enterpriseInfo.img || '/api/v1/services/enterprise/images/' + subdomain + '/logo'" class="subdomain_logo" [class]="{'rounded': enterpriseInfo.rounded_corner}">
         </div>
         <div class="vertical-line"></div>
       </ng-template>
       <ng-container *ngIf="{ val: connectionState$ | async } as connectionState">
         @if (enterpriseInfo?.header_img) {
-          <img [src]="enterpriseInfo?.header_img" alt="enterpriseInfo.title" height="36px">
+          <img [src]="enterpriseInfo?.header_img" [alt]="enterpriseInfo.title" height="36px">
         } @else {
           <app-svg-images *ngIf="!officialMempoolSpace" name="mempoolSpace" viewBox="0 0 500 126" class="mempool-logo" [ngStyle]="{'opacity': connectionState.val === 2 ? 1 : 0.5 }"></app-svg-images>
           <app-svg-images *ngIf="officialMempoolSpace" name="officialMempoolSpace" viewBox="0 0 500 126"></app-svg-images>
@@ -85,7 +84,6 @@
       <li class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" id="btn-home" *ngIf="network.val === '' && stateService.env.ACCELERATOR">
         <a class="nav-link" [routerLink]="['/acceleration' | relativeUrl]" (click)="collapse()">
           <fa-icon [icon]="['fas', 'rocket']" [fixedWidth]="true" i18n-title="master-page.accelerator-dashboard" title="Accelerator Dashboard"></fa-icon>
-          <span class="badge badge-pill badge-warning beta" i18n="beta">beta</span>
         </a>
       </li>
       <li class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" id="btn-pools" *ngIf="stateService.env.MINING_DASHBOARD">

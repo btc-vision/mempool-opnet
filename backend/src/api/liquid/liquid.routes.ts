@@ -3,6 +3,7 @@ import { Application, Request, Response } from 'express';
 import config from '../../config';
 import elementsParser from './elements-parser';
 import icons from './icons';
+import { handleError } from '../../utils/api';
 
 class LiquidRoutes {
   public initRoutes(app: Application) {
@@ -42,7 +43,7 @@ class LiquidRoutes {
       res.setHeader('content-length', result.length);
       res.send(result);
     } else {
-      res.status(404).send('Asset icon not found');
+      handleError(req, res, 404, 'Asset icon not found');
     }
   }
 
@@ -51,7 +52,7 @@ class LiquidRoutes {
     if (result) {
       res.json(result);
     } else {
-      res.status(404).send('Asset icons not found');
+      handleError(req, res, 404, 'Asset icons not found');
     }
   }
 
@@ -82,7 +83,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 60 * 60).toUTCString());
       res.json(pegs);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get pegs by month');
     }
   }
 
@@ -94,7 +95,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 60 * 60).toUTCString());
       res.json(reserves);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get reserves by month');
     }
   }
 
@@ -106,7 +107,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(currentSupply);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get pegs');
     }
   }
 
@@ -118,7 +119,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(currentReserves);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get reserves');
     }
   }
 
@@ -130,7 +131,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(auditStatus);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get federation audit status');
     }
   }
 
@@ -142,7 +143,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(federationAddresses);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get federation addresses');
     }
   }
 
@@ -154,7 +155,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(federationAddresses);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get federation addresses');
     }
   }
 
@@ -166,7 +167,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(federationUtxos);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get federation utxos');
     }
   }
 
@@ -178,7 +179,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(expiredUtxos);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get expired utxos');
     }
   }
 
@@ -190,7 +191,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(federationUtxos);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get federation utxos number');
     }
   }
 
@@ -202,7 +203,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(emergencySpentUtxos);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get emergency spent utxos');
     }
   }
 
@@ -214,7 +215,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(emergencySpentUtxos);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get emergency spent utxos stats');
     }
   }
 
@@ -226,7 +227,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(recentPegs);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get pegs list');
     }
   }
 
@@ -238,7 +239,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(pegsVolume);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get pegs volume daily');
     }
   }
 
@@ -250,7 +251,7 @@ class LiquidRoutes {
       res.setHeader('Expires', new Date(Date.now() + 1000 * 30).toUTCString());
       res.json(pegsCount);
     } catch (e) {
-      res.status(500).send(e instanceof Error ? e.message : e);
+      handleError(req, res, 500, 'Failed to get pegs count');
     }
   }
 

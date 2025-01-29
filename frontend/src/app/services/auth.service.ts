@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, map, Observable, of, ReplaySubject, switchMap, tap } from 'rxjs';
-import { ServicesApiServices } from './services-api.service';
+import { ServicesApiServices } from '@app/services/services-api.service';
 
 export interface IAuth {
   token: string;
@@ -58,6 +58,7 @@ export class AuthServiceMempool {
   setAuth(auth: any) {
     if (!auth) {
       localStorage.removeItem('auth');
+      localStorage.removeItem('authenticatorStatus');
     } else {
       localStorage.setItem('auth', JSON.stringify(auth));
     }

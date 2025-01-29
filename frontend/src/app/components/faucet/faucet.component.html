@@ -5,7 +5,7 @@
   </div>
 
   <div class="faucet-container text-center">
-  
+
     @if (txid) {
       <div class="alert alert-success w-100 text-truncate">
         <fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
@@ -19,21 +19,34 @@
     } @else if (!user) {
       <!-- User not logged in -->
       <div class="alert alert-mempool d-block text-center w-100">
-        <div class="d-inline align-middle">
-          <span>To use the faucet, please&nbsp;</span>
-          <a routerLink="/login" [queryParams]="{'redirectTo': '/testnet4/faucet'}">login</a>
-          <span class="mr-2">&nbsp;or</span>
+        <div class="d-inline align-middle pr-2">
+          <span>To use the faucet, please</span>
         </div>
-        <app-twitter-login customClass="btn btn-sm" width="220px" redirectTo="/testnet4/faucet" buttonString="Sign up with Twitter"></app-twitter-login>
+        <app-github-login customClass="btn btn-sm" width="150px" redirectTo="/testnet4/faucet" buttonString="Sign up with"></app-github-login>
+      </div>
+    }
+    @else if (user && user.status === 'pending' && !user.email && user.snsId) {
+      <div class="alert alert-danger w-100 col d-flex justify-content-center text-left">
+        <span class="d-flex">
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" [fixedWidth]="true" class="mr-1"></fa-icon>
+          <span>Please <a class="text-primary" [routerLink]="['/services/account/settings']">verify your account</a> by providing a valid email address. To mitigate spam, we delete unverified accounts at regular intervals.</span>
+        </span>
       </div>
     }
     @else if (error === 'not_available') {
-      <!-- User logged in but not a paid user or did not link its Twitter account -->
+      <!-- User logged in but not a paid user or did not link its Github account -->
       <div class="alert alert-mempool d-block text-center w-100">
         <div class="d-inline align-middle">
           <span class="mb-2 mr-2">To use the faucet, please</span>
         </div>
-        <app-twitter-login customClass="btn btn-sm" width="180px" redirectTo="/testnet4/faucet" buttonString="Link your Twitter"></app-twitter-login>
+        <app-github-login customClass="btn btn-sm" width="180px" redirectTo="/testnet4/faucet" buttonString="Link your"></app-github-login>
+      </div>
+    }
+    @else if (error === 'account_limited') {
+      <div class="alert alert-mempool d-block text-center w-100">
+        <div class="d-inline align-middle">
+          <span class="mb-2 mr-2">Your account does not allow you to access the faucet</span>
+        </div>
       </div>
     }
     @else if (error) {
@@ -81,7 +94,7 @@
     }
 
     <!-- Send back coins -->
-    @if (status?.address) {  
+    @if (status?.address) {
       <div class="mt-4 alert alert-info w-100">If you no longer need your testnet4 coins, please consider <a class="text-primary" [routerLink]="['/address/' | relativeUrl, status.address]"><u>sending them back</u></a> to replenish the faucet.</div>
     }
 

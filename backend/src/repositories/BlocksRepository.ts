@@ -14,6 +14,8 @@ import chainTips from '../api/chain-tips';
 import blocks from '../api/blocks';
 import BlocksAuditsRepository from './BlocksAuditsRepository';
 import transactionUtils from '../api/transaction-utils';
+import { parseDATUMTemplateCreator } from '../utils/bitcoin-script';
+import poolsUpdater from '../tasks/pools-updater';
 
 interface DatabaseBlock {
   id: string;
@@ -56,6 +58,7 @@ interface DatabaseBlock {
   utxoSetChange: number;
   utxoSetSize: number;
   totalInputAmt: number;
+  firstSeen: number;
 }
 
 const BLOCK_DB_FIELDS = `
@@ -98,7 +101,8 @@ const BLOCK_DB_FIELDS = `
   blocks.header,
   blocks.utxoset_change AS utxoSetChange,
   blocks.utxoset_size AS utxoSetSize,
-  blocks.total_input_amt AS totalInputAmt
+  blocks.total_input_amt AS totalInputAmt,
+  UNIX_TIMESTAMP(blocks.first_seen) AS firstSeen
 `;
 
 class BlocksRepository {
@@ -111,16 +115,16 @@ class BlocksRepository {
 
     try {
       const query = `INSERT INTO blocks(
-        height,             hash,                blockTimestamp,    size,
-        weight,             tx_count,            coinbase_raw,      difficulty,
-        pool_id,            fees,                fee_span,          median_fee,
-        reward,             version,             bits,              nonce,
-        merkle_root,        previous_block_hash, avg_fee,           avg_fee_rate,
-        median_timestamp,   header,              coinbase_address,  coinbase_addresses,
-        coinbase_signature, utxoset_size,        utxoset_change,    avg_tx_size,
-        total_inputs,       total_outputs,       total_input_amt,   total_output_amt,
-        fee_percentiles,    segwit_total_txs,    segwit_total_size, segwit_total_weight,
-        median_fee_amt,     coinbase_signature_ascii
+        height,             hash,                     blockTimestamp,    size,
+        weight,             tx_count,                 coinbase_raw,      difficulty,
+        pool_id,            fees,                     fee_span,          median_fee,
+        reward,             version,                  bits,              nonce,
+        merkle_root,        previous_block_hash,      avg_fee,           avg_fee_rate,
+        median_timestamp,   header,                   coinbase_address,  coinbase_addresses,
+        coinbase_signature, utxoset_size,             utxoset_change,    avg_tx_size,
+        total_inputs,       total_outputs,            total_input_amt,   total_output_amt,
+        fee_percentiles,    segwit_total_txs,         segwit_total_size, segwit_total_weight,
+        median_fee_amt,     coinbase_signature_ascii, definition_hash
       ) VALUE (
         ?, ?, FROM_UNIXTIME(?), ?,
         ?, ?, ?, ?,
@@ -131,7 +135,7 @@ class BlocksRepository {
         ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?,
-        ?, ?
+        ?, ?, ?
       )`;
 
       const poolDbId = await PoolsRepository.$getPoolByUniqueId(block.extras.pool.id);
@@ -178,6 +182,7 @@ class BlocksRepository {
         block.extras.segwitTotalWeight,
         block.extras.medianFeeAmt,
         truncatedCoinbaseSignatureAscii,
+        poolsUpdater.currentSha
       ];
 
       await DB.query(query, params);
@@ -498,7 +503,7 @@ class BlocksRepository {
     }
 
     query += ` ORDER BY height DESC
-      LIMIT 10`;
+      LIMIT 100`;
 
     try {
       const [rows]: any[] = await DB.query(query, params);
@@ -1010,12 +1015,30 @@ class BlocksRepository {
   public async $savePool(id: string, poolId: number): Promise<void> {
     try {
       await DB.query(`
-        UPDATE blocks SET pool_id = ?
+        UPDATE blocks SET pool_id = ?, definition_hash = ?
         WHERE hash = ?`,
-        [poolId, id]
+        [poolId, poolsUpdater.currentSha, id]
       );
     } catch (e) {
       logger.err(`Cannot update block pool. Reason: ` + (e instanceof Error ? e.message : e));
+      throw e;
+    }
+  }
+
+  /**
+   * Save block first seen time
+   * 
+   * @param id 
+   */
+  public async $saveFirstSeenTime(id: string, firstSeen: number): Promise<void> {
+    try {
+      await DB.query(`
+        UPDATE blocks SET first_seen = FROM_UNIXTIME(?)
+        WHERE hash = ?`,
+        [firstSeen, id]
+      );
+    } catch (e) {
+      logger.err(`Cannot update block first seen time. Reason: ` + (e instanceof Error ? e.message : e));
       throw e;
     }
   }
@@ -1054,6 +1077,7 @@ class BlocksRepository {
       id: dbBlk.poolId,
       name: dbBlk.poolName,
       slug: dbBlk.poolSlug,
+      minerNames: null,
     };
     extras.avgFee = dbBlk.avgFee;
     extras.avgFeeRate = dbBlk.avgFeeRate;
@@ -1076,6 +1100,7 @@ class BlocksRepository {
     extras.utxoSetSize = dbBlk.utxoSetSize;
     extras.totalInputAmt = dbBlk.totalInputAmt;
     extras.virtualSize = dbBlk.weight / 4.0;
+    extras.firstSeen = dbBlk.firstSeen;
 
     // Re-org can happen after indexing so we need to always get the
     // latest state from core
@@ -1106,7 +1131,7 @@ class BlocksRepository {
         let summaryVersion = 0;
         if (config.MEMPOOL.BACKEND === 'esplora') {
           const txs = (await bitcoinApi.$getTxsForBlock(dbBlk.id)).map(tx => transactionUtils.extendTransaction(tx));
-          summary = blocks.summarizeBlockTransactions(dbBlk.id, txs);
+          summary = blocks.summarizeBlockTransactions(dbBlk.id, dbBlk.height, txs);
           summaryVersion = 1;
         } else {
           // Call Core RPC
@@ -1121,6 +1146,10 @@ class BlocksRepository {
         extras.medianFeeAmt = extras.feePercentiles[3];
         await this.$updateFeeAmounts(dbBlk.id, extras.feePercentiles, extras.medianFeeAmt);
       }
+    }
+
+    if (extras.pool.name === 'OCEAN') {
+      extras.pool.minerNames = parseDATUMTemplateCreator(extras.coinbaseRaw);
     }
 
     blk.extras = <BlockExtension>extras;
