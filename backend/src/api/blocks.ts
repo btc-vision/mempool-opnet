@@ -929,17 +929,9 @@ class Blocks {
       const blockSummary: BlockSummary = this.summarizeBlockTransactions(block.id, block.height, cpfpSummary.transactions);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
-      if(blockExtended.height === 4594) {
-        console.log('blockExtended', blockExtended);
-      }
-
       if (Common.indexingEnabled()) {
         if (!fastForwarded) {
           const lastBlock = await blocksRepository.$getBlockByHeight(blockExtended.height - 1);
-          if(blockExtended.height === 4594) {
-            console.log('lastBlock', lastBlock);
-          }
-
           this.updateTimerProgress(timer, `got block by height for ${this.currentBlockHeight}`);
           if (lastBlock !== null && blockExtended.previousblockhash !== lastBlock.id) {
             logger.warn(`Chain divergence detected at block ${lastBlock.height}, re-indexing most recent data`, logger.tags.mining);
@@ -1047,6 +1039,10 @@ class Blocks {
       await Promise.all(callbackPromises);
       this.updateTimerProgress(timer, `async callbacks completed for ${this.currentBlockHeight}`);
 
+      if(blockHeightTip === 4594) {
+        console.log('1', blockExtended);
+      }
+
       this.blocks.push(blockExtended);
       if (this.blocks.length > config.MEMPOOL.INITIAL_BLOCKS_AMOUNT * 4) {
         this.blocks = this.blocks.slice(-config.MEMPOOL.INITIAL_BLOCKS_AMOUNT * 4);
@@ -1062,6 +1058,7 @@ class Blocks {
       if (this.newBlockCallbacks.length) {
         this.newBlockCallbacks.forEach((cb) => cb(blockExtended, txIds, transactions));
       }
+
       if (config.MEMPOOL.CACHE_ENABLED && !memPool.hasPriority() && (block.height % config.MEMPOOL.DISK_CACHE_BLOCK_INTERVAL === 0)) {
         diskCache.$saveCacheToDisk();
       }
@@ -1072,6 +1069,10 @@ class Blocks {
         await redisCache.$updateBlockSummaries(this.blockSummaries);
         await redisCache.$removeTransactions(txIds);
         await rbfCache.updateCache();
+      }
+
+      if(blockHeightTip === 4594) {
+        console.log('1', blockExtended);
       }
 
       handledBlocks++;
