@@ -361,6 +361,7 @@ class ElectrsApi implements AbstractBitcoinApi {
   }
 
   $getTxIdsForBlock(hash: string): Promise<string[]> {
+    console.log(`Using explora`)
     return this.failoverRouter.$get<string[]>('/block/' + hash + '/txids');
   }
 

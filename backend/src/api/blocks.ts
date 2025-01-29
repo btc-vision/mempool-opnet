@@ -100,11 +100,15 @@ class Blocks {
     const transactionMap: { [txid: string]: TransactionExtended } = {};
 
     if (!txIds) {
-      txIds = await bitcoinApi.$getTxIdsForBlock(blockHash);
-    }
+      if(blockHeight === 4594) {
+        console.log('getting txids');
+      }
 
-    if(blockHeight === 4594) {
-      console.log('txIds', txIds, txIds.length, blockHash);
+      txIds = await bitcoinApi.$getTxIdsForBlock(blockHash);
+
+      if(blockHeight === 4594) {
+        console.log('got txs', txIds.length, blockHash);
+      }
     }
 
     const mempool = memPool.getMempool();
