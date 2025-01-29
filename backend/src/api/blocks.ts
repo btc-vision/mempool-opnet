@@ -80,6 +80,7 @@ class Blocks {
    * Return the list of transaction for a block
    * @param blockHash
    * @param blockHeight
+   * @param blockTime
    * @param onlyCoinbase - Set to true if you only need the coinbase transaction
    * @param txIds - optional ordered list of transaction ids if already known
    * @param quiet - don't print non-essential logs
@@ -97,6 +98,10 @@ class Blocks {
   ): Promise<TransactionExtended[]> {
     const isEsplora = config.MEMPOOL.BACKEND === 'esplora';
     const transactionMap: { [txid: string]: TransactionExtended } = {};
+
+    if(blockHeight === 4594) {
+      console.log('txIds before', txIds);
+    }
 
     if (!txIds) {
       txIds = await bitcoinApi.$getTxIdsForBlock(blockHash);
