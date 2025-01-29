@@ -142,8 +142,14 @@ class BitcoinApi implements AbstractBitcoinApi {
       return foundBlock;
     }
 
-    return this.bitcoindClient.getBlock(hash)
+    const block = await this.bitcoindClient.getBlock(hash)
       .then((block: IBitcoinApi.Block) => BitcoinApi.convertBlock(block));
+
+    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') {
+      console.log(block);
+    }
+
+    return block;
   }
 
   $getAddress(address: string): Promise<IEsploraApi.Address> {
