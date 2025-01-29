@@ -807,6 +807,10 @@ class Blocks {
           const transactions = await this.$getTransactionsExtended(blockHash, block.height, block.timestamp, true, null, true);
           const blockExtended = await this.$getBlockExtended(block, transactions);
 
+          if(blockHeight === 4594) {
+            console.log(`Block #4594`,blockExtended);
+          }
+
           newlyIndexed++;
           await blocksRepository.$saveBlockInDatabase(blockExtended);
         }
@@ -844,6 +848,7 @@ class Blocks {
     } else {
       this.currentBlockHeight = this.blocks[this.blocks.length - 1].height;
     }
+
     if (this.currentBlockHeight >= 503) {
       try {
         const quarterEpochBlockHash = await bitcoinApi.$getBlockHash(this.currentBlockHeight - 503);
