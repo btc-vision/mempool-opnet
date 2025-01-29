@@ -103,7 +103,7 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   async $getTxIdsForBlock(hash: string): Promise<string[]> {
-    console.log(`using bitcoin api`)
+    console.log(`using bitcoin api for ${hash}`);
     const hashes = await this.bitcoindClient.getBlock(hash, 1)
       .then((rpcBlock: IBitcoinApi.Block) => rpcBlock.tx);
 
