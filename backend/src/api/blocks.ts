@@ -102,6 +102,10 @@ class Blocks {
       txIds = await bitcoinApi.$getTxIdsForBlock(blockHash);
     }
 
+    if(blockHeight === 4594) {
+      console.log('txIds', txIds, txIds.length);
+    }
+
     const mempool = memPool.getMempool();
     let foundInMempool = 0;
     let totalFound = 0;
@@ -134,6 +138,8 @@ class Blocks {
           throw new Error(msg);
         }
       } catch (e) {
+        console.log(`(only coinbase) Problem getting raw tx`, e);
+
         const msg = `Cannot fetch coinbase tx ${txIds[0]}. Reason: ` + (e instanceof Error ? e.message : e);
         logger.err(msg);
         throw new Error(msg);
@@ -151,6 +157,7 @@ class Blocks {
           }
         }
       } catch (e) {
+        console.log(`Problem getting raw tx`, e);
         logger.err(`Cannot fetch bulk txs for block ${blockHash}. Reason: ` + (e instanceof Error ? e.message : e));
       }
     }
@@ -165,6 +172,7 @@ class Blocks {
         transactionMap[txid] = tx;
         totalFound++;
       } catch (e) {
+        console.log(`Cannot fetch tx ${txid}. Reason: ` + (e instanceof Error ? e.message : e));
         const msg = `Cannot fetch tx ${txid}. Reason: ` + (e instanceof Error ? e.message : e);
         logger.err(msg);
         throw new Error(msg);
@@ -808,7 +816,7 @@ class Blocks {
           const blockExtended = await this.$getBlockExtended(block, transactions);
 
           if(blockHeight === 4594) {
-            console.log(`Block #4594`,blockExtended);
+            console.log(`Block #4594`,blockExtended, transactions);
           }
 
           newlyIndexed++;
