@@ -929,7 +929,7 @@ class Blocks {
       const blockSummary: BlockSummary = this.summarizeBlockTransactions(block.id, block.height, cpfpSummary.transactions);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
-      if(blockHeightTip === 4594) {
+      if(this.currentBlockHeight === 4594) {
         console.log('0', blockExtended);
       }
 
@@ -1003,7 +1003,7 @@ class Blocks {
         }
       }
 
-      if(blockHeightTip === 4594) {
+      if(this.currentBlockHeight === 4594) {
         console.log('0.5', blockExtended);
       }
 
@@ -1047,7 +1047,7 @@ class Blocks {
       await Promise.all(callbackPromises);
       this.updateTimerProgress(timer, `async callbacks completed for ${this.currentBlockHeight}`);
 
-      if(blockHeightTip === 4594) {
+      if(this.currentBlockHeight === 4594) {
         console.log('1', blockExtended);
       }
 
@@ -1079,7 +1079,7 @@ class Blocks {
         await rbfCache.updateCache();
       }
 
-      if(blockHeightTip === 4594) {
+      if(this.currentBlockHeight === 4594) {
         console.log('1', blockExtended);
       }
 
