@@ -104,7 +104,7 @@ class Blocks {
     }
 
     if(blockHeight === 4594) {
-      console.log('txIds', txIds, txIds.length);
+      console.log('txIds', txIds, txIds.length, blockHash);
     }
 
     const mempool = memPool.getMempool();
