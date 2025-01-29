@@ -99,10 +99,6 @@ class Blocks {
     const isEsplora = config.MEMPOOL.BACKEND === 'esplora';
     const transactionMap: { [txid: string]: TransactionExtended } = {};
 
-    if(blockHeight === 4594) {
-      console.log('txIds before', txIds);
-    }
-
     if (!txIds) {
       txIds = await bitcoinApi.$getTxIdsForBlock(blockHash);
     }
