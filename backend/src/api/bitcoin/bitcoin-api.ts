@@ -108,7 +108,7 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   async $getTxsForBlock(hash: string): Promise<IEsploraApi.Transaction[]> {
-    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`get txs ${hash}`);
+    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`!!!!!!!!!! get txs ${hash}`);
 
     const verboseBlock: IBitcoinApi.VerboseBlock = await this.bitcoindClient.getBlock(hash, 2);
     const transactions: IEsploraApi.Transaction[] = [];
@@ -120,7 +120,7 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   $getRawBlock(hash: string): Promise<Buffer> {
-    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`raw block ${hash}`);
+    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`!!!!!!!!!! raw block ${hash}`);
 
     return this.bitcoindClient.getBlock(hash, 0)
       .then((raw: string) => Buffer.from(raw, "hex"));
@@ -136,7 +136,7 @@ class BitcoinApi implements AbstractBitcoinApi {
 
   async $getBlock(hash: string): Promise<IEsploraApi.Block> {
     const foundBlock = blocks.getBlocks().find((block) => block.id === hash);
-    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`get block ${hash}`);
+    if(hash === '46b49a53706e377533de2a51997da91c1b3c8f12bd61f28a04f4e5269240abb1') console.log(`!!!!!!!!!! get block ${hash}`);
 
     if (foundBlock) {
       return foundBlock;
