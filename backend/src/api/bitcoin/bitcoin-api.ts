@@ -108,6 +108,8 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   async $getTxsForBlock(hash: string): Promise<IEsploraApi.Transaction[]> {
+    console.log(`get txs ${hash}`);
+    
     const verboseBlock: IBitcoinApi.VerboseBlock = await this.bitcoindClient.getBlock(hash, 2);
     const transactions: IEsploraApi.Transaction[] = [];
     for (const tx of verboseBlock.tx) {
@@ -118,6 +120,8 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   $getRawBlock(hash: string): Promise<Buffer> {
+    console.log(`raw block ${hash}`);
+
     return this.bitcoindClient.getBlock(hash, 0)
       .then((raw: string) => Buffer.from(raw, "hex"));
   }
@@ -133,7 +137,7 @@ class BitcoinApi implements AbstractBitcoinApi {
   async $getBlock(hash: string): Promise<IEsploraApi.Block> {
     const foundBlock = blocks.getBlocks().find((block) => block.id === hash);
     console.log(`get block ${hash}`);
-    
+
     if (foundBlock) {
       return foundBlock;
     }
