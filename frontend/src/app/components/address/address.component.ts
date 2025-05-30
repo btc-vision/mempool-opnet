@@ -1,13 +1,19 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
-import { switchMap, filter, catchError, map, tap } from 'rxjs/operators';
-import { Address, ChainStats, Transaction, Utxo, Vin } from '@interfaces/electrs.interface';
+import { catchError, filter, map, switchMap, tap } from 'rxjs/operators';
+import {
+  Address,
+  ChainStats,
+  Transaction,
+  Utxo,
+  Vin,
+} from '@interfaces/electrs.interface';
 import { WebsocketService } from '@app/services/websocket.service';
 import { StateService } from '@app/services/state.service';
 import { AudioService } from '@app/services/audio.service';
 import { ApiService } from '@app/services/api.service';
-import { of, merge, Subscription, Observable, forkJoin } from 'rxjs';
+import { forkJoin, merge, Observable, of, Subscription } from 'rxjs';
 import { SeoService } from '@app/services/seo.service';
 import { seoDescriptionNetwork } from '@app/shared/common.utils';
 import { AddressInformation } from '@interfaces/node-api.interface';
@@ -22,7 +28,7 @@ class AddressStats implements ChainStats {
   spent_txo_sum: number;
   tx_count: number;
 
-  constructor (stats: ChainStats, address: string, scriptpubkey?: string) {
+  constructor(stats: ChainStats, address: string, scriptpubkey?: string) {
     Object.assign(this, stats);
     this.address = address;
     this.scriptpubkey = scriptpubkey;
@@ -30,13 +36,19 @@ class AddressStats implements ChainStats {
 
   public addTx(tx: Transaction): void {
     for (const vin of tx.vin) {
-      if (vin.prevout?.scriptpubkey_address === this.address || (this.scriptpubkey === vin.prevout?.scriptpubkey)) {
-        this.spendTxo(vin.prevout.value);
+      if (
+        vin.prevout?.scriptpubkey_address === this.address ||
+        this.scriptpubkey === vin.prevout?.scriptpubkey
+      ) {
+        this.spendTxo(vin.prevout?.value || 0);
       }
     }
     for (const vout of tx.vout) {
-      if (vout.scriptpubkey_address === this.address || (this.scriptpubkey === vout.scriptpubkey)) {
-        this.fundTxo(vout.value);
+      if (
+        vout.scriptpubkey_address === this.address ||
+        this.scriptpubkey === vout.scriptpubkey
+      ) {
+        this.fundTxo(vout?.value || 0);
       }
     }
     this.tx_count++;
@@ -44,12 +56,18 @@ class AddressStats implements ChainStats {
 
   public removeTx(tx: Transaction): void {
     for (const vin of tx.vin) {
-      if (vin.prevout?.scriptpubkey_address === this.address || (this.scriptpubkey === vin.prevout?.scriptpubkey)) {
+      if (
+        vin.prevout?.scriptpubkey_address === this.address ||
+        this.scriptpubkey === vin.prevout?.scriptpubkey
+      ) {
         this.unspendTxo(vin.prevout.value);
       }
     }
     for (const vout of tx.vout) {
-      if (vout.scriptpubkey_address === this.address || (this.scriptpubkey === vout.scriptpubkey)) {
+      if (
+        vout.scriptpubkey_address === this.address ||
+        this.scriptpubkey === vout.scriptpubkey
+      ) {
         this.unfundTxo(vout.value);
       }
     }

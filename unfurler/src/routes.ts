@@ -437,7 +437,7 @@ export function matchRoute(
   if (parts[0] === 'preview') {
     parts.shift();
   }
-  if (['testnet', 'testnet4', 'signet'].includes(parts[0])) {
+  if (['testnet', 'testnet4', 'signet', 'regtest'].includes(parts[0])) {
     match.networkMode = parts.shift() || 'mainnet';
   }
 

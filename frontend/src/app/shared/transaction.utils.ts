@@ -1468,9 +1468,10 @@ function scriptPubKeyToAddress(scriptPubKey: string, network: string): { address
   if (/^5120[0-9a-f]{64}$/.test(scriptPubKey)) {
     return { address: p2tr(scriptPubKey.substring(4, 4 + 64), network), type: 'v1_p2tr' };
   }
+  console.log(`Unknown scriptPubKey: ${scriptPubKey} for network: ${network}`, /^6015[0-9a-f]{42}$/.test(scriptPubKey));
   // P2OP
   if (/^6015[0-9a-f]{42}$/.test(scriptPubKey)) {
-    const progHex = scriptPubKey.substring(4, 4 + 42);
+    const progHex = scriptPubKey.substring(4, 46);
     return {
       address: p2op(progHex, network),
       type: 'v16_p2op',

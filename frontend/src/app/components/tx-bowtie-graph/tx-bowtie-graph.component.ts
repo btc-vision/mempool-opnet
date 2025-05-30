@@ -1,10 +1,22 @@
-import { Component, OnInit, Input, OnChanges, HostListener, Inject, LOCALE_ID } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  Inject,
+  Input,
+  LOCALE_ID,
+  OnChanges,
+  OnInit,
+} from '@angular/core';
 import { StateService } from '@app/services/state.service';
-import { Outspend, Transaction, Vin, Vout } from '@interfaces/electrs.interface';
+import {
+  Outspend,
+  Transaction,
+  Vin,
+  Vout,
+} from '@interfaces/electrs.interface';
 import { Router } from '@angular/router';
-import { ReplaySubject, merge, Subscription, of } from 'rxjs';
-import { tap, switchMap } from 'rxjs/operators';
-import { ApiService } from '@app/services/api.service';
+import { merge, of, ReplaySubject, Subscription } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
 import { RelativeUrlPipe } from '@app/shared/pipes/relative-url/relative-url.pipe';
 import { AssetsService } from '@app/services/assets.service';
 import { environment } from '@environments/environment';
@@ -92,6 +104,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     // testnet: ['#1d486f', '#183550'],
     testnet: ['#4edf77', '#10a0af', '#4edf7700'],
     testnet4: ['#4edf77', '#10a0af', '#4edf7700'],
+    regtest: ['#4edf77', '#10a0af', '#4edf7700'],
     // signet: ['#6f1d5d', '#471850'],
     signet: ['#d24fc8', '#a84fd2', '#d24fc800'],
   };

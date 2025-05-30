@@ -100,7 +100,7 @@ class PoolsRepository {
       if (parse) {
         rows[0].regexes = JSON.parse(rows[0].regexes);
       }
-      if (['testnet', 'signet'].includes(config.MEMPOOL.NETWORK)) {
+      if (['testnet', 'signet', 'regtest'].includes(config.MEMPOOL.NETWORK)) {
         rows[0].addresses = []; // pools-v2.json only contains mainnet addresses
       } else if (parse) {
         rows[0].addresses = JSON.parse(rows[0].addresses);
@@ -132,7 +132,7 @@ class PoolsRepository {
       if (parse) {
         rows[0].regexes = JSON.parse(rows[0].regexes);
       }
-      if (['testnet', 'signet'].includes(config.MEMPOOL.NETWORK)) {
+      if (['testnet', 'signet', 'regtest'].includes(config.MEMPOOL.NETWORK)) {
         rows[0].addresses = []; // pools.json only contains mainnet addresses
       } else if (parse) {
         rows[0].addresses = JSON.parse(rows[0].addresses);
@@ -147,8 +147,8 @@ class PoolsRepository {
 
   /**
    * Insert a new mining pool in the database
-   * 
-   * @param pool 
+   *
+   * @param pool
    */
   public async $insertNewMiningPool(pool: any, slug: string): Promise<void> {
     try {
@@ -164,10 +164,10 @@ class PoolsRepository {
 
   /**
    * Rename an existing mining pool
-   * 
+   *
    * @param dbId
    * @param newSlug
-   * @param newName 
+   * @param newName
    */
   public async $renameMiningPool(dbId: number, newSlug: string, newName: string): Promise<void> {
     try {
@@ -184,9 +184,9 @@ class PoolsRepository {
 
   /**
    * Update an exisiting mining pool link
-   * 
-   * @param dbId 
-   * @param newLink 
+   *
+   * @param dbId
+   * @param newLink
    */
   public async $updateMiningPoolLink(dbId: number, newLink: string): Promise<void> {
     try {
@@ -204,10 +204,10 @@ class PoolsRepository {
 
   /**
    * Update an existing mining pool addresses or coinbase tags
-   * 
-   * @param dbId 
-   * @param addresses 
-   * @param regexes 
+   *
+   * @param dbId
+   * @param addresses
+   * @param regexes
    */
   public async $updateMiningPoolTags(dbId: number, addresses: string, regexes: string): Promise<void> {
     try {

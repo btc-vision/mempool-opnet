@@ -35,6 +35,7 @@ const ADDRESS_PREFIXES = {
       script: ['3'],
     },
     bech32: 'bc1',
+    bech32Opnet: 'op1',
   },
   luckycoin: {
     base58: {
@@ -42,6 +43,7 @@ const ADDRESS_PREFIXES = {
       script: ['5'],
     },
     bech32: 'bc1',
+    bech32Opnet: 'opl1',
   },
   testnet: {
     base58: {
@@ -49,6 +51,7 @@ const ADDRESS_PREFIXES = {
       script: '2',
     },
     bech32: 'tb1',
+    bech32Opnet: 'opt1',
   },
   testnet4: {
     base58: {
@@ -56,6 +59,7 @@ const ADDRESS_PREFIXES = {
       script: '2',
     },
     bech32: 'tb1',
+    bech32Opnet: 'opt1',
   },
   regtest: {
     base58: {
@@ -63,6 +67,7 @@ const ADDRESS_PREFIXES = {
       script: '2',
     },
     bech32: 'bcrt1',
+    bech32Opnet: 'opr1',
   },
   signet: {
     base58: {
@@ -70,6 +75,7 @@ const ADDRESS_PREFIXES = {
       script: '2',
     },
     bech32: 'tb1',
+    bech32Opnet: 'opt1',
   },
   liquid: {
     base58: {
@@ -79,6 +85,7 @@ const ADDRESS_PREFIXES = {
     },
     bech32: 'ex1',
     confidential: 'lq1',
+    bech32Opnet: 'opx1',
   },
   liquidtestnet: {
     base58: {
@@ -88,6 +95,7 @@ const ADDRESS_PREFIXES = {
     },
     bech32: 'tex1',
     confidential: 'tlq1',
+    bech32Opnet: 'opxt1',
   },
 };
 
@@ -95,13 +103,14 @@ const ADDRESS_PREFIXES = {
 const base58Regex = RegExp('^' + BASE58_CHARS + '{26,34}$');
 const confidentialb58Regex = RegExp('^[TJ]' + BASE58_CHARS + '{78}$');
 const p2wpkhRegex = RegExp('^q' + BECH32_CHARS_LW + '{38}$');
-const p2opRegex = RegExp('^s' + BECH32_CHARS_LW + '{38}$');
 const p2wshRegex = RegExp('^q' + BECH32_CHARS_LW + '{58}$');
 const p2trRegex = RegExp('^p' + BECH32_CHARS_LW + '{58}$');
+const p2opRegex = RegExp('^s' + BECH32_CHARS_LW + '{58}$');
 const pubkeyRegex = RegExp('^' + `(04${HEX_CHARS}{128})|(0[23]${HEX_CHARS}{64})$`);
 
 export function detectAddressType(address: string, network: string): AddressType {
   network = network || 'mainnet';
+
   // normal address types
   const firstChar = address.substring(0, 1);
   if (ADDRESS_PREFIXES[network].base58.pubkey.includes(firstChar) && base58Regex.test(address.slice(1))) {
@@ -116,9 +125,11 @@ export function detectAddressType(address: string, network: string): AddressType
       return 'v0_p2wsh';
     } else if (p2trRegex.test(suffix)) {
       return 'v1_p2tr';
+    } else if (p2opRegex.test(suffix)) {
+      return 'v16_p2op';
     }
-  } else if (address.startsWith(ADDRESS_PREFIXES[network].bech32Opnet)) {
-    const suffix = address.slice(ADDRESS_PREFIXES[network].bech32Opnet.length);
+  } else if (address.startsWith('op')) {
+    const suffix = address.slice(2);
     if (p2opRegex.test(suffix)) {
       return 'v16_p2op';
     }
@@ -162,14 +173,12 @@ export class AddressTypeInfo {
     this.network = network;
     this.address = address;
     this.scripts = new Map();
-    if (type) {
+    if (type && type !== 'unknown') {
       this.type = type;
     } else {
       this.type = detectAddressType(address, network);
     }
-    if(this.type === 'unknown' && network === 'testnet4') {
-      this.type = detectAddressType(address, 'regtest');
-    }
+
     this.processInputs(vin);
     if (vout) {
       this.processOutput(vout);
@@ -260,6 +269,8 @@ export class AddressTypeInfo {
     } else if (this.type === 'unknown') {
       if (output.scriptpubkey === '51024e73') {
         this.type = 'anchor';
+      } else if(output.scriptpubkey.startsWith('6015') && output.scriptpubkey.length === 46) {
+        this.type = 'v16_p2op';
       }
     }
   }

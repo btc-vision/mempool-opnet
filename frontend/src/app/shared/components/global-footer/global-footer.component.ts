@@ -1,7 +1,18 @@
-import { Input, ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnChanges, SimpleChanges, Inject, LOCALE_ID, OnDestroy } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Observable, merge, of, Subject, Subscription } from 'rxjs';
-import { tap, takeUntil } from 'rxjs/operators';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Inject,
+  Input,
+  LOCALE_ID,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { merge, Observable, of, Subject, Subscription } from 'rxjs';
+import { takeUntil, tap } from 'rxjs/operators';
 import { Env, StateService } from '@app/services/state.service';
 import { IBackendInfo } from '@interfaces/websocket.interface';
 import { LanguageService } from '@app/services/language.service';
@@ -93,9 +104,9 @@ export class GlobalFooterComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  networkLink(network) {
+  networkLink(network: string) {
     const thisNetwork = network || 'mainnet';
-    if( network === '' || network === 'mainnet' || network === 'testnet' || network === 'testnet4' || network === 'signet' ) {
+    if( network === '' || network === 'regtest' || network === 'mainnet' || network === 'testnet' || network === 'testnet4' || network === 'signet' ) {
       return (this.env.BASE_MODULE === 'mempool' ? '' : this.env.MEMPOOL_WEBSITE_URL + this.urlLanguage) + this.networkPaths[thisNetwork] || '/';
     }
     if( network === 'liquid' || network === 'liquidtestnet' ) {

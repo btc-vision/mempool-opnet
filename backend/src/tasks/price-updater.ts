@@ -2,7 +2,10 @@ import * as fs from 'fs';
 import path from 'path';
 import config from '../config';
 import logger from '../logger';
-import PricesRepository, { ApiPrice, MAX_PRICES } from '../repositories/PricesRepository';
+import PricesRepository, {
+  ApiPrice,
+  MAX_PRICES,
+} from '../repositories/PricesRepository';
 import BitfinexApi from './price-feeds/bitfinex-api';
 import BitflyerApi from './price-feeds/bitflyer-api';
 import CoinbaseApi from './price-feeds/coinbase-api';
@@ -131,7 +134,7 @@ class PriceUpdater {
   }
 
   public async $run(): Promise<void> {
-    if (config.MEMPOOL.NETWORK === 'signet' || config.MEMPOOL.NETWORK === 'testnet') {
+    if (config.MEMPOOL.NETWORK === 'signet' || config.MEMPOOL.NETWORK === 'testnet'|| config.MEMPOOL.NETWORK === 'regtest') {
       // Coins have no value on testnet/signet, so we want to always show 0
       return;
     }
@@ -452,7 +455,7 @@ class PriceUpdater {
       }
 
       const prices: ApiPrice = this.getEmptyPricesObj();
-      
+
       let willInsert = false;
       for (const conversionCurrency of this.newCurrencies.concat(missingLegacyCurrencies)) {
         if (conversionRates[yearMonthTimestamp][conversionCurrency] > 0 && priceTime.USD * conversionRates[yearMonthTimestamp][conversionCurrency] < MAX_PRICES[conversionCurrency]) {
@@ -462,7 +465,7 @@ class PriceUpdater {
           prices[conversionCurrency] = 0;
         }
       }
-      
+
       if (willInsert) {
         await PricesRepository.$saveAdditionalCurrencyPrices(priceTime.time, prices, missingLegacyCurrencies);
         ++totalInserted;

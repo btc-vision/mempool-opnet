@@ -268,25 +268,35 @@ const featureActivation = {
     rbf: 399701,
     segwit: 477120,
     taproot: 709632,
+    smart_contract: 0,
   },
   testnet: {
     rbf: 720255,
     segwit: 872730,
     taproot: 2032291,
+    smart_contract: 0,
   },
   testnet4: {
     rbf: 0,
     segwit: 0,
     taproot: 0,
+    smart_contract: 0,
+  },
+  regtest: {
+    rbf: 0,
+    segwit: 0,
+    taproot: 0,
+    smart_contract: 0,
   },
   signet: {
     rbf: 0,
     segwit: 0,
     taproot: 0,
+    smart_contract: 0,
   },
 };
 
-export function isFeatureActive(network: string, height: number, feature: 'rbf' | 'segwit' | 'taproot'): boolean {
+export function isFeatureActive(network: string, height: number, feature: 'rbf' | 'segwit' | 'taproot' | 'smart_contract'): boolean {
   const activationHeight = featureActivation[network || 'mainnet']?.[feature];
   if (activationHeight != null) {
     return height >= activationHeight;

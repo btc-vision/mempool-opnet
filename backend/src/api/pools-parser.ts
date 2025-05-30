@@ -200,6 +200,8 @@ class PoolsParser {
       firstKnownBlockPool = 21106; // https://mempool.space/testnet/block/0000000070b701a5b6a1b965f6a38e0472e70b2bb31b973e4638dec400877581
     } else if (config.MEMPOOL.NETWORK === 'signet') {
       firstKnownBlockPool = 0;
+    } else if (config.MEMPOOL.NETWORK === 'regtest') {
+      firstKnownBlockPool = 0;
     }
 
     const [blocks]: any[] = await DB.query(`

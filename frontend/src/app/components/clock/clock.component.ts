@@ -1,5 +1,11 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, Input, OnInit } from '@angular/core';
-import { Observable, Subscription, of, switchMap, tap } from 'rxjs';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  HostListener,
+  OnInit,
+} from '@angular/core';
+import { Observable, of, Subscription, switchMap, tap } from 'rxjs';
 import { StateService } from '@app/services/state.service';
 import { BlockExtended } from '@interfaces/node-api.interface';
 import { WebsocketService } from '@app/services/websocket.service';
@@ -37,6 +43,7 @@ export class ClockComponent implements OnInit {
     'liquidtestnet': ['var(--liquidtestnet)', 'var(--liquidtestnet-alt)'],
     testnet: ['var(--testnet)', 'var(--testnet-alt)'],
     testnet4: ['var(--testnet)', 'var(--testnet-alt)'],
+    regtest: ['var(--testnet)', 'var(--testnet-alt)'],
     signet: ['var(--signet)', 'var(--signet-alt)'],
   };
 
@@ -107,7 +114,7 @@ export class ClockComponent implements OnInit {
       )`,
     };
   }
-  
+
   @HostListener('window:resize', ['$event'])
   resizeCanvas(): void {
     const windowWidth = this.limitWidth || window.innerWidth || 800;

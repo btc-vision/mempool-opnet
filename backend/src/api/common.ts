@@ -729,9 +729,11 @@ export class Common {
         case 'v16_p2op': flags |= TransactionFlags.p2op; break;
         case 'op_return': flags |= TransactionFlags.op_return; break;
       }
+
       if (vout.scriptpubkey_address) {
         reusedOutputAddresses[vout.scriptpubkey_address] = (reusedOutputAddresses[vout.scriptpubkey_address] || 0) + 1;
       }
+
       if (vout.scriptpubkey_type === 'v0_p2wsh') {
         if (!P2WSHCount) {
           olgaSize = parseInt(vout.scriptpubkey.slice(4, 8), 16);
@@ -746,8 +748,10 @@ export class Common {
       } else {
         P2WSHCount = 0;
       }
+
       outValues[vout.value || Math.random()] = (outValues[vout.value || Math.random()] || 0) + 1;
     }
+
     if (hasFakePubkey) {
       flags |= TransactionFlags.fake_pubkey;
     }
@@ -758,10 +762,12 @@ export class Common {
     if (!addressReuse && tx.vin.length >= 5 && tx.vout.length >= 5 && (Object.keys(inValues).length + Object.keys(outValues).length) <= (tx.vin.length + tx.vout.length) / 2 ) {
       flags |= TransactionFlags.coinjoin;
     }
+
     // more than 5:1 input:output ratio
     if (tx.vin.length / tx.vout.length >= 5) {
       flags |= TransactionFlags.consolidation;
     }
+
     // less than 1:5 input:output ratio
     if (tx.vin.length / tx.vout.length <= 0.2) {
       flags |= TransactionFlags.batch_payout;
@@ -1075,7 +1081,7 @@ export class Common {
   }
 
   static getTransactionFromRequest(req: Request, form: boolean): string {
-    let rawTx: any = typeof req.body === 'object' && form
+    const rawTx: any = typeof req.body === 'object' && form
       ? Object.values(req.body)[0] as any
       : req.body;
     if (typeof rawTx !== 'string') {
@@ -1176,7 +1182,7 @@ export class Common {
             }
           }
         }
-      })
+      });
     }
 
     // Pass through the input string untouched

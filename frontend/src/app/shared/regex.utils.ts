@@ -39,13 +39,21 @@ const ADDRESS_CHARS: {
       // Version byte 0x00 (P2PKH) can be as short as 27 characters, up to 34 length
       // P2SH must be 34 length
     bech32: `(?:`
-        + `bc1` // Starts with bc1
-        + BECH32_CHARS_LW
-        + `{6,100}` // As per bech32, 6 char checksum is minimum
+      + `(?:` // bech32 liquid starts with ex1 (unconfidential) or lq1 (confidential)
+      + `bc1`
       + `|`
-        + `BC1` // All upper case version
-        + BECH32_CHARS_UP
-        + `{6,100}`
+      + `op1`
+      + `)`
+      + BECH32_CHARS_LW // blech32 and bech32 are the same alphabet and protocol, different checksums.
+      + `{6,100}`
+      + `|`
+      + `(?:` // Same as above but all upper case
+      + `OP1`
+      + `|`
+      + `BC1`
+      + `)`
+      + BECH32_CHARS_UP
+      + `{6,100}`
       + `)`,
   },
   testnet: {
@@ -53,13 +61,21 @@ const ADDRESS_CHARS: {
       + BASE58_CHARS
       + `{33,34}`, // m|n is 34 length, 2 is 35 length (We match the first letter separately)
     bech32: `(?:`
-        + `tb1` // Starts with tb1
-        + BECH32_CHARS_LW
-        + `{6,100}` // As per bech32, 6 char checksum is minimum
+      + `(?:` // bech32 liquid starts with ex1 (unconfidential) or lq1 (confidential)
+      + `opt1`
       + `|`
-        + `TB1` // All upper case version
-        + BECH32_CHARS_UP
-        + `{6,100}`
+      + `tb1`
+      + `)`
+      + BECH32_CHARS_LW // blech32 and bech32 are the same alphabet and protocol, different checksums.
+      + `{6,100}`
+      + `|`
+      + `(?:` // Same as above but all upper case
+      + `OPT1`
+      + `|`
+      + `TB1`
+      + `)`
+      + BECH32_CHARS_UP
+      + `{6,100}`
       + `)`,
   },
   testnet4: {
@@ -67,13 +83,43 @@ const ADDRESS_CHARS: {
       + BASE58_CHARS
       + `{33,34}`, // m|n is 34 length, 2 is 35 length (We match the first letter separately)
     bech32: `(?:`
-        + `tb1` // Starts with tb1
-        + BECH32_CHARS_LW
-        + `{6,100}` // As per bech32, 6 char checksum is minimum
+      + `(?:` // bech32 liquid starts with ex1 (unconfidential) or lq1 (confidential)
+      + `opt1`
       + `|`
-        + `TB1` // All upper case version
-        + BECH32_CHARS_UP
-        + `{6,100}`
+      + `tb1`
+      + `)`
+      + BECH32_CHARS_LW // blech32 and bech32 are the same alphabet and protocol, different checksums.
+      + `{6,100}`
+      + `|`
+      + `(?:` // Same as above but all upper case
+      + `OPT1`
+      + `|`
+      + `TB1`
+      + `)`
+      + BECH32_CHARS_UP
+      + `{6,100}`
+      + `)`,
+  },
+  regtest: {
+    base58: `[mn2]` // Starts with a single m, n, or 2 (P2PKH is m or n, 2 is P2SH)
+      + BASE58_CHARS
+      + `{33,34}`, // m|n is 34 length, 2 is 35 length (We match the first letter separately
+    bech32: `(?:`
+      + `(?:` // bech32 liquid starts with ex1 (unconfidential) or lq1 (confidential)
+      + `opr1`
+      + `|`
+      + `bcrt1`
+      + `)`
+      + BECH32_CHARS_LW // blech32 and bech32 are the same alphabet and protocol, different checksums.
+      + `{6,100}`
+      + `|`
+      + `(?:` // Same as above but all upper case
+      + `OPR1`
+      + `|`
+      + `BCRT1`
+      + `)`
+      + BECH32_CHARS_UP
+      + `{6,100}`
       + `)`,
   },
   signet: {
@@ -97,7 +143,7 @@ const ADDRESS_CHARS: {
       + `|`
         + `[V][TJ]` // Confidential P2PKH or P2SH starts with VT or VJ
         + BASE58_CHARS
-        + `{78}`, 
+        + `{78}`,
     bech32: `(?:`
         + `(?:` // bech32 liquid starts with ex1 (unconfidential) or lq1 (confidential)
           + `ex1`
@@ -142,7 +188,7 @@ const ADDRESS_CHARS: {
 type RegexTypeNoAddrNoBlockHash = | `transaction` | `blockheight` | `date` | `timestamp`;
 export type RegexType = `address` | `blockhash` | RegexTypeNoAddrNoBlockHash;
 
-export const NETWORKS = [`mainnet`, `testnet4`, `testnet`, `signet`, `liquid`, `liquidtestnet`] as const;
+export const NETWORKS = [`mainnet`, `testnet4`, `testnet`, `signet`, `liquid`, `liquidtestnet`, 'regtest'] as const;
 export type Network = typeof NETWORKS[number]; // Turn const array into union type
 
 export const ADDRESS_REGEXES: [RegExp, Network][] = NETWORKS
@@ -156,6 +202,8 @@ export function findOtherNetworks(address: string, skipNetwork: Network, env: En
 
 function isNetworkAvailable(network: Network, env: Env): boolean {
   switch (network) {
+    case 'regtest':
+      return env.REGTEST_ENABLED === true;
     case 'testnet':
       return env.TESTNET_ENABLED === true;
     case 'testnet4':
@@ -176,7 +224,7 @@ function isNetworkAvailable(network: Network, env: Env): boolean {
 export function needBaseModuleChange(fromBaseModule: 'mempool' | 'liquid', toNetwork: Network): boolean {
   if (!toNetwork) return false; // No target network means no change needed
   if (fromBaseModule === 'mempool') {
-    return toNetwork !== 'mainnet' && toNetwork !== 'testnet' && toNetwork !== 'testnet4' && toNetwork !== 'signet';
+    return toNetwork !== 'mainnet' && toNetwork !== 'testnet' && toNetwork !== 'testnet4' && toNetwork !== 'signet' && toNetwork !== 'regtest';
   }
   if (fromBaseModule === 'liquid') {
     return toNetwork !== 'liquid' && toNetwork !== 'liquidtestnet';
@@ -191,7 +239,7 @@ export function getTargetUrl(toNetwork: Network, address: string, env: Env): str
     targetUrl += '/address/';
     targetUrl += address;
   }
-  if (toNetwork === 'mainnet' || toNetwork === 'testnet' || toNetwork === 'testnet4' || toNetwork === 'signet') {
+  if (toNetwork === 'mainnet' || toNetwork === 'testnet' || toNetwork === 'testnet4' || toNetwork === 'signet' || toNetwork === 'regtest') {
     targetUrl = env.MEMPOOL_WEBSITE_URL;
     targetUrl += (toNetwork === 'mainnet' ? '' : `/${toNetwork}`);
     targetUrl += '/address/';
@@ -219,6 +267,9 @@ export function getRegex(type: RegexType, network?: Network): RegExp {
       }
       let leadingZeroes: number;
       switch (network) {
+        case 'regtest':
+          leadingZeroes = 8; // Assumes at least 32 bits of difficulty
+          break;
         case `mainnet`:
           leadingZeroes = 8; // Assumes at least 32 bits of difficulty
           break;
@@ -284,6 +335,15 @@ export function getRegex(type: RegexType, network?: Network): RegExp {
           regex += ADDRESS_CHARS.testnet.base58;
           regex += `|`; // OR
           regex += ADDRESS_CHARS.testnet.bech32;
+          regex += `|`; // OR
+          regex += `04${HEX_CHARS}{128}`; // Uncompressed pubkey
+          regex += `|`; // OR
+          regex += `(?:02|03)${HEX_CHARS}{64}`; // Compressed pubkey
+          break;
+        case `regtest`:
+          regex += ADDRESS_CHARS.regtest.base58;
+          regex += `|`; // OR
+          regex += ADDRESS_CHARS.regtest.bech32;
           regex += `|`; // OR
           regex += `04${HEX_CHARS}{128}`; // Uncompressed pubkey
           regex += `|`; // OR

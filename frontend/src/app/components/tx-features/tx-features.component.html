@@ -25,6 +25,42 @@
 </ng-template>
 
 <ng-template [ngIf]="rbfEnabled">
-<span *ngIf="isRbfTransaction; else rbfDisabled" class="badge badge-success" i18n-ngbTooltip="RBF tooltip" ngbTooltip="This transaction supports Replace-By-Fee (RBF) allowing fee bumping" placement="bottom" i18n="tx-features.tag.rbf|RBF">RBF</span>
-<ng-template #rbfDisabled><span class="badge badge-danger mr-1" i18n-ngbTooltip="RBF disabled tooltip" ngbTooltip="This transaction does NOT support Replace-By-Fee (RBF) and cannot be fee bumped using this method" placement="bottom"><del i18n="tx-features.tag.rbf|RBF">RBF</del></span></ng-template>
+  <span *ngIf="isRbfTransaction; else rbfDisabled"
+        class="badge badge-success mr-1"
+        i18n-ngbTooltip="RBF tooltip"
+        ngbTooltip="This transaction supports Replace-By-Fee (RBF) allowing fee bumping"
+        placement="bottom"
+        i18n="tx-features.tag.rbf|RBF">
+    RBF
+  </span>
+
+  <ng-template #rbfDisabled>
+    <span class="badge badge-danger mr-1"
+          i18n-ngbTooltip="RBF disabled tooltip"
+          ngbTooltip="This transaction does NOT support Replace-By-Fee (RBF) and cannot be fee bumped using this method"
+          placement="bottom">
+      <del i18n="tx-features.tag.rbf|RBF">RBF</del>
+    </span>
+  </ng-template>
+</ng-template>
+
+<ng-template [ngIf]="smartContractsEnabled">
+  <span *ngIf="isSmartContract; else smartContractsDisabled"
+        class="badge badge-success mr-1"
+        i18n-ngbTooltip="Tooltip about smart-contract usage"
+        ngbTooltip="This transaction executes an on-chain smart-contract"
+        placement="bottom"
+        i18n="tx-features.tag.smartcontract|Smart Contract">
+    Smart&nbsp;Contract
+  </span>
+
+  <!-- Transaction contains no advanced contract logic -->
+  <ng-template #smartContractsDisabled>
+    <span class="badge badge-danger mr-1"
+          i18n-ngbTooltip="Tooltip about not using smart contracts"
+          ngbTooltip="This transaction does not use any on-chain smart-contract"
+          placement="bottom">
+      <del i18n="tx-features.tag.smartcontract|Smart Contract">Smart&nbsp;Contract</del>
+    </span>
+  </ng-template>
 </ng-template>

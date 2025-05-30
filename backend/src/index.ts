@@ -1,5 +1,4 @@
-import express from 'express';
-import { Application, Request, Response, NextFunction } from 'express';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import bitcoinApi from './api/bitcoin/bitcoin-api-factory';
@@ -8,13 +7,13 @@ import DB from './database';
 import config from './config';
 import blocks from './api/blocks';
 import memPool from './api/mempool';
+import mempool from './api/mempool';
 import diskCache from './api/disk-cache';
 import statistics from './api/statistics/statistics';
 import websocketHandler from './api/websocket-handler';
 import logger from './logger';
 import backendInfo from './api/backend-info';
 import loadingIndicators from './api/loading-indicators';
-import mempool from './api/mempool';
 import elementsParser from './api/liquid/elements-parser';
 import databaseMigration from './api/database-migration';
 import syncAssets from './sync-assets';
@@ -155,7 +154,7 @@ class Server {
     this.setUpWebsocketHandling();
 
     await poolsUpdater.updatePoolsJson(); // Needs to be done before loading the disk cache because we sometimes wipe it
-    if (config.DATABASE.ENABLED === true && config.MEMPOOL.ENABLED && ['mainnet', 'testnet', 'signet'].includes(config.MEMPOOL.NETWORK) && !poolsUpdater.currentSha) {
+    if (config.DATABASE.ENABLED === true && config.MEMPOOL.ENABLED && ['mainnet', 'testnet', 'signet', 'regtest'].includes(config.MEMPOOL.NETWORK) && !poolsUpdater.currentSha) {
       logger.err(`Failed to retreive pools-v2.json sha, cannot run block indexing. Please make sure you've set valid urls in your mempool-config.json::MEMPOOL::POOLS_JSON_URL and mempool-config.json::MEMPOOL::POOLS_JSON_TREE_UR, aborting now`);
       return process.exit(1);
     }
