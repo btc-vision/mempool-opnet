@@ -1,8 +1,13 @@
 import { TransactionFlags } from '@app/shared/filters.utils';
-import { getVarIntLength, opcodes, parseMultisigScript, isPoint,  checkIsSmartContract, checkIsInteraction } from '@app/shared/script.utils';
+import {
+  checkIsInteraction,
+  checkIsSmartContract,
+  getVarIntLength,
+  isPoint,
+  parseMultisigScript,
+} from '@app/shared/script.utils';
 import { Transaction, Vin } from '@interfaces/electrs.interface';
-import { CpfpInfo, RbfInfo, TransactionStripped } from '@interfaces/node-api.interface';
-import { StateService } from '@app/services/state.service';
+import { CpfpInfo, TransactionStripped } from '@interfaces/node-api.interface';
 import { hash, Hash } from './sha256';
 import { AddressType } from './address-utils';
 
