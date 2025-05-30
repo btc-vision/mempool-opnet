@@ -46,7 +46,8 @@ export const TransactionFlags = {
   fake_pubkey:                                   0b00000010_00000000_00000000_00000000n,
   inscription:                                   0b00000100_00000000_00000000_00000000n,
   fake_scripthash:                               0b00001000_00000000_00000000_00000000n,
-  opnet:                                         0b00010000_00000000_00000000_00000000n,
+  annex:                                         0b00010000_00000000_00000000_00000000n,
+  opnet:                                         0b00100000_00000000_00000000_00000000n,
   // heuristics
   coinjoin:                             0b00000001_00000000_00000000_00000000_00000000n,
   consolidation:                        0b00000010_00000000_00000000_00000000_00000000n,
@@ -107,6 +108,7 @@ export const TransactionFilters: { [key: string]: Filter } = {
     inscription: { key: 'inscription', label: 'Inscription', flag: TransactionFlags.inscription, important: true, tooltip: true, txPage: true, },
     opnet: { key: 'opnet', label: 'OP_NET', flag: TransactionFlags.opnet, important: true, tooltip: true, txPage: true, },
     fake_scripthash: { key: 'fake_scripthash', label: 'Fake scripthash', flag: TransactionFlags.fake_scripthash, tooltip: true, txPage: true,},
+    annex: { key: 'annex', label: 'Annex', flag: TransactionFlags.annex, important: false, tooltip: true, txPage: true,},
     /* heuristics */
     coinjoin: { key: 'coinjoin', label: $localize`Coinjoin`, flag: TransactionFlags.coinjoin, important: true, tooltip: true, txPage: true, },
     consolidation: { key: 'consolidation', label: $localize`Consolidation`, flag: TransactionFlags.consolidation, tooltip: true, txPage: true, },
@@ -126,7 +128,7 @@ export const FilterGroups: { label: string, filters: Filter[]}[] = [
   { label: $localize`:@@885666551418fd59011ceb09d5c481095940193b:Features`, filters: ['rbf', 'no_rbf', 'v1', 'v2', 'v3', 'nonstandard'] },
   { label: $localize`Address Types`, filters: ['p2pk', 'p2ms', 'p2pkh', 'p2sh', 'p2wpkh', 'p2wsh', 'p2tr'] },
   { label: $localize`Behavior`, filters: ['cpfp_parent', 'cpfp_child', 'replacement', 'acceleration'] },
-  { label: $localize`Data`, filters: ['op_return', 'fake_pubkey', 'fake_scripthash', 'inscription', 'opnet'] },
+  { label: $localize`Data`, filters: ['op_return', 'fake_pubkey', 'fake_scripthash', 'inscription', 'annex', 'opnet'] },
   { label: $localize`Heuristics`, filters: ['coinjoin', 'consolidation', 'batch_payout'] },
   { label: $localize`Sighash Flags`, filters: ['sighash_all', 'sighash_none', 'sighash_single', 'sighash_default', 'sighash_acp'] },
   { label: $localize`Contract`, filters: ['smart_contract', 'interaction'] },
