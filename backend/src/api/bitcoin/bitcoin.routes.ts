@@ -1,5 +1,4 @@
 import { Application, Request, Response } from 'express';
-import axios from 'axios';
 import * as bitcoinjs from 'bitcoinjs-lib';
 import config from '../../config';
 import websocketHandler from '../websocket-handler';
@@ -1018,7 +1017,7 @@ class BitcoinRoutes {
                 value: Math.round(rawPrevout.value * 100000000),
                 scriptpubkey: rawPrevout.scriptPubKey.hex,
                 scriptpubkey_asm: rawPrevout.scriptPubKey.asm ? transactionUtils.convertScriptSigAsm(rawPrevout.scriptPubKey.hex) : '',
-                scriptpubkey_type: transactionUtils.translateScriptPubKeyType(rawPrevout.scriptPubKey.type),
+                scriptpubkey_type: transactionUtils.translateScriptPubKeyType(rawPrevout.scriptPubKey.type, rawPrevout.scriptPubKey.hex),
                 scriptpubkey_address: rawPrevout.scriptPubKey && rawPrevout.scriptPubKey.address ? rawPrevout.scriptPubKey.address : '',
               };
               unconfirmed = false;

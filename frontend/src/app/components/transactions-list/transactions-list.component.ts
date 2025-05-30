@@ -1,12 +1,30 @@
-import { Component, OnInit, Input, ChangeDetectionStrategy, OnChanges, Output, EventEmitter, ChangeDetectorRef, OnDestroy } from '@angular/core';
-import { StateService, SignaturesMode } from '@app/services/state.service';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Output,
+} from '@angular/core';
+import { SignaturesMode, StateService } from '@app/services/state.service';
 import { CacheService } from '@app/services/cache.service';
-import { Observable, ReplaySubject, BehaviorSubject, merge, Subscription, of, forkJoin } from 'rxjs';
-import { Outspend, Transaction, Vin, Vout } from '@interfaces/electrs.interface';
+import {
+  BehaviorSubject,
+  forkJoin,
+  merge,
+  Observable,
+  of,
+  ReplaySubject,
+  Subscription,
+} from 'rxjs';
+import { Outspend, Transaction, Vout } from '@interfaces/electrs.interface';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { environment } from '@environments/environment';
 import { AssetsService } from '@app/services/assets.service';
-import { filter, map, tap, switchMap, catchError } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, tap } from 'rxjs/operators';
 import { BlockExtended } from '@interfaces/node-api.interface';
 import { ApiService } from '@app/services/api.service';
 import { PriceService } from '@app/services/price.service';
@@ -14,8 +32,18 @@ import { StorageService } from '@app/services/storage.service';
 import { OrdApiService } from '@app/services/ord-api.service';
 import { Inscription } from '@app/shared/ord/inscription.utils';
 import { Etching, Runestone } from '@app/shared/ord/rune.utils';
-import { ADDRESS_SIMILARITY_THRESHOLD, AddressMatch, AddressSimilarity, AddressType, AddressTypeInfo, checkedCompareAddressStrings, detectAddressType } from '@app/shared/address-utils';
-import { processInputSignatures, Sighash, SigInfo, SighashLabels } from '@app/shared/transaction.utils';
+import {
+  ADDRESS_SIMILARITY_THRESHOLD,
+  AddressMatch,
+  AddressType,
+  checkedCompareAddressStrings,
+} from '@app/shared/address-utils';
+import {
+  processInputSignatures,
+  Sighash,
+  SighashLabels,
+  SigInfo,
+} from '@app/shared/transaction.utils';
 import { ActivatedRoute } from '@angular/router';
 import { SighashFlag } from '../../shared/transaction.utils';
 
@@ -366,8 +394,8 @@ export class TransactionsListComponent implements OnInit, OnChanges, OnDestroy {
 
       // Check for address poisoning similarity matches
       this.similarityMatches.set(tx.txid, new Map());
-      const comparableVouts = tx.vout.slice(0, 20).filter(v => ['p2pkh', 'p2sh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr'].includes(v.scriptpubkey_type));
-      const comparableVins = tx.vin.slice(0, 20).map(v => v.prevout).filter(v => ['p2pkh', 'p2sh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr'].includes(v?.scriptpubkey_type));
+      const comparableVouts = tx.vout.slice(0, 20).filter(v => ['p2pkh', 'p2sh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr', 'v16_p2op'].includes(v.scriptpubkey_type));
+      const comparableVins = tx.vin.slice(0, 20).map(v => v.prevout).filter(v => ['p2pkh', 'p2sh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr', 'v16_p2op'].includes(v?.scriptpubkey_type));
       for (const vout of comparableVouts) {
         const address = vout.scriptpubkey_address;
         const addressType = vout.scriptpubkey_type;

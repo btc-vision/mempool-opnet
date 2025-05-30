@@ -1,4 +1,9 @@
-import { Component, ChangeDetectionStrategy, OnChanges, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Input,
+  OnChanges,
+} from '@angular/core';
 import { calcSegwitFeeGains, isFeatureActive } from '@app/bitcoin.utils';
 import { Transaction } from '@interfaces/electrs.interface';
 import { StateService } from '@app/services/state.service';
@@ -21,6 +26,7 @@ export class TxFeaturesComponent implements OnChanges {
   };
   isRbfTransaction: boolean;
   isTaproot: boolean;
+  isP2OP: boolean;
 
   segwitEnabled: boolean;
   rbfEnabled: boolean;
@@ -40,5 +46,6 @@ export class TxFeaturesComponent implements OnChanges {
     this.segwitGains = calcSegwitFeeGains(this.tx);
     this.isRbfTransaction = this.tx.vin.some((v) => v.sequence < 0xfffffffe);
     this.isTaproot = this.tx.vin.some((v) => v.prevout && v.prevout.scriptpubkey_type === 'v1_p2tr');
+    this.isP2OP = this.tx.vin.some((v) => v.prevout && v.prevout.scriptpubkey_type === 'v16_p2op');
   }
 }

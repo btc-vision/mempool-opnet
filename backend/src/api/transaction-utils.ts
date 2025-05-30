@@ -1,4 +1,8 @@
-import { TransactionExtended, MempoolTransactionExtended, TransactionMinerInfo } from '../mempool.interfaces';
+import {
+  MempoolTransactionExtended,
+  TransactionExtended,
+  TransactionMinerInfo,
+} from '../mempool.interfaces';
 import { IEsploraApi } from './bitcoin/esplora-api.interface';
 import { Common } from './common';
 import bitcoinApi, { bitcoinCoreApi } from './bitcoin/bitcoin-api-factory';
@@ -8,38 +12,65 @@ import config from '../config';
 import pLimit from '../utils/p-limit';
 
 class TransactionUtils {
-  constructor() { }
+  constructor() {}
 
-  public stripCoinbaseTransaction(tx: TransactionExtended): TransactionMinerInfo {
+  public stripCoinbaseTransaction(
+    tx: TransactionExtended
+  ): TransactionMinerInfo {
     return {
-      vin: [{
-        scriptsig: tx.vin[0].scriptsig || tx.vin[0]['coinbase']
-      }],
+      vin: [
+        {
+          scriptsig: tx.vin[0].scriptsig || tx.vin[0]['coinbase'],
+        },
+      ],
       vout: tx.vout
         .map((vout) => ({
           scriptpubkey_address: vout.scriptpubkey_address,
           scriptpubkey_asm: vout.scriptpubkey_asm,
-          value: vout.value
+          value: vout.value,
         }))
-        .filter((vout) => vout.value)
+        .filter((vout) => vout.value),
     };
   }
 
   // Wrapper for $getTransactionExtended with an automatic retry direct to Core if the first API request fails.
   // Propagates any error from the retry request.
-  public async $getTransactionExtendedRetry(txid: string, addPrevouts = false, lazyPrevouts = false, forceCore = false, addMempoolData = false): Promise<TransactionExtended> {
+  public async $getTransactionExtendedRetry(
+    txid: string,
+    addPrevouts = false,
+    lazyPrevouts = false,
+    forceCore = false,
+    addMempoolData = false
+  ): Promise<TransactionExtended> {
     try {
-      const result = await this.$getTransactionExtended(txid, addPrevouts, lazyPrevouts, forceCore, addMempoolData);
+      const result = await this.$getTransactionExtended(
+        txid,
+        addPrevouts,
+        lazyPrevouts,
+        forceCore,
+        addMempoolData
+      );
       if (result) {
         return result;
       } else {
-        logger.err(`Cannot fetch tx ${txid}. Reason: backend returned null data`);
+        logger.err(
+          `Cannot fetch tx ${txid}. Reason: backend returned null data`
+        );
       }
     } catch (e) {
-      logger.err(`Cannot fetch tx ${txid}. Reason: ` + (e instanceof Error ? e.message : e));
+      logger.err(
+        `Cannot fetch tx ${txid}. Reason: ` +
+          (e instanceof Error ? e.message : e)
+      );
     }
     // retry direct from Core if first request failed
-    return this.$getTransactionExtended(txid, addPrevouts, lazyPrevouts, true, addMempoolData);
+    return this.$getTransactionExtended(
+      txid,
+      addPrevouts,
+      lazyPrevouts,
+      true,
+      addMempoolData
+    );
   }
 
   /**
@@ -48,17 +79,36 @@ class TransactionUtils {
    * @param lazyPrevouts
    * @param forceCore - See https://github.com/mempool/mempool/issues/2904
    */
-  public async $getTransactionExtended(txId: string, addPrevouts = false, lazyPrevouts = false, forceCore = false, addMempoolData = false): Promise<TransactionExtended> {
+  public async $getTransactionExtended(
+    txId: string,
+    addPrevouts = false,
+    lazyPrevouts = false,
+    forceCore = false,
+    addMempoolData = false
+  ): Promise<TransactionExtended> {
     let transaction: IEsploraApi.Transaction;
     if (forceCore === true) {
-      transaction  = await bitcoinCoreApi.$getRawTransaction(txId, false, addPrevouts, lazyPrevouts);
+      transaction = await bitcoinCoreApi.$getRawTransaction(
+        txId,
+        false,
+        addPrevouts,
+        lazyPrevouts
+      );
     } else {
-      transaction  = await bitcoinApi.$getRawTransaction(txId, false, addPrevouts, lazyPrevouts);
+      transaction = await bitcoinApi.$getRawTransaction(
+        txId,
+        false,
+        addPrevouts,
+        lazyPrevouts
+      );
     }
 
     if (Common.isLiquid()) {
       if (!isFinite(Number(transaction.fee))) {
-        transaction.fee = Object.values(transaction.fee || {}).reduce((total, output) => total + output, 0);
+        transaction.fee = Object.values(transaction.fee || {}).reduce(
+          (total, output) => total + output,
+          0
+        );
       }
     }
 
@@ -69,24 +119,55 @@ class TransactionUtils {
     }
   }
 
-  public async $getMempoolTransactionExtended(txId: string, addPrevouts = false, lazyPrevouts = false, forceCore = false): Promise<MempoolTransactionExtended> {
-    return (await this.$getTransactionExtended(txId, addPrevouts, lazyPrevouts, forceCore, true)) as MempoolTransactionExtended;
+  public async $getMempoolTransactionExtended(
+    txId: string,
+    addPrevouts = false,
+    lazyPrevouts = false,
+    forceCore = false
+  ): Promise<MempoolTransactionExtended> {
+    return (await this.$getTransactionExtended(
+      txId,
+      addPrevouts,
+      lazyPrevouts,
+      forceCore,
+      true
+    )) as MempoolTransactionExtended;
   }
 
-  public async $getMempoolTransactionsExtended(txids: string[], addPrevouts = false, lazyPrevouts = false, forceCore = false): Promise<MempoolTransactionExtended[]> {
+  public async $getMempoolTransactionsExtended(
+    txids: string[],
+    addPrevouts = false,
+    lazyPrevouts = false,
+    forceCore = false
+  ): Promise<MempoolTransactionExtended[]> {
     if (forceCore || config.MEMPOOL.BACKEND !== 'esplora') {
       const limiter = pLimit(8); // Run 8 requests at a time
-      const results = await Promise.allSettled(txids.map(
-        txid => limiter(() => this.$getMempoolTransactionExtended(txid, addPrevouts, lazyPrevouts, forceCore))
-      ));
-      return results.filter(reply => reply.status === 'fulfilled')
-        .map(r => (r as PromiseFulfilledResult<MempoolTransactionExtended>).value);
+      const results = await Promise.allSettled(
+        txids.map((txid) =>
+          limiter(() =>
+            this.$getMempoolTransactionExtended(
+              txid,
+              addPrevouts,
+              lazyPrevouts,
+              forceCore
+            )
+          )
+        )
+      );
+      return results
+        .filter((reply) => reply.status === 'fulfilled')
+        .map(
+          (r) => (r as PromiseFulfilledResult<MempoolTransactionExtended>).value
+        );
     } else {
       const transactions = await bitcoinApi.$getMempoolTransactions(txids);
-      return transactions.map(transaction => {
+      return transactions.map((transaction) => {
         if (Common.isLiquid()) {
           if (!isFinite(Number(transaction.fee))) {
-            transaction.fee = Object.values(transaction.fee || {}).reduce((total, output) => total + output, 0);
+            transaction.fee = Object.values(transaction.fee || {}).reduce(
+              (total, output) => total + output,
+              0
+            );
           }
         }
 
@@ -95,44 +176,64 @@ class TransactionUtils {
     }
   }
 
-  public extendTransaction(transaction: IEsploraApi.Transaction): TransactionExtended {
+  public extendTransaction(
+    transaction: IEsploraApi.Transaction
+  ): TransactionExtended {
     // @ts-ignore
     if (transaction.vsize) {
       // @ts-ignore
       return transaction;
     }
     const feePerVbytes = (transaction.fee || 0) / (transaction.weight / 4);
-    const transactionExtended: TransactionExtended = Object.assign({
-      vsize: transaction.weight / 4,
-      feePerVsize: feePerVbytes,
-      effectiveFeePerVsize: feePerVbytes,
-    }, transaction);
+    const transactionExtended: TransactionExtended = Object.assign(
+      {
+        vsize: transaction.weight / 4,
+        feePerVsize: feePerVbytes,
+        effectiveFeePerVsize: feePerVbytes,
+      },
+      transaction
+    );
     if (!transaction?.status?.confirmed && !transactionExtended.firstSeen) {
-      transactionExtended.firstSeen = Math.round((Date.now() / 1000));
+      transactionExtended.firstSeen = Math.round(Date.now() / 1000);
     }
     return transactionExtended;
   }
 
-  public extendMempoolTransaction(transaction: IEsploraApi.Transaction): MempoolTransactionExtended {
+  public extendMempoolTransaction(
+    transaction: IEsploraApi.Transaction
+  ): MempoolTransactionExtended {
     const vsize = Math.ceil(transaction.weight / 4);
-    const fractionalVsize = (transaction.weight / 4);
-    let sigops = Common.isLiquid() ? 0 : (transaction.sigops != null ? transaction.sigops : this.countSigops(transaction));
+    const fractionalVsize = transaction.weight / 4;
+    let sigops = Common.isLiquid()
+      ? 0
+      : transaction.sigops != null
+      ? transaction.sigops
+      : this.countSigops(transaction);
     // https://github.com/bitcoin/bitcoin/blob/e9262ea32a6e1d364fb7974844fadc36f931f8c6/src/policy/policy.cpp#L295-L298
-    const adjustedVsize = Math.max(fractionalVsize, sigops *  5); // adjusted vsize = Max(weight, sigops * bytes_per_sigop) / witness_scale_factor
+    const adjustedVsize = Math.max(fractionalVsize, sigops * 5); // adjusted vsize = Max(weight, sigops * bytes_per_sigop) / witness_scale_factor
     const feePerVbytes = (transaction.fee || 0) / fractionalVsize;
     const adjustedFeePerVsize = (transaction.fee || 0) / adjustedVsize;
-    const effectiveFeePerVsize = transaction['effectiveFeePerVsize'] || adjustedFeePerVsize || feePerVbytes;
-    const transactionExtended: MempoolTransactionExtended = Object.assign(transaction, {
-      order: this.txidToOrdering(transaction.txid),
-      vsize,
-      adjustedVsize,
-      sigops,
-      feePerVsize: feePerVbytes,
-      adjustedFeePerVsize: adjustedFeePerVsize,
-      effectiveFeePerVsize: effectiveFeePerVsize,
-    });
-    if (!transactionExtended?.status?.confirmed && !transactionExtended.firstSeen) {
-      transactionExtended.firstSeen = Math.round((Date.now() / 1000));
+    const effectiveFeePerVsize =
+      transaction['effectiveFeePerVsize'] ||
+      adjustedFeePerVsize ||
+      feePerVbytes;
+    const transactionExtended: MempoolTransactionExtended = Object.assign(
+      transaction,
+      {
+        order: this.txidToOrdering(transaction.txid),
+        vsize,
+        adjustedVsize,
+        sigops,
+        feePerVsize: feePerVbytes,
+        adjustedFeePerVsize: adjustedFeePerVsize,
+        effectiveFeePerVsize: effectiveFeePerVsize,
+      }
+    );
+    if (
+      !transactionExtended?.status?.confirmed &&
+      !transactionExtended.firstSeen
+    ) {
+      transactionExtended.firstSeen = Math.round(Date.now() / 1000);
     }
     return transactionExtended;
   }
@@ -145,14 +246,18 @@ class TransactionUtils {
     return str;
   }
 
-  public countScriptSigops(script: string, isRawScript: boolean = false, witness: boolean = false): number {
+  public countScriptSigops(
+    script: string,
+    isRawScript: boolean = false,
+    witness: boolean = false
+  ): number {
     if (!script?.length) {
       return 0;
     }
 
     let sigops = 0;
     // count OP_CHECKSIG and OP_CHECKSIGVERIFY
-    sigops += (script.match(/OP_CHECKSIG/g)?.length || 0);
+    sigops += script.match(/OP_CHECKSIG/g)?.length || 0;
 
     // count OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
     if (isRawScript) {
@@ -160,7 +265,9 @@ class TransactionUtils {
       sigops += 20 * (script.match(/OP_CHECKMULTISIG/g)?.length || 0);
     } else {
       // in redeem scripts and witnesses, worth N if preceded by OP_N, 20 otherwise
-      const matches = script.matchAll(/(?:OP_(?:PUSHNUM_)?(\d+))? OP_CHECKMULTISIG/g);
+      const matches = script.matchAll(
+        /(?:OP_(?:PUSHNUM_)?(\d+))? OP_CHECKMULTISIG/g
+      );
       for (const match of matches) {
         const n = parseInt(match[1]);
         if (Number.isInteger(n)) {
@@ -171,7 +278,7 @@ class TransactionUtils {
       }
     }
 
-    return witness ? sigops : (sigops * 4);
+    return witness ? sigops : sigops * 4;
   }
 
   public countSigops(transaction: IEsploraApi.Transaction): number {
@@ -183,15 +290,27 @@ class TransactionUtils {
       }
       if (input.prevout) {
         switch (true) {
-          case input.prevout.scriptpubkey_type === 'p2sh' && input.witness?.length === 2 && input.scriptsig && input.scriptsig.startsWith('160014'):
+          case input.prevout.scriptpubkey_type === 'p2sh' &&
+            input.witness?.length === 2 &&
+            input.scriptsig &&
+            input.scriptsig.startsWith('160014'):
           case input.prevout.scriptpubkey_type === 'v0_p2wpkh':
             sigops += 1;
             break;
 
-          case input.prevout?.scriptpubkey_type === 'p2sh' && input.witness?.length && input.scriptsig && input.scriptsig.startsWith('220020'):
+          case input.prevout?.scriptpubkey_type === 'p2sh' &&
+            input.witness?.length &&
+            input.scriptsig &&
+            input.scriptsig.startsWith('220020'):
           case input.prevout.scriptpubkey_type === 'v0_p2wsh':
             if (input.witness?.length) {
-              sigops += this.countScriptSigops(bitcoinjs.script.toASM(Buffer.from(input.witness[input.witness.length - 1], 'hex')), false, true);
+              sigops += this.countScriptSigops(
+                bitcoinjs.script.toASM(
+                  Buffer.from(input.witness[input.witness.length - 1], 'hex')
+                ),
+                false,
+                true
+              );
             }
             break;
 
@@ -249,6 +368,11 @@ class TransactionUtils {
         vin.inner_witnessscript_asm = this.convertScriptSigAsm(witnessScript);
       }
     }
+
+    if (vin.prevout.scriptpubkey_type === 'v16_p2op' && vin.witness) {
+      const witnessScript = vin.witness[vin.witness.length - 1];
+      vin.inner_witnessscript_asm = this.convertScriptSigAsm(witnessScript);
+    }
   }
 
   public convertScriptSigAsm(hex: string): string {
@@ -298,7 +422,7 @@ class TransactionUtils {
         } else if (op === 0xba) {
           b.push('OP_CHECKSIGADD');
         } else {
-          const opcode = bitcoinjs.script.toASM([ op ]);
+          const opcode = bitcoinjs.script.toASM([op]);
           if (opcode && op < 0xfd) {
             if (/^OP_(\d+)$/.test(opcode)) {
               b.push(opcode.replace(/^OP_(\d+)$/, 'OP_PUSHNUM_$1'));
@@ -342,11 +466,17 @@ class TransactionUtils {
 
   // calculate the most parsimonious set of prioritizations given a list of block transactions
   // (i.e. the most likely prioritizations and deprioritizations)
-  public identifyPrioritizedTransactions(transactions: any[], rateKey: string): { prioritized: string[], deprioritized: string[] } {
+  public identifyPrioritizedTransactions(
+    transactions: any[],
+    rateKey: string
+  ): { prioritized: string[]; deprioritized: string[] } {
     // find the longest increasing subsequence of transactions
     // (adapted from https://en.wikipedia.org/wiki/Longest_increasing_subsequence#Efficient_algorithms)
     // should be O(n log n)
-    const X = transactions.slice(1).reverse().map((tx) => ({ txid: tx.txid, rate: tx[rateKey] })); // standard block order is by *decreasing* effective fee rate, but we want to iterate in increasing order (and skip the coinbase)
+    const X = transactions
+      .slice(1)
+      .reverse()
+      .map((tx) => ({ txid: tx.txid, rate: tx[rateKey] })); // standard block order is by *decreasing* effective fee rate, but we want to iterate in increasing order (and skip the coinbase)
     if (X.length < 2) {
       return { prioritized: [], deprioritized: [] };
     }
@@ -365,7 +495,8 @@ class TransactionUtils {
         const mid = lo + Math.floor((hi - lo) / 2); // lo <= mid < hi
         if (X[M[mid]].rate > X[i].rate) {
           hi = mid;
-        } else { // if X[M[mid]].effectiveFeePerVsize < X[i].effectiveFeePerVsize
+        } else {
+          // if X[M[mid]].effectiveFeePerVsize < X[i].effectiveFeePerVsize
           lo = mid + 1;
         }
       }
@@ -422,19 +553,23 @@ class TransactionUtils {
   }
 
   // Copied from https://github.com/mempool/mempool/blob/14e49126c3ca8416a8d7ad134a95c5e090324d69/backend/src/api/bitcoin/bitcoin-api.ts#L324
-  public translateScriptPubKeyType(outputType: string): string {
+  public translateScriptPubKeyType(outputType: string, pub: string): string {
     const map = {
-      'pubkey': 'p2pk',
-      'pubkeyhash': 'p2pkh',
-      'scripthash': 'p2sh',
-      'witness_v0_keyhash': 'v0_p2wpkh',
-      'witness_v0_scripthash': 'v0_p2wsh',
-      'witness_v1_taproot': 'v1_p2tr',
-      'nonstandard': 'nonstandard',
-      'multisig': 'multisig',
-      'anchor': 'anchor',
-      'nulldata': 'op_return'
+      pubkey: 'p2pk',
+      pubkeyhash: 'p2pkh',
+      scripthash: 'p2sh',
+      witness_v0_keyhash: 'v0_p2wpkh',
+      witness_v0_scripthash: 'v0_p2wsh',
+      witness_v1_taproot: 'v1_p2tr',
+      nonstandard: 'nonstandard',
+      multisig: 'multisig',
+      anchor: 'anchor',
+      nulldata: 'op_return',
     };
+
+    if (outputType === 'witness_unknown' && pub.startsWith('60')) {
+      return 'v16_p2op';
+    }
 
     if (map[outputType]) {
       return map[outputType];
@@ -442,7 +577,6 @@ class TransactionUtils {
       return 'unknown';
     }
   }
-  
 }
 
 export default new TransactionUtils();
