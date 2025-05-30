@@ -189,7 +189,7 @@ export const specialBlocks = {
   '0': {
     labelEvent: 'Genesis',
     labelEventCompleted: 'The Genesis of Bitcoin',
-    networks: ['mainnet', 'testnet', 'testnet4'],
+    networks: ['mainnet', 'testnet', 'testnet4', 'regtest'],
   },
   '210000': {
     labelEvent: 'Bitcoin\'s 1st Halving',

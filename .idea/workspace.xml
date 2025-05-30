@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6443f129-23b0-47a0-b2dd-876d5c03faea" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/shared/components/address-type/address-type.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/shared/components/address-type/address-type.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/app.constants.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/app.constants.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/shared/transaction.utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/shared/transaction.utils.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

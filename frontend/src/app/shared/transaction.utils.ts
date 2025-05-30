@@ -484,6 +484,7 @@ function isNonStandardVersion(tx: Transaction, height?: number, network?: string
 }
 
 const ANCHOR_STANDARDNESS_ACTIVATION_HEIGHT = {
+  'regtest': 0,
   'testnet4': 42_000,
   'testnet': 2_900_000,
   'signet': 211_000,
