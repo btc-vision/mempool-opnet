@@ -1,6 +1,9 @@
-import * as bitcoinjs from 'bitcoinjs-lib';
-import { AbstractBitcoinApi, HealthCheckHost } from './bitcoin-api-abstract-factory';
-import { IBitcoinApi, SubmitPackageResult, TestMempoolAcceptResult } from './bitcoin-api.interface';
+import { AbstractBitcoinApi } from './bitcoin-api-abstract-factory';
+import {
+  IBitcoinApi,
+  SubmitPackageResult,
+  TestMempoolAcceptResult,
+} from './bitcoin-api.interface';
 import { IEsploraApi } from './esplora-api.interface';
 import blocks from '../blocks';
 import mempool from '../mempool';
@@ -284,7 +287,7 @@ class BitcoinApi implements AbstractBitcoinApi {
         scriptpubkey_address: vout.scriptPubKey && vout.scriptPubKey.address ? vout.scriptPubKey.address
           : vout.scriptPubKey.addresses ? vout.scriptPubKey.addresses[0] : '',
         scriptpubkey_asm: vout.scriptPubKey.asm ? transactionUtils.convertScriptSigAsm(vout.scriptPubKey.hex) : '',
-        scriptpubkey_type: this.translateScriptPubKeyType(vout.scriptPubKey.type),
+        scriptpubkey_type: this.translateScriptPubKeyType(vout.scriptPubKey.type, vout.scriptPubKey.hex),
       };
     });
 
@@ -321,7 +324,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return esploraTransaction;
   }
 
-  private translateScriptPubKeyType(outputType: string): string {
+  private translateScriptPubKeyType(outputType: string, pub: string): string {
     const map = {
       'pubkey': 'p2pk',
       'pubkeyhash': 'p2pkh',
@@ -334,6 +337,11 @@ class BitcoinApi implements AbstractBitcoinApi {
       'anchor': 'anchor',
       'nulldata': 'op_return'
     };
+
+    if(outputType === 'witness_unknown' && pub.startsWith('60')) {
+      // This is a special case for Taproot outputs that are not recognized by the API
+      return 'v16_p2op';
+    }
 
     if (map[outputType]) {
       return map[outputType];

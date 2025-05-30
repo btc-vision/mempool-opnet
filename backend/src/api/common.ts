@@ -1,13 +1,26 @@
 import * as bitcoinjs from 'bitcoinjs-lib';
 import { Request } from 'express';
-import { EffectiveFeeStats, MempoolBlockWithTransactions, TransactionExtended, MempoolTransactionExtended, TransactionStripped, WorkingEffectiveFeeStats, TransactionClassified, TransactionFlags } from '../mempool.interfaces';
+import {
+  EffectiveFeeStats,
+  MempoolBlockWithTransactions,
+  MempoolTransactionExtended,
+  TransactionClassified,
+  TransactionExtended,
+  TransactionFlags,
+  TransactionStripped,
+  WorkingEffectiveFeeStats,
+} from '../mempool.interfaces';
 import config from '../config';
 import { NodeSocket } from '../repositories/NodesSocketsRepository';
 import { isIP } from 'net';
 import transactionUtils from './transaction-utils';
 import { isPoint } from '../utils/secp256k1';
 import logger from '../logger';
-import { getVarIntLength, opcodes, parseMultisigScript } from '../utils/bitcoin-script';
+import {
+  getVarIntLength,
+  opcodes,
+  parseMultisigScript,
+} from '../utils/bitcoin-script';
 
 // Bitcoin Core default policy settings
 const MAX_STANDARD_TX_WEIGHT = 400_000;
@@ -19,6 +32,7 @@ const MAX_STANDARD_P2WSH_STACK_ITEMS = 100;
 const MAX_STANDARD_P2WSH_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_TAPSCRIPT_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_P2WSH_SCRIPT_SIZE = 3600;
+const MAX_STANDARD_P2OP_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_SCRIPTSIG_SIZE = 1650;
 const DUST_RELAY_TX_FEE = 3;
 const MAX_OP_RETURN_RELAY = 83;
@@ -278,6 +292,28 @@ export class Common {
           if (vin.witness.slice(0, vin.witness.length - (hasAnnex ? 3 : 2)).some(v => v.length > 160)) {
             return false;
           }
+        }
+      } else if (vin.prevout?.scriptpubkey_type === 'v16_p2op' && vin.witness?.length) {
+        const hasAnnex = vin.witness.length > 1 &&
+          vin.witness[vin.witness.length - 1].startsWith('50');
+
+        if (hasAnnex) {
+          return true;
+        }
+
+        // Rule 2 – Must be a script-path spend:  at least 2 witness items
+        if (vin.witness.length < 2) {
+          return true;
+        }
+
+        // Rule 3 – Every stack item **except the script itself (last item)**
+        //          must not exceed 80 bytes (160 hex chars)
+        if (
+          vin.witness
+            .slice(0, vin.witness.length - 1)
+            .some(itemHex => itemHex.length > MAX_STANDARD_P2OP_STACK_ITEM_SIZE * 2)
+        ) {
+          return true;
         }
       }
       // TODO: other bad-witness-nonstandard cases
@@ -543,7 +579,12 @@ export class Common {
                 flags |= TransactionFlags.annex;
               }
             }
-          } break;
+            break;
+          }
+          case 'v16_p2op': {
+            flags |= TransactionFlags.p2op;
+            break;
+          }
         }
       } else {
         // no prevouts, optimistically check witness-bearing inputs
@@ -600,6 +641,7 @@ export class Common {
         case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
         case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
         case 'v1_p2tr': flags |= TransactionFlags.p2tr; break;
+        case 'v16_p2op': flags |= TransactionFlags.p2op; break;
         case 'op_return': flags |= TransactionFlags.op_return; break;
       }
       if (vout.scriptpubkey_address) {

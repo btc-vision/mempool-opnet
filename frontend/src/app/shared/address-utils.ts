@@ -1,9 +1,14 @@
 import '@angular/localize/init';
 import { ScriptInfo } from '@app/shared/script.utils';
 import { Vin, Vout } from '@interfaces/electrs.interface';
-import { BECH32_CHARS_LW, BASE58_CHARS, HEX_CHARS } from '@app/shared/regex.utils';
+import {
+  BASE58_CHARS,
+  BECH32_CHARS_LW,
+  HEX_CHARS,
+} from '@app/shared/regex.utils';
 
-export type AddressType = 'fee'
+export type AddressType =
+  | 'fee'
   | 'empty'
   | 'provably_unspendable'
   | 'op_return'
@@ -16,6 +21,7 @@ export type AddressType = 'fee'
   | 'v0_p2wpkh'
   | 'v0_p2wsh'
   | 'v1_p2tr'
+  | 'v16_p2op'
   | 'confidential'
   | 'anchor'
   | 'unknown'
@@ -73,6 +79,7 @@ const ADDRESS_PREFIXES = {
 const base58Regex = RegExp('^' + BASE58_CHARS + '{26,34}$');
 const confidentialb58Regex = RegExp('^[TJ]' + BASE58_CHARS + '{78}$');
 const p2wpkhRegex = RegExp('^q' + BECH32_CHARS_LW + '{38}$');
+const p2opRegex = RegExp('^s' + BECH32_CHARS_LW + '{38}$');
 const p2wshRegex = RegExp('^q' + BECH32_CHARS_LW + '{58}$');
 const p2trRegex = RegExp('^p' + BECH32_CHARS_LW + '{58}$');
 const pubkeyRegex = RegExp('^' + `(04${HEX_CHARS}{128})|(0[23]${HEX_CHARS}{64})$`);
@@ -93,6 +100,11 @@ export function detectAddressType(address: string, network: string): AddressType
       return 'v0_p2wsh';
     } else if (p2trRegex.test(suffix)) {
       return 'v1_p2tr';
+    }
+  } else if (address.startsWith(ADDRESS_PREFIXES[network].bech32Opnet)) {
+    const suffix = address.slice(ADDRESS_PREFIXES[network].bech32Opnet.length);
+    if (p2opRegex.test(suffix)) {
+      return 'v16_p2op';
     }
   }
 
@@ -166,6 +178,22 @@ export class AddressTypeInfo {
         }
       }
     // for single-script types, if we've seen one input we've seen them all
+    } else if (this.type === 'v16_p2op') {
+      for (let i = 0; i < vin.length; i++) {
+        const v = vin[i];
+        if (v.inner_witnessscript_asm) {
+          this.processScript(
+            new ScriptInfo(
+              'inner_witnessscript',
+              /* scriptHex  */ undefined,
+              /* asm        */ v.inner_witnessscript_asm,
+              /* witness    */ v.witness,
+              /* ctrlBlk    */ undefined,
+              /* originating input id */ vinIds?.[i],
+            ),
+          );
+        }
+      }
     } else if (['p2sh', 'v0_p2wsh'].includes(this.type)) {
       if (!this.scripts.size && vin.length) {
         const v = vin[0];
@@ -322,7 +350,7 @@ export function compareAddressInfo(a: AddressTypeInfo, b: AddressTypeInfo): Addr
   if (a.type !== b.type) {
     return { status: 'incomparable' };
   }
-  if (!['p2pkh', 'p2sh', 'p2sh-p2wpkh', 'p2sh-p2wsh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr'].includes(a.type)) {
+  if (!['p2pkh', 'p2sh', 'p2sh-p2wpkh', 'p2sh-p2wsh', 'v0_p2wpkh', 'v0_p2wsh', 'v1_p2tr', 'v16_p2op'].includes(a.type)) {
     return { status: 'incomparable' };
   }
   const isBase58 = a.type === 'p2pkh' || a.type === 'p2sh';

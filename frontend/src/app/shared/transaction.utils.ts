@@ -628,6 +628,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
       case 'p2sh': flags |= TransactionFlags.p2sh; break;
       case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
       case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
+      case 'v16_p2op': flags |= TransactionFlags.p2op; break;
       case 'v1_p2tr': {
         flags |= TransactionFlags.p2tr;
         // every valid taproot input has at least one witness item, however transactions
@@ -696,6 +697,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
       case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
       case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
       case 'v1_p2tr': flags |= TransactionFlags.p2tr; break;
+      case 'v16_p2op': flags |= TransactionFlags.p2op; break;
       case 'op_return': flags |= TransactionFlags.op_return; break;
     }
     if (vout.scriptpubkey_address) {
@@ -1432,6 +1434,15 @@ function scriptPubKeyToAddress(scriptPubKey: string, network: string): { address
   if (/^5120[0-9a-f]{64}$/.test(scriptPubKey)) {
     return { address: p2tr(scriptPubKey.substring(4, 4 + 64), network), type: 'v1_p2tr' };
   }
+  // P2OP
+  if (/^6015[0-9a-f]{42}$/.test(scriptPubKey)) {
+    const progHex = scriptPubKey.substring(4, 4 + 42);
+    return {
+      address: p2op(progHex, network),
+      type: 'v16_p2op',
+    };
+  }
+
   // multisig
   if (/^[0-9a-f]+ae$/.test(scriptPubKey)) {
     return { address: null, type: 'multisig' };
@@ -1447,64 +1458,52 @@ function scriptPubKeyToAddress(scriptPubKey: string, network: string): { address
   return { address: null, type: 'unknown' };
 }
 
+const REGTEST        = 'regtest';
+const TESTNET_FAMILY = ['testnet', 'testnet4', 'signet'];
+
+const isTestnetLike = (n: string) => TESTNET_FAMILY.includes(n) || n === REGTEST;
+const versionP2PKH = (n: string) => isTestnetLike(n) ? 0x6f : 0x00;        // 0x6f is also regtest
+const versionP2SH  = (n: string) => isTestnetLike(n) ? 0xc4 : 0x05;        // 0xc4 is also regtest
+const hrpSegwit = (n: string) =>
+  n === REGTEST ? 'bcrt' : TESTNET_FAMILY.includes(n) ? 'tb' : 'bc';       // regtest uses “bcrt”
+const hrpOpnet = (n: string) =>
+  n === REGTEST ? 'opr' : TESTNET_FAMILY.includes(n) ? 'opt' : 'op';       // convention: op / opt / opr
+
 function p2pkh(pubKeyHash: string, network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array(pubKeyHash);
-  const version = ['testnet', 'testnet4', 'signet'].includes(network) ? 0x6f : 0x00;
-  const versionedPayload = Uint8Array.from([version, ...pubkeyHashArray]);
-  const hash1 = new Hash().update(versionedPayload).digest();
-  const hash2 = new Hash().update(hash1).digest();
-  const checksum = hash2.slice(0, 4);
-  const finalPayload = Uint8Array.from([...versionedPayload, ...checksum]);
-  const bitcoinAddress = base58Encode(finalPayload);
-  return bitcoinAddress;
+  const payload   = Uint8Array.from([versionP2PKH(network), ...hexStringToUint8Array(pubKeyHash)]);
+  const checksum  = new Hash().update(new Hash().update(payload).digest()).digest().slice(0, 4);
+  return base58Encode(Uint8Array.from([...payload, ...checksum]));
 }
 
 function p2sh(scriptHash: string, network: string): string {
-  const scriptHashArray = hexStringToUint8Array(scriptHash);
-  const version = ['testnet', 'testnet4', 'signet'].includes(network) ? 0xc4 : 0x05;
-  const versionedPayload = Uint8Array.from([version, ...scriptHashArray]);
-  const hash1 = new Hash().update(versionedPayload).digest();
-  const hash2 = new Hash().update(hash1).digest();
-  const checksum = hash2.slice(0, 4);
-  const finalPayload = Uint8Array.from([...versionedPayload, ...checksum]);
-  const bitcoinAddress = base58Encode(finalPayload);
-  return bitcoinAddress;
+  const payload   = Uint8Array.from([versionP2SH(network), ...hexStringToUint8Array(scriptHash)]);
+  const checksum  = new Hash().update(new Hash().update(payload).digest()).digest().slice(0, 4);
+  return base58Encode(Uint8Array.from([...payload, ...checksum]));
 }
 
 function p2wpkh(pubKeyHash: string, network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array(pubKeyHash);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 0;
-  const words = [version].concat(toWords(pubkeyHashArray));
-  const bech32Address = bech32Encode(hrp, words);
-  return bech32Address;
+  const words = [0].concat(toWords(hexStringToUint8Array(pubKeyHash)));
+  return bech32Encode(hrpSegwit(network), words);                          // Bech32 (v0)
 }
 
 function p2wsh(scriptHash: string, network: string): string {
-  const scriptHashArray = hexStringToUint8Array(scriptHash);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 0;
-  const words = [version].concat(toWords(scriptHashArray));
-  const bech32Address = bech32Encode(hrp, words);
-  return bech32Address;
+  const words = [0].concat(toWords(hexStringToUint8Array(scriptHash)));
+  return bech32Encode(hrpSegwit(network), words);                          // Bech32 (v0)
 }
 
-function p2tr(pubKeyHash: string, network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array(pubKeyHash);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 1;
-  const words = [version].concat(toWords(pubkeyHashArray));
-  const bech32Address = bech32Encode(hrp, words, 0x2bc830a3);
-  return bech32Address;
+function p2tr(pubKey: string, network: string): string {
+  const words = [1].concat(toWords(hexStringToUint8Array(pubKey)));
+  return bech32Encode(hrpSegwit(network), words, 0x2bc830a3);             // Bech32m (>= v1)
+}
+
+function p2op(versionPlusHash: string, network: string): string {
+  const words = [16].concat(toWords(hexStringToUint8Array(versionPlusHash)));
+  return bech32Encode(hrpOpnet(network), words, 0x2bc830a3);              // Bech32m (v16)
 }
 
 function p2a(network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array('4e73');
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 1;
-  const words = [version].concat(toWords(pubkeyHashArray));
-  const bech32Address = bech32Encode(hrp, words, 0x2bc830a3);
-  return bech32Address;
+  const words = [1].concat(toWords(hexStringToUint8Array('4e73')));
+  return bech32Encode(hrpSegwit(network), words, 0x2bc830a3);             // Bech32m (v1)
 }
 
 // base58 encoding
