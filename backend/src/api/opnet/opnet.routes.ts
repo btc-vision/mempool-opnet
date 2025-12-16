@@ -1,4 +1,10 @@
 import { Application, Request, Response } from 'express';
+import {
+  TransactionBase,
+  OPNetTransactionTypes,
+  DeploymentTransaction,
+  InteractionTransaction,
+} from 'opnet';
 import config from '../../config';
 import logger from '../../logger';
 import opnetClient from './opnet-client';
@@ -8,7 +14,6 @@ import {
   OPNetInteractionData,
   OPNetGasInfo,
   OPNetEvent,
-  PostQuantumInfo,
   OPNetStatusResponse,
 } from './opnet.interfaces';
 
@@ -92,7 +97,15 @@ class OPNetRoutes {
         return;
       }
 
-      res.status(200).json(receipt);
+      // Serialize the receipt for JSON response
+      res.status(200).json({
+        receipt: receipt.receipt?.toString('hex'),
+        receiptProofs: receipt.receiptProofs,
+        events: opnetClient.serializeEvents(receipt.events),
+        revert: receipt.revert,
+        gasUsed: receipt.gasUsed.toString(),
+        specialGasUsed: receipt.specialGasUsed.toString(),
+      });
     } catch (e) {
       logger.err(`Error fetching transaction receipt ${txId}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
@@ -122,8 +135,9 @@ class OPNetRoutes {
       for (const [contractAddress, contractEvents] of Object.entries(rawTx.events)) {
         for (const event of contractEvents) {
           events.push({
-            ...event,
             contractAddress,
+            type: event.type,
+            data: Buffer.from(event.data).toString('hex'),
           });
         }
       }
@@ -153,7 +167,8 @@ class OPNetRoutes {
         return;
       }
 
-      res.status(200).json(info[address]);
+      // Serialize the Address object for JSON response
+      res.status(200).json(opnetClient.serializeAddress(info[address]));
     } catch (e) {
       logger.err(`Error fetching public key info for ${address}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
@@ -178,7 +193,17 @@ class OPNetRoutes {
 
     try {
       const info = await opnetClient.getPublicKeyInfo(addresses);
-      res.status(200).json(info || {});
+      if (!info) {
+        res.status(200).json({});
+        return;
+      }
+
+      // Serialize all Address objects
+      const serialized: Record<string, unknown> = {};
+      for (const [addr, addressObj] of Object.entries(info)) {
+        serialized[addr] = opnetClient.serializeAddress(addressObj);
+      }
+      res.status(200).json(serialized);
     } catch (e) {
       logger.err(`Error fetching batch public key info: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
@@ -203,7 +228,17 @@ class OPNetRoutes {
         return;
       }
 
-      res.status(200).json(code);
+      // Serialize ContractData for JSON response
+      res.status(200).json({
+        contractAddress: code.contractAddress,
+        bytecode: code.bytecode.toString('hex'),
+        wasCompressed: code.wasCompressed,
+        deployedTransactionId: code.deployedTransactionId,
+        deployedTransactionHash: code.deployedTransactionHash,
+        deployerPubKey: code.deployerPubKey.toString('hex'),
+        contractSeed: code.contractSeed.toString('hex'),
+        contractSaltHash: code.contractSaltHash.toString('hex'),
+      });
     } catch (e) {
       logger.err(`Error fetching contract code for ${address}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
@@ -248,7 +283,16 @@ class OPNetRoutes {
         return;
       }
 
-      res.status(200).json(result);
+      // Serialize CallResult for JSON response
+      // BinaryReader doesn't have a hex conversion, so we read all bytes
+      const resultBytes = result.result.readBytes(result.result.length());
+      res.status(200).json({
+        result: Buffer.from(resultBytes).toString('hex'),
+        events: result.events,
+        accessList: result.accessList,
+        revert: result.revert,
+        estimatedGas: result.estimatedGas?.toString(),
+      });
     } catch (e) {
       logger.err(`Error simulating call to ${to}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
@@ -272,62 +316,62 @@ class OPNetRoutes {
   /**
    * Parse raw OPNet transaction into extension format
    */
-  private parseOPNetTransaction(rawTx: any): OPNetTransactionExtension {
+  private parseOPNetTransaction(rawTx: TransactionBase<OPNetTransactionTypes>): OPNetTransactionExtension {
     const extension: OPNetTransactionExtension = {
-      opnetType: rawTx.OPNetType || 'Generic',
+      opnetType: rawTx.OPNetType === OPNetTransactionTypes.Deployment ? 'Deployment' :
+                 rawTx.OPNetType === OPNetTransactionTypes.Interaction ? 'Interaction' : 'Generic',
     };
 
     // Parse deployment data
-    if (rawTx.OPNetType === 'Deployment' && rawTx.contractAddress) {
+    if (rawTx.OPNetType === OPNetTransactionTypes.Deployment) {
+      const deployTx = rawTx as DeploymentTransaction;
       const deployment: OPNetDeploymentData = {
-        contractAddress: rawTx.contractAddress,
-        contractPublicKey: rawTx.contractPublicKey,
-        bytecode: rawTx.bytecode || '',
-        bytecodeLength: rawTx.bytecode ? Buffer.from(rawTx.bytecode, 'base64').length : 0,
-        deployerPubKey: rawTx.deployerPubKey || '',
-        deployerAddress: rawTx.from || '',
-        contractSeed: rawTx.contractSeed,
-        contractSaltHash: rawTx.contractSaltHash,
-        wasCompressed: rawTx.wasCompressed,
+        contractAddress: deployTx.contractAddress || '',
+        contractPublicKey: deployTx.contractPublicKey?.toHex(),
+        bytecode: deployTx.bytecode?.toString('hex') || '',
+        bytecodeLength: deployTx.bytecode?.length || 0,
+        deployerPubKey: deployTx.deployerPubKey?.toString('hex') || '',
+        deployerAddress: deployTx.deployerAddress?.p2tr(opnetClient.getNetwork()) || '',
+        contractSeed: deployTx.contractSeed?.toString('hex'),
+        contractSaltHash: deployTx.contractSaltHash?.toString('hex'),
+        wasCompressed: deployTx.wasCompressed,
       };
       extension.deployment = deployment;
     }
 
     // Parse interaction data
-    if (rawTx.OPNetType === 'Interaction' && rawTx.contractAddress) {
+    if (rawTx.OPNetType === OPNetTransactionTypes.Interaction) {
+      const interTx = rawTx as InteractionTransaction;
       const interaction: OPNetInteractionData = {
-        calldata: rawTx.calldata,
-        calldataLength: rawTx.calldata ? Buffer.from(rawTx.calldata, 'base64').length : 0,
-        senderPubKeyHash: rawTx.senderPubKeyHash,
-        contractSecret: rawTx.contractSecret,
-        interactionPubKey: rawTx.interactionPubKey,
-        contractAddress: rawTx.contractAddress,
-        from: rawTx.from || '',
-        wasCompressed: rawTx.wasCompressed,
+        calldata: interTx.calldata?.toString('hex'),
+        calldataLength: interTx.calldata?.length,
+        senderPubKeyHash: interTx.senderPubKeyHash?.toString('hex'),
+        contractSecret: interTx.contractSecret?.toString('hex'),
+        interactionPubKey: interTx.interactionPubKey?.toString('hex'),
+        contractAddress: interTx.contractAddress || '',
+        from: interTx.from?.p2tr(opnetClient.getNetwork()) || '',
+        wasCompressed: interTx.wasCompressed,
       };
       extension.interaction = interaction;
     }
 
     // Parse gas info
-    if (rawTx.gasUsed || rawTx.specialGasUsed) {
-      const gasInfo: OPNetGasInfo = {
-        estimatedGas: rawTx.estimatedGas || '0',
-        gasUsed: rawTx.gasUsed || '0',
-        specialGasUsed: rawTx.specialGasUsed || '0',
-        refundedGas: rawTx.refundedGas,
-      };
-      extension.gasInfo = gasInfo;
-    }
+    const gasInfo: OPNetGasInfo = {
+      estimatedGas: '0',
+      gasUsed: rawTx.gasUsed?.toString() || '0',
+      specialGasUsed: rawTx.specialGasUsed?.toString() || '0',
+    };
+    extension.gasInfo = gasInfo;
 
-    // Parse receipt
+    // Parse receipt (TransactionBase extends TransactionReceipt)
     if (rawTx.receipt || rawTx.receiptProofs) {
       extension.receipt = {
-        receipt: rawTx.receipt,
+        receipt: rawTx.receipt?.toString('hex'),
         receiptProofs: rawTx.receiptProofs,
-        events: rawTx.events,
+        events: opnetClient.serializeEvents(rawTx.events),
         revert: rawTx.revert,
-        gasUsed: rawTx.gasUsed || '0',
-        specialGasUsed: rawTx.specialGasUsed || '0',
+        gasUsed: rawTx.gasUsed?.toString() || '0',
+        specialGasUsed: rawTx.specialGasUsed?.toString() || '0',
       };
     }
 
@@ -335,10 +379,11 @@ class OPNetRoutes {
     if (rawTx.events) {
       const events: OPNetEvent[] = [];
       for (const [contractAddress, contractEvents] of Object.entries(rawTx.events)) {
-        for (const event of contractEvents as OPNetEvent[]) {
+        for (const event of contractEvents) {
           events.push({
-            ...event,
             contractAddress,
+            type: event.type,
+            data: Buffer.from(event.data).toString('hex'),
           });
         }
       }

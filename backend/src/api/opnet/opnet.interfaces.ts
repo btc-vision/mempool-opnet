@@ -79,12 +79,18 @@ export interface OPNetCallResult {
   specialGas?: string;
 }
 
+// Serialized Event (for JSON responses)
+export interface OPNetSerializedEvent {
+  type: string;
+  data: string;
+}
+
 // Transaction Receipt
 export interface OPNetTransactionReceipt {
   receipt?: string;
   receiptProofs?: string[];
   events?: {
-    [contractAddress: string]: OPNetEvent[];
+    [contractAddress: string]: OPNetSerializedEvent[];
   };
   revert?: string;
   gasUsed: string;

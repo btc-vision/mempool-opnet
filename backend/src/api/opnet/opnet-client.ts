@@ -1,22 +1,47 @@
-import { JSONRpcProvider } from 'opnet';
-import { MLDSASecurityLevel } from '@btc-vision/transaction';
+import { Network, networks } from '@btc-vision/bitcoin';
+import { Address } from '@btc-vision/transaction';
+import {
+  JSONRpcProvider,
+  TransactionBase,
+  TransactionReceipt,
+  CallResult,
+  ContractData,
+  OPNetTransactionTypes,
+  ICallRequestError,
+  AddressesInfo,
+  ContractEvents,
+} from 'opnet';
 import config from '../../config';
 import logger from '../../logger';
-import {
-  OPNetPublicKeyInfo,
-  OPNetTransactionReceipt,
-  OPNetCallResult,
-  OPNetRawTransaction,
-} from './opnet.interfaces';
+
+// Helper to check if result is an error
+function isCallError(result: CallResult | ICallRequestError): result is ICallRequestError {
+  return 'error' in result;
+}
+
+// Get network from config
+function getNetwork(): Network {
+  switch (config.MEMPOOL.NETWORK) {
+    case 'mainnet':
+      return networks.bitcoin;
+    case 'testnet':
+    case 'signet':
+      return networks.testnet;
+    default:
+      return networks.regtest;
+  }
+}
 
 class OPNetClient {
   private provider: JSONRpcProvider | null = null;
   private enabled: boolean;
   private connected: boolean = false;
   private lastError: string | null = null;
+  private network: Network;
 
   constructor() {
     this.enabled = config.OPNET.ENABLED;
+    this.network = getNetwork();
 
     if (this.enabled) {
       this.initProvider();
@@ -25,9 +50,11 @@ class OPNetClient {
 
   private initProvider(): void {
     try {
-      this.provider = new JSONRpcProvider(config.OPNET.RPC_URL, {
-        timeout: config.OPNET.TIMEOUT,
-      });
+      this.provider = new JSONRpcProvider(
+        config.OPNET.RPC_URL,
+        this.network,
+        config.OPNET.TIMEOUT
+      );
       logger.info(`OPNet provider initialized, connecting to ${config.OPNET.RPC_URL}`);
       this.checkConnection();
     } catch (e) {
@@ -65,6 +92,13 @@ class OPNetClient {
   }
 
   /**
+   * Get the network
+   */
+  public getNetwork(): Network {
+    return this.network;
+  }
+
+  /**
    * Check connection to OPNet node
    */
   public async checkConnection(): Promise<boolean> {
@@ -89,7 +123,7 @@ class OPNetClient {
   /**
    * Get transaction by hash
    */
-  public async getTransaction(txHash: string): Promise<OPNetRawTransaction | null> {
+  public async getTransaction(txHash: string): Promise<TransactionBase<OPNetTransactionTypes> | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
@@ -103,8 +137,7 @@ class OPNetClient {
       this.connected = true;
       this.lastError = null;
 
-      // The provider returns the parsed transaction
-      return tx as unknown as OPNetRawTransaction;
+      return tx;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getTransaction failed for ${txHash}: ${this.lastError}`);
@@ -115,7 +148,7 @@ class OPNetClient {
   /**
    * Get transaction receipt
    */
-  public async getTransactionReceipt(txHash: string): Promise<OPNetTransactionReceipt | null> {
+  public async getTransactionReceipt(txHash: string): Promise<TransactionReceipt | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
@@ -129,14 +162,7 @@ class OPNetClient {
       this.connected = true;
       this.lastError = null;
 
-      return {
-        receipt: receipt.receipt,
-        receiptProofs: receipt.receiptProofs,
-        events: receipt.events,
-        revert: receipt.revert,
-        gasUsed: receipt.gasUsed?.toString() || '0',
-        specialGasUsed: receipt.specialGasUsed?.toString() || '0',
-      };
+      return receipt;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getTransactionReceipt failed for ${txHash}: ${this.lastError}`);
@@ -147,7 +173,7 @@ class OPNetClient {
   /**
    * Get public key info (MLDSA/BIP360)
    */
-  public async getPublicKeyInfo(addresses: string[]): Promise<Record<string, OPNetPublicKeyInfo> | null> {
+  public async getPublicKeyInfo(addresses: string[]): Promise<AddressesInfo | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
@@ -161,24 +187,7 @@ class OPNetClient {
       this.connected = true;
       this.lastError = null;
 
-      // Convert to our interface format
-      const result: Record<string, OPNetPublicKeyInfo> = {};
-      for (const [address, pubKeyInfo] of Object.entries(info)) {
-        result[address] = {
-          originalPubKey: pubKeyInfo.originalPubKey,
-          tweakedPubkey: pubKeyInfo.tweakedPubkey,
-          p2tr: pubKeyInfo.p2tr,
-          p2op: pubKeyInfo.p2op,
-          lowByte: pubKeyInfo.lowByte,
-          p2pkh: pubKeyInfo.p2pkh,
-          p2wpkh: pubKeyInfo.p2wpkh,
-          mldsaHashedPublicKey: pubKeyInfo.mldsaHashedPublicKey,
-          mldsaLevel: pubKeyInfo.mldsaLevel as MLDSASecurityLevel,
-          mldsaPublicKey: pubKeyInfo.mldsaPublicKey,
-        };
-      }
-
-      return result;
+      return info;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getPublicKeyInfo failed: ${this.lastError}`);
@@ -190,32 +199,29 @@ class OPNetClient {
    * Call contract (simulation)
    */
   public async call(
-    to: string,
-    data: string,
-    from?: string,
-    height?: number
-  ): Promise<OPNetCallResult | null> {
+    to: string | Address,
+    data: string | Buffer,
+    from?: Address,
+    height?: bigint | number
+  ): Promise<CallResult | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
 
     try {
-      const result = await this.provider.call(to, data, from, height);
-      if (!result) {
+      const result = await this.provider.call(to, data, from, height ? BigInt(height) : undefined);
+      if (!result || isCallError(result)) {
+        if (isCallError(result)) {
+          this.lastError = result.error;
+          logger.warn(`OPNet call returned error for ${to}: ${result.error}`);
+        }
         return null;
       }
 
       this.connected = true;
       this.lastError = null;
 
-      return {
-        result: result.result?.toString() || '',
-        events: result.events || {},
-        accessList: result.accessList || {},
-        revert: result.revert,
-        estimatedGas: result.estimatedGas?.toString(),
-        specialGas: result.specialGas?.toString(),
-      };
+      return result;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet call failed to ${to}: ${this.lastError}`);
@@ -224,23 +230,24 @@ class OPNetClient {
   }
 
   /**
-   * Get contract bytecode
+   * Get contract bytecode/data
    */
-  public async getCode(address: string): Promise<{ bytecode: string } | null> {
+  public async getCode(address: string | Address): Promise<ContractData | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
 
     try {
-      const code = await this.provider.getCode(address);
-      if (!code) {
+      const code = await this.provider.getCode(address, false);
+      if (!code || Buffer.isBuffer(code)) {
+        // If onlyBytecode was true, it returns Buffer; we want ContractData
         return null;
       }
 
       this.connected = true;
       this.lastError = null;
 
-      return { bytecode: code.bytecode || '' };
+      return code;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getCode failed for ${address}: ${this.lastError}`);
@@ -251,7 +258,7 @@ class OPNetClient {
   /**
    * Get storage at address
    */
-  public async getStorageAt(address: string, pointer: string): Promise<string | null> {
+  public async getStorageAt(address: string | Address, pointer: string | bigint): Promise<string | null> {
     if (!this.enabled || !this.provider) {
       return null;
     }
@@ -286,6 +293,36 @@ class OPNetClient {
       logger.warn(`OPNet getBlockNumber failed: ${this.lastError}`);
       return null;
     }
+  }
+
+  /**
+   * Helper to serialize Address for API responses
+   */
+  public serializeAddress(addr: Address): Record<string, unknown> {
+    return {
+      originalPublicKey: addr.originalPublicKey ? Buffer.from(addr.originalPublicKey).toString('hex') : undefined,
+      tweakedPublicKey: addr.tweakedPublicKeyToBuffer().toString('hex'),
+      p2tr: addr.p2tr(this.network),
+      p2op: addr.p2op(this.network),
+      p2pkh: addr.p2pkh(this.network),
+      p2wpkh: addr.p2wpkh(this.network),
+      mldsaLevel: addr.mldsaLevel,
+      mldsaPublicKey: addr.mldsaPublicKey ? Buffer.from(addr.mldsaPublicKey).toString('hex') : undefined,
+    };
+  }
+
+  /**
+   * Helper to serialize transaction receipt events
+   */
+  public serializeEvents(events: ContractEvents): Record<string, { type: string; data: string }[]> {
+    const result: Record<string, { type: string; data: string }[]> = {};
+    for (const [contractAddress, eventList] of Object.entries(events)) {
+      result[contractAddress] = eventList.map(event => ({
+        type: event.type,
+        data: Buffer.from(event.data).toString('hex'),
+      }));
+    }
+    return result;
   }
 }
 

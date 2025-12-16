@@ -307,7 +307,7 @@ class BitcoinRoutes {
       for (const [index, input] of psbt.data.inputs.entries()) {
         if (!input.nonWitnessUtxo) {
           // Buffer.from ensures it won't be modified in place by reverse()
-          const txid = Buffer.from(psbt.txInputs[index].hash)
+          const txid = Buffer.from(psbt.txInputs[index].hash as Uint8Array)
             .reverse()
             .toString('hex');
 

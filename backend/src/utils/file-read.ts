@@ -8,7 +8,7 @@ function readFile(filePath: string, bufferSize?: number): string[] {
   const fileDescriptor = fs.openSync(filePath, 'r');
   const buffer = Buffer.alloc(chunkSize);
 
-  fs.readSync(fileDescriptor, buffer, 0, chunkSize, fileSize - chunkSize);
+  fs.readSync(fileDescriptor, buffer as unknown as Uint8Array, 0, chunkSize, fileSize - chunkSize);
   fs.closeSync(fileDescriptor);
 
   const lines = buffer.toString('utf8', 0, chunkSize).split('\n');
