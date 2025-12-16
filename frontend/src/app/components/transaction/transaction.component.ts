@@ -139,6 +139,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   fetchCachedTx$ = new Subject<string>();
   fetchAcceleration$ = new Subject<number>();
   fetchMiningInfo$ = new Subject<{ hash: string, height: number, txid: string }>();
+  fetchOPNetData$ = new Subject<string>();
   txChanged$ = new BehaviorSubject<boolean>(false); // triggered whenever this.tx changes (long term, we should refactor to make this.tx an observable itself)
   isAccelerated$ = new BehaviorSubject<boolean>(false); // refactor this to make isAccelerated an observable itself
   ETA$: Observable<ETA | null>;
@@ -513,6 +514,21 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.setIsAccelerated();
     });
 
+    // OPNet data subscription - fetch smart contract details
+    this.fetchOPNetData$.pipe(
+      switchMap((txId) =>
+        this.apiService.getOPNetTransaction$(txId).pipe(
+          catchError(() => of(null))
+        )
+      )
+    ).subscribe((opnetData) => {
+      if (opnetData && this.tx) {
+        this.tx.opnet = opnetData.opnet;
+        this.txChanged$.next(true);
+        this.cd.detectChanges();
+      }
+    });
+
     this.mempoolPositionSubscription = this.stateService.mempoolTxPosition$.subscribe(txPosition => {
       this.now = Date.now();
       if (txPosition && txPosition.txid === this.txId && txPosition.position) {
@@ -662,6 +678,14 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           this.tx = tx;
           this.setFeatures();
           this.isCached = false;
+          // Fetch OPNet data if transaction has smart contract or interaction flags
+          if (this.tx.flags && (
+            (this.tx.flags & TransactionFlags.smart_contract) ||
+            (this.tx.flags & TransactionFlags.interaction) ||
+            (this.tx.flags & TransactionFlags.p2op)
+          )) {
+            this.fetchOPNetData$.next(tx.txid);
+          }
           if (tx.fee === undefined) {
             this.tx.fee = 0;
           }

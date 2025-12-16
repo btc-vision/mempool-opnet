@@ -603,4 +603,30 @@ export class ApiService {
   getBlockSummaryLoaded(hash) {
     return this.blockSummaryLoaded[hash];
   }
+
+  // OPNet API methods
+  getOPNetTransaction$(txId: string): Observable<any> {
+    return this.httpClient.get<any>(
+      this.apiBaseUrl + this.apiBasePath + `/api/v1/opnet/tx/${txId}`
+    );
+  }
+
+  getOPNetPublicKeyInfo$(address: string): Observable<any> {
+    return this.httpClient.get<any>(
+      this.apiBaseUrl + this.apiBasePath + `/api/v1/opnet/address/${address}/pubkey`
+    );
+  }
+
+  getOPNetBatchPublicKeyInfo$(addresses: string[]): Observable<any> {
+    return this.httpClient.post<any>(
+      this.apiBaseUrl + this.apiBasePath + '/api/v1/opnet/pubkeys',
+      { addresses }
+    );
+  }
+
+  getOPNetStatus$(): Observable<{ enabled: boolean; connected: boolean }> {
+    return this.httpClient.get<{ enabled: boolean; connected: boolean }>(
+      this.apiBaseUrl + this.apiBasePath + '/api/v1/opnet/status'
+    );
+  }
 }
