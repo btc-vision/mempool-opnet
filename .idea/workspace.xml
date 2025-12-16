@@ -6,15 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="6443f129-23b0-47a0-b2dd-876d5c03faea" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/components/transaction/transaction-details/transaction-details.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/components/transaction/transaction-details/transaction-details.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/components/transaction/transaction.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/components/transaction/transaction.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.scss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/components/tx-features/tx-features.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/interfaces/electrs.interface.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/interfaces/electrs.interface.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/app/shared/filters.utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/shared/filters.utils.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -36,24 +28,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "bitcoin-smart-contracts",
-    "javascript.preferred.runtime.type.id": "node",
-    "last_opened_file_path": "C:/Users/felix/Desktop/moto/mempool",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "actions.on.save",
-    "ts.external.directory.path": "C:\\Users\\felix\\Desktop\\moto\\mempool\\frontend\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;bitcoin-smart-contracts&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/felix/Desktop/moto/mempool&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;actions.on.save&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\felix\\Desktop\\moto\\mempool\\frontend\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -74,7 +67,10 @@
       <workItem from="1748585406932" duration="6435000" />
       <workItem from="1765854309572" duration="1778000" />
       <workItem from="1765859587671" duration="367000" />
-      <workItem from="1765860832979" duration="3612000" />
+      <workItem from="1765860832979" duration="3695000" />
+      <workItem from="1765866137627" duration="126000" />
+      <workItem from="1765866267193" duration="77000" />
+      <workItem from="1765866348075" duration="10000" />
     </task>
     <servers />
   </component>
