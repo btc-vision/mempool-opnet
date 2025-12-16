@@ -399,18 +399,22 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
         const data = epochFeature.data;
         console.log('[OPNet] extractEpochSubmission: data length:', data.length);
 
-        if (data.length < 64) {
-            console.log('[OPNet] extractEpochSubmission: data too short, need at least 64 bytes');
+        // Epoch submission format:
+        // - publicKey: 32 bytes (SHA256 hash of ML-DSA public key)
+        // - solution: 20 bytes (SHA-1 hash)
+        // - graffiti: optional with U32 length prefix
+        if (data.length < 52) {
+            console.log('[OPNet] extractEpochSubmission: data too short, need at least 52 bytes (32 + 20)');
             return null;
         }
 
         const reader = new BinaryReader(data);
 
-        // Read miner public key (32 bytes)
+        // Read miner public key (32 bytes - SHA256 hash of ML-DSA public key)
         const mldsaPublicKey = Buffer.from(reader.readBytes(32));
 
-        // Read solution (should be 32 bytes based on ChallengeSolution)
-        const epochSolution = Buffer.from(reader.readBytes(32));
+        // Read solution (20 bytes - SHA-1 hash)
+        const epochSolution = Buffer.from(reader.readBytes(20));
 
         let graffiti: string | undefined;
         let graffitiHex: string | undefined;
@@ -433,7 +437,10 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
         }
 
         // Calculate epoch number from block height (5 blocks per epoch)
-        const epochNumber = blockHeight !== undefined ? Math.floor(blockHeight / 5).toString() : '0';
+        // Submissions are for epoch + 2 (you submit for 2 epochs ahead)
+        const currentEpoch = blockHeight !== undefined ? Math.floor(blockHeight / 5) : 0;
+        const submissionEpoch = currentEpoch + 2;
+        const epochNumber = submissionEpoch.toString();
 
         return {
             epochNumber,
@@ -632,10 +639,11 @@ export function parseFullOPNetWitness(witness: string[], blockHeight?: number): 
             for (const feature of decodedFeatures) {
                 if (feature.type === 'epoch') {
                     const epochData = feature.data;
-                    if (epochData.length >= 64) {
+                    // Epoch format: publicKey(32) + solution(20) + optional graffiti
+                    if (epochData.length >= 52) {
                         const epochReader = new BinaryReader(epochData);
                         const mldsaPublicKey = Buffer.from(epochReader.readBytes(32));
-                        const epochSolution = Buffer.from(epochReader.readBytes(32));
+                        const epochSolution = Buffer.from(epochReader.readBytes(20));
 
                         let graffiti: string | undefined;
                         let graffitiHex: string | undefined;
@@ -652,7 +660,10 @@ export function parseFullOPNetWitness(witness: string[], blockHeight?: number): 
                             } catch {}
                         }
 
-                        const epochNumber = blockHeight !== undefined ? Math.floor(blockHeight / 5).toString() : '0';
+                        // Submissions are for epoch + 2
+                        const currentEpoch = blockHeight !== undefined ? Math.floor(blockHeight / 5) : 0;
+                        const submissionEpoch = currentEpoch + 2;
+                        const epochNumber = submissionEpoch.toString();
 
                         result.epochSubmission = {
                             epochNumber,
