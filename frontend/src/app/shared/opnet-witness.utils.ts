@@ -8,6 +8,7 @@
 import { Buffer } from 'buffer';
 import { script, opcodes } from '@btc-vision/bitcoin';
 import { BinaryReader } from '@btc-vision/transaction';
+import * as pako from 'pako';
 
 // Feature flags from @btc-vision/transaction Features enum
 const Features = {
@@ -16,36 +17,40 @@ const Features = {
     MLDSA_LINK_PUBKEY: 0b100,
 } as const;
 
-// Feature priority order for decoding
+// Feature priority order for decoding (matches FeaturePriority enum)
 const FeaturePriority = {
-    ACCESS_LIST: 0,
-    EPOCH_SUBMISSION: 1,
-    MLDSA_LINK_PUBKEY: 2,
+    ACCESS_LIST: 1,
+    EPOCH_SUBMISSION: 2,
+    MLDSA_LINK_PUBKEY: 3,
 } as const;
 
-// ML-DSA security levels
+// ML-DSA security levels (matching @btc-vision/bip32 MLDSASecurityLevel enum)
+// Values are the ML-DSA algorithm numbers: 44, 65, 87
 const MLDSASecurityLevel = {
-    LEVEL2: 0,
-    LEVEL3: 1,
-    LEVEL5: 2,
+    LEVEL2: 44,  // ML-DSA-44
+    LEVEL3: 65,  // ML-DSA-65
+    LEVEL5: 87,  // ML-DSA-87
 } as const;
 
 // ML-DSA public key lengths by level
 const MLDSA_PUBLIC_KEY_LENGTHS: Record<number, number> = {
-    [MLDSASecurityLevel.LEVEL2]: 1312,
-    [MLDSASecurityLevel.LEVEL3]: 1952,
-    [MLDSASecurityLevel.LEVEL5]: 2592,
+    [MLDSASecurityLevel.LEVEL2]: 1312,  // ML-DSA-44
+    [MLDSASecurityLevel.LEVEL3]: 1952,  // ML-DSA-65
+    [MLDSASecurityLevel.LEVEL5]: 2592,  // ML-DSA-87
 };
 
 // ML-DSA signature lengths by level
 const MLDSA_SIGNATURE_LENGTHS: Record<number, number> = {
-    [MLDSASecurityLevel.LEVEL2]: 2420,
-    [MLDSASecurityLevel.LEVEL3]: 3293,
-    [MLDSASecurityLevel.LEVEL5]: 4595,
+    [MLDSASecurityLevel.LEVEL2]: 2420,  // ML-DSA-44
+    [MLDSASecurityLevel.LEVEL3]: 3293,  // ML-DSA-65
+    [MLDSASecurityLevel.LEVEL5]: 4595,  // ML-DSA-87
 };
 
 // Expected header length: prefix(1) + flags(3) + priorityFee(8) = 12 bytes
 const OPNET_HEADER_LENGTH = 12;
+
+// OPNet magic bytes "op" = 0x6f70
+const OPNET_MAGIC = Buffer.from('op', 'utf-8');
 
 export interface OPNetFeatures {
     hasAccessList: boolean;
@@ -73,105 +78,71 @@ export interface MLDSALinkInfo {
     verifyRequest: boolean;
 }
 
-interface PriorityOrder {
-    priority: number;
-    feature: number;
-}
-
 interface DecodedFeature {
     type: 'accessList' | 'epoch' | 'mldsa';
     data: Buffer;
 }
 
 /**
- * OPNetHeader class matching the node implementation
- * Handles the 12-byte header: prefix(1) + flags(3) + priorityFee(8)
- */
-class OPNetHeader {
-    public static readonly EXPECTED_HEADER_LENGTH = OPNET_HEADER_LENGTH;
-
-    private readonly _priorityFeeSat: bigint;
-    private readonly _headerBytes: Uint8Array;
-    private _prefix: number = 0;
-    private _flags: number = 0;
-
-    constructor(
-        header: Buffer,
-        public readonly minerMLDSAPublicKey: Buffer,
-        public readonly solution: Buffer,
-    ) {
-        const reader = new BinaryReader(header);
-        this._headerBytes = reader.readBytes(4);
-        this._priorityFeeSat = reader.readU64();
-        this.decodeHeader();
-    }
-
-    public get priorityFeeSat(): bigint {
-        return this._priorityFeeSat;
-    }
-
-    public get publicKeyPrefix(): number {
-        return this._prefix;
-    }
-
-    public get flags(): number {
-        return this._flags;
-    }
-
-    public decodeFlags(): PriorityOrder[] {
-        const features: PriorityOrder[] = [];
-
-        const includesAccessList = (this._flags & Features.ACCESS_LIST) === Features.ACCESS_LIST;
-        const includesEpochSubmission = (this._flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION;
-        const includesMLDSALinkingRequest = (this._flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY;
-
-        if (includesAccessList) {
-            features.push({
-                priority: FeaturePriority.ACCESS_LIST,
-                feature: Features.ACCESS_LIST,
-            });
-        }
-
-        if (includesEpochSubmission) {
-            features.push({
-                priority: FeaturePriority.EPOCH_SUBMISSION,
-                feature: Features.EPOCH_SUBMISSION,
-            });
-        }
-
-        if (includesMLDSALinkingRequest) {
-            features.push({
-                priority: FeaturePriority.MLDSA_LINK_PUBKEY,
-                feature: Features.MLDSA_LINK_PUBKEY,
-            });
-        }
-
-        return features;
-    }
-
-    private decodeHeader(): void {
-        this._prefix = this._headerBytes[0];
-
-        if (this._prefix !== 0x02 && this._prefix !== 0x03) {
-            throw new Error('Invalid public key prefix');
-        }
-
-        const flagBuffer = Buffer.from(this._headerBytes.slice(1));
-        this._flags = flagBuffer.readUIntBE(0, 3);
-    }
-}
-
-/**
  * Parsed OPNet script structure
  */
 interface ParsedOPNetScript {
-    header: OPNetHeader;
+    flags: number;
+    priorityFeeSat: bigint;
+    publicKeyPrefix: number;
+    minerMLDSAPublicKey: Buffer;
+    solution: Buffer;
     featuresData: Buffer | null;
 }
 
 /**
+ * Try to decompress gzip data, return original if not compressed
+ */
+function tryDecompress(data: Buffer): Buffer {
+    // Check for gzip magic bytes (0x1f 0x8b)
+    if (data.length >= 2 && data[0] === 0x1f && data[1] === 0x8b) {
+        try {
+            console.log('[OPNet] tryDecompress: found gzip magic, decompressing...');
+            const decompressed = pako.ungzip(data);
+            console.log('[OPNet] tryDecompress: decompressed', data.length, '->', decompressed.length, 'bytes');
+            return Buffer.from(decompressed);
+        } catch (e) {
+            console.log('[OPNet] tryDecompress: gzip decompress failed:', e);
+            return data;
+        }
+    }
+
+    // Try raw inflate (deflate without gzip header)
+    try {
+        const inflated = pako.inflate(data);
+        if (inflated.length > data.length) {
+            console.log('[OPNet] tryDecompress: raw inflate succeeded', data.length, '->', inflated.length, 'bytes');
+            return Buffer.from(inflated);
+        }
+    } catch {
+        // Not compressed or different format
+    }
+
+    return data;
+}
+
+/**
  * Decompile and parse the OPNet script from witness[3]
- * Uses script.decompile() to properly extract pushed data buffers
+ *
+ * Script structure (CalldataGenerator):
+ * 1. Header (12 bytes) - prefix(1) + flags(3) + priorityFee(8)
+ * 2. OP_TOALTSTACK
+ * 3. challenge.publicKey (32 bytes) - minerMLDSAPublicKey
+ * 4. OP_TOALTSTACK
+ * 5. challenge.solution
+ * 6. OP_TOALTSTACK
+ * 7. ... verification opcodes ...
+ * 8. OP_IF
+ * 9. MAGIC ("op")
+ * 10. **featuresData chunks** (what we want)
+ * 11. OP_1NEGATE
+ * 12. ...calldata chunks
+ * 13. OP_ELSE, OP_1, OP_ENDIF
  */
 function parseOPNetScript(rawScriptHex: string): ParsedOPNetScript | null {
     const rawScriptBuf = Buffer.from(rawScriptHex, 'hex');
@@ -189,128 +160,157 @@ function parseOPNetScript(rawScriptHex: string): ParsedOPNetScript | null {
         return null;
     }
 
-    // Create a mutable copy to shift elements from
-    const scriptData: (number | Buffer)[] = [...decodedScript];
+    // Create a mutable copy
+    const scriptElements: (number | Buffer)[] = [...decodedScript];
 
     // 1. Read header (12 bytes)
-    const header = scriptData.shift();
-    if (!Buffer.isBuffer(header) || header.length !== OPNetHeader.EXPECTED_HEADER_LENGTH) {
+    const header = scriptElements.shift();
+    if (!Buffer.isBuffer(header) || header.length !== OPNET_HEADER_LENGTH) {
         console.log('[OPNet] parseScript: invalid header, got length:', Buffer.isBuffer(header) ? header.length : 'not a buffer');
         return null;
     }
 
+    // Parse header
+    const headerReader = new BinaryReader(header);
+    const headerBytes = headerReader.readBytes(4);
+    const priorityFeeSat = headerReader.readU64();
+
+    const publicKeyPrefix = headerBytes[0];
+    if (publicKeyPrefix !== 0x02 && publicKeyPrefix !== 0x03) {
+        console.log('[OPNet] parseScript: invalid public key prefix:', publicKeyPrefix);
+        return null;
+    }
+
+    const flagBuffer = Buffer.from(headerBytes.slice(1));
+    const flags = flagBuffer.readUIntBE(0, 3);
+
     // 2. Expect OP_TOALTSTACK
-    if (scriptData.shift() !== opcodes.OP_TOALTSTACK) {
+    if (scriptElements.shift() !== opcodes.OP_TOALTSTACK) {
         console.log('[OPNet] parseScript: expected OP_TOALTSTACK after header');
         return null;
     }
 
     // 3. Read minerMLDSAPublicKey (32 bytes)
-    const minerMLDSAPublicKey = scriptData.shift();
+    const minerMLDSAPublicKey = scriptElements.shift();
     if (!Buffer.isBuffer(minerMLDSAPublicKey) || minerMLDSAPublicKey.length !== 32) {
         console.log('[OPNet] parseScript: invalid minerMLDSAPublicKey');
         return null;
     }
 
     // 4. Expect OP_TOALTSTACK
-    if (scriptData.shift() !== opcodes.OP_TOALTSTACK) {
+    if (scriptElements.shift() !== opcodes.OP_TOALTSTACK) {
         console.log('[OPNet] parseScript: expected OP_TOALTSTACK after minerMLDSAPublicKey');
         return null;
     }
 
-    // 5. Read preimage/solution (variable length)
-    const preimage = scriptData.shift();
-    if (!Buffer.isBuffer(preimage)) {
-        console.log('[OPNet] parseScript: invalid preimage');
+    // 5. Read solution (variable length)
+    const solution = scriptElements.shift();
+    if (!Buffer.isBuffer(solution)) {
+        console.log('[OPNet] parseScript: invalid solution');
         return null;
     }
 
     // 6. Expect OP_TOALTSTACK
-    if (scriptData.shift() !== opcodes.OP_TOALTSTACK) {
-        console.log('[OPNet] parseScript: expected OP_TOALTSTACK after preimage');
+    if (scriptElements.shift() !== opcodes.OP_TOALTSTACK) {
+        console.log('[OPNet] parseScript: expected OP_TOALTSTACK after solution');
         return null;
     }
 
-    // Create header object
-    const opnetHeader = new OPNetHeader(header, minerMLDSAPublicKey, preimage);
-
-    // 7. Read features data if any flags are set
+    // Now we need to find the MAGIC "op" and extract features data after it
     let featuresData: Buffer | null = null;
-    if (opnetHeader.flags !== 0) {
-        featuresData = getDataUntilBufferEnd(scriptData);
+
+    if (flags !== 0) {
+        // Find the MAGIC "op" in the remaining script
+        let magicIndex = -1;
+        for (let i = 0; i < scriptElements.length; i++) {
+            const elem = scriptElements[i];
+            if (Buffer.isBuffer(elem) && elem.equals(OPNET_MAGIC)) {
+                magicIndex = i;
+                break;
+            }
+        }
+
+        if (magicIndex !== -1) {
+            // Collect all buffers after MAGIC until we hit OP_1NEGATE
+            const featureBuffers: Buffer[] = [];
+            for (let i = magicIndex + 1; i < scriptElements.length; i++) {
+                const elem = scriptElements[i];
+                if (elem === opcodes.OP_1NEGATE) {
+                    break;
+                }
+                if (Buffer.isBuffer(elem)) {
+                    featureBuffers.push(elem);
+                }
+            }
+
+            if (featureBuffers.length > 0) {
+                featuresData = Buffer.concat(featureBuffers);
+                console.log('[OPNet] parseScript: extracted features data:', featuresData.length, 'bytes from', featureBuffers.length, 'chunks');
+            }
+        } else {
+            console.log('[OPNet] parseScript: MAGIC "op" not found, flags:', flags);
+        }
     }
 
     return {
-        header: opnetHeader,
+        flags,
+        priorityFeeSat,
+        publicKeyPrefix,
+        minerMLDSAPublicKey: Buffer.from(minerMLDSAPublicKey),
+        solution: Buffer.from(solution),
         featuresData,
     };
 }
 
 /**
- * Read all consecutive buffer data from script array
- * Matching SharedInteractionParameters.getDataUntilBufferEnd
- */
-function getDataUntilBufferEnd(scriptData: (number | Buffer)[]): Buffer | null {
-    let data: Buffer | null = null;
-
-    while (scriptData.length > 0) {
-        const currentItem = scriptData[0];
-
-        if (!Buffer.isBuffer(currentItem)) {
-            break;
-        }
-
-        scriptData.shift();
-        data = data ? Buffer.concat([data, currentItem]) : currentItem;
-    }
-
-    return data;
-}
-
-/**
  * Decode features data based on priority order
  *
- * Features data format depends on how it was pushed to the script:
- * - If multiple features or large data: uses U32 length prefix per feature
- * - If single feature with small data: may be raw data without length prefix
+ * Each feature is encoded with writeBytesWithLength() (U32 BE length prefix)
+ * Features are sorted by priority: ACCESS_LIST(1) < EPOCH_SUBMISSION(2) < MLDSA_LINK_PUBKEY(3)
  */
 function decodeFeaturesData(flags: number, data: Buffer): DecodedFeature[] {
     const features: DecodedFeature[] = [];
 
-    // Count how many features are enabled
-    const enabledFeatures: Array<{ flag: number; type: DecodedFeature['type'] }> = [];
+    console.log('[OPNet] decodeFeaturesData: flags:', flags, 'dataLen:', data.length);
+    console.log('[OPNet] decodeFeaturesData: first 32 bytes:', data.subarray(0, 32).toString('hex'));
+
+    // Determine enabled features sorted by priority
+    const enabledFeatures: Array<{ flag: number; type: DecodedFeature['type']; priority: number }> = [];
+
     if ((flags & Features.ACCESS_LIST) === Features.ACCESS_LIST) {
-        enabledFeatures.push({ flag: Features.ACCESS_LIST, type: 'accessList' });
+        enabledFeatures.push({ flag: Features.ACCESS_LIST, type: 'accessList', priority: FeaturePriority.ACCESS_LIST });
     }
     if ((flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION) {
-        enabledFeatures.push({ flag: Features.EPOCH_SUBMISSION, type: 'epoch' });
+        enabledFeatures.push({ flag: Features.EPOCH_SUBMISSION, type: 'epoch', priority: FeaturePriority.EPOCH_SUBMISSION });
     }
     if ((flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY) {
-        enabledFeatures.push({ flag: Features.MLDSA_LINK_PUBKEY, type: 'mldsa' });
+        enabledFeatures.push({ flag: Features.MLDSA_LINK_PUBKEY, type: 'mldsa', priority: FeaturePriority.MLDSA_LINK_PUBKEY });
     }
 
-    console.log('[OPNet] decodeFeaturesData: flags:', flags, 'dataLen:', data.length, 'enabledFeatures:', enabledFeatures.length);
+    // Sort by priority (ascending)
+    enabledFeatures.sort((a, b) => a.priority - b.priority);
+    console.log('[OPNet] decodeFeaturesData: enabledFeatures:', enabledFeatures.map(f => f.type));
 
-    // If only one feature enabled, the data might be raw (no length prefix)
-    // because script push opcodes already encode lengths
-    if (enabledFeatures.length === 1) {
-        console.log('[OPNet] decodeFeaturesData: single feature, using raw data for', enabledFeatures[0].type);
-        features.push({ type: enabledFeatures[0].type, data: data });
-        return features;
-    }
-
-    // Multiple features - try reading with length prefixes
+    // Read features with length prefixes
     const reader = new BinaryReader(data);
+
     for (const { type } of enabledFeatures) {
         if (reader.bytesLeft() < 4) {
-            console.log('[OPNet] decodeFeaturesData: not enough bytes for', type);
+            console.log('[OPNet] decodeFeaturesData: not enough bytes for length prefix of', type, 'bytesLeft:', reader.bytesLeft());
             break;
         }
 
         try {
             const featureData = Buffer.from(reader.readBytesWithLength());
             console.log('[OPNet] decodeFeaturesData: read', type, 'length:', featureData.length);
-            features.push({ type, data: featureData });
+
+            // ACCESS_LIST is compressed, others are not
+            if (type === 'accessList') {
+                const decompressed = tryDecompress(featureData);
+                features.push({ type, data: decompressed });
+            } else {
+                features.push({ type, data: featureData });
+            }
         } catch (e) {
             console.log(`[OPNet] decodeFeaturesData: failed to read ${type}:`, e);
             break;
@@ -326,14 +326,12 @@ function decodeFeaturesData(flags: number, data: Buffer): DecodedFeature[] {
  */
 export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures | null {
     if (!witness || witness.length < 4) {
-        console.log('[OPNet] parseFeatures: witness too short, length:', witness?.length);
         return null;
     }
 
     try {
         const rawScript = witness[3];
         if (!rawScript) {
-            console.log('[OPNet] parseFeatures: witness[3] is empty');
             return null;
         }
 
@@ -342,13 +340,11 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
             return null;
         }
 
-        const flags = parsed.header.flags;
-
         return {
-            hasAccessList: (flags & Features.ACCESS_LIST) === Features.ACCESS_LIST,
-            hasEpochSubmission: (flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION,
-            hasMLDSALink: (flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY,
-            featureFlags: flags,
+            hasAccessList: (parsed.flags & Features.ACCESS_LIST) === Features.ACCESS_LIST,
+            hasEpochSubmission: (parsed.flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION,
+            hasMLDSALink: (parsed.flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY,
+            featureFlags: parsed.flags,
         };
     } catch (e) {
         console.warn('[OPNet] Failed to parse features from witness:', e);
@@ -358,7 +354,20 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
 
 /**
  * Extract Epoch Submission info from witness data
- * Format: mldsaPublicKey(32) + salt(32) + graffiti(optional with length)
+ *
+ * Epoch data format (from encodeChallengeSubmission):
+ * - publicKey: 32 bytes (miner's public key hash)
+ * - solution: variable (from challenge, already in header)
+ * - graffiti: optional with length prefix
+ *
+ * Wait - looking at the code again:
+ * writer.writeBytes(feature.data.publicKey.toBuffer()); // 32 bytes
+ * writer.writeBytes(feature.data.solution);  // This is NOT in the feature data, it's the challenge.solution
+ *
+ * Actually the epoch feature data is:
+ * - publicKey (32 bytes)
+ * - solution (the actual PoW solution, separate from header solution)
+ * - graffiti (optional with length prefix)
  */
 export function extractEpochSubmissionFromWitness(witness: string[], blockHeight?: number): EpochSubmissionInfo | null {
     if (!witness || witness.length < 4) {
@@ -376,12 +385,11 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
             return null;
         }
 
-        const flags = parsed.header.flags;
-        if ((flags & Features.EPOCH_SUBMISSION) !== Features.EPOCH_SUBMISSION) {
+        if ((parsed.flags & Features.EPOCH_SUBMISSION) !== Features.EPOCH_SUBMISSION) {
             return null;
         }
 
-        const features = decodeFeaturesData(flags, parsed.featuresData);
+        const features = decodeFeaturesData(parsed.flags, parsed.featuresData);
         const epochFeature = features.find(f => f.type === 'epoch');
 
         if (!epochFeature || !epochFeature.data) {
@@ -389,15 +397,20 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
         }
 
         const data = epochFeature.data;
+        console.log('[OPNet] extractEpochSubmission: data length:', data.length);
+
         if (data.length < 64) {
-            console.log('[OPNet] extractEpochSubmission: data too short');
+            console.log('[OPNet] extractEpochSubmission: data too short, need at least 64 bytes');
             return null;
         }
 
         const reader = new BinaryReader(data);
 
+        // Read miner public key (32 bytes)
         const mldsaPublicKey = Buffer.from(reader.readBytes(32));
-        const salt = Buffer.from(reader.readBytes(32));
+
+        // Read solution (should be 32 bytes based on ChallengeSolution)
+        const epochSolution = Buffer.from(reader.readBytes(32));
 
         let graffiti: string | undefined;
         let graffitiHex: string | undefined;
@@ -425,8 +438,8 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
         return {
             epochNumber,
             minerPublicKey: mldsaPublicKey.toString('hex'),
-            solution: parsed.header.solution.toString('hex'),
-            salt: salt.toString('hex'),
+            solution: epochSolution.toString('hex'),
+            salt: parsed.solution.toString('hex'), // The solution from header is the salt/preimage
             graffiti,
             graffitiHex,
             signature: '',
@@ -439,7 +452,15 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
 
 /**
  * Extract MLDSA/BIP360 link info from witness data
- * Format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
+ *
+ * MLDSA data format (from encodeLinkRequest):
+ * - level: U8 (0=LEVEL2, 1=LEVEL3, 2=LEVEL5)
+ * - hashedPublicKey: 32 bytes
+ * - verifyRequest: boolean (1 byte)
+ * - if verifyRequest:
+ *   - publicKey: 1312/1952/2592 bytes based on level
+ *   - mldsaSignature: 2420/3293/4595 bytes based on level
+ * - legacySignature: 64 bytes (Schnorr)
  */
 export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null {
     if (!witness || witness.length < 4) {
@@ -460,9 +481,8 @@ export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null
             return null;
         }
 
-        const flags = parsed.header.flags;
-        if ((flags & Features.MLDSA_LINK_PUBKEY) !== Features.MLDSA_LINK_PUBKEY) {
-            console.log('[OPNet] extractMLDSA: MLDSA flag not set, flags:', flags);
+        if ((parsed.flags & Features.MLDSA_LINK_PUBKEY) !== Features.MLDSA_LINK_PUBKEY) {
+            console.log('[OPNet] extractMLDSA: MLDSA flag not set, flags:', parsed.flags);
             return null;
         }
 
@@ -471,7 +491,7 @@ export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null
             return null;
         }
 
-        const features = decodeFeaturesData(flags, parsed.featuresData);
+        const features = decodeFeaturesData(parsed.flags, parsed.featuresData);
         const mldsaFeature = features.find(f => f.type === 'mldsa');
 
         if (!mldsaFeature || !mldsaFeature.data) {
@@ -488,28 +508,13 @@ export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null
 
 /**
  * Parse MLDSA data buffer
- * Format varies:
- * - Minimal (32 bytes): just hashedPubKey (level defaults to LEVEL2)
- * - Full: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
  */
 function parseMLDSAData(data: Buffer): MLDSALinkInfo | null {
-    console.log('[OPNet] parseMLDSAData: data length:', data.length, 'hex:', data.toString('hex').substring(0, 80));
+    console.log('[OPNet] parseMLDSAData: data length:', data.length);
 
-    // Minimal format: just 32-byte hashed public key
-    if (data.length === 32) {
-        console.log('[OPNet] parseMLDSAData: minimal format (32 bytes = just hash)');
-        return {
-            level: 'LEVEL2', // Default
-            hashedPublicKey: data.toString('hex'),
-            fullPublicKey: undefined,
-            legacySignature: '',
-            isVerified: true,
-            verifyRequest: false,
-        };
-    }
-
-    if (data.length < 34) {
-        console.log('[OPNet] parseMLDSAData: data too short, need 32 (minimal) or 34+ (full), got:', data.length);
+    // Minimum: level(1) + hash(32) + verifyRequest(1) + legacySig(64) = 98 bytes
+    if (data.length < 98) {
+        console.log('[OPNet] parseMLDSAData: data too short, need at least 98 bytes, got:', data.length);
         return null;
     }
 
@@ -537,17 +542,22 @@ function parseMLDSAData(data: Buffer): MLDSALinkInfo | null {
     const hashedPublicKey = Buffer.from(reader.readBytes(32)).toString('hex');
 
     // Verify request (1 byte bool)
-    const verifyRequest = reader.bytesLeft() > 0 ? reader.readBoolean() : false;
+    const verifyRequest = reader.readBoolean();
 
     let fullPublicKey: string | undefined;
 
-    if (verifyRequest && reader.bytesLeft() > 0) {
+    if (verifyRequest) {
         const pubKeyLen = MLDSA_PUBLIC_KEY_LENGTHS[levelByte];
         const sigLen = MLDSA_SIGNATURE_LENGTHS[levelByte];
 
-        if (reader.bytesLeft() >= pubKeyLen + sigLen) {
+        console.log('[OPNet] parseMLDSAData: verifyRequest=true, expecting pubKey:', pubKeyLen, 'sig:', sigLen);
+
+        if (reader.bytesLeft() >= pubKeyLen + sigLen + 64) {
             fullPublicKey = Buffer.from(reader.readBytes(pubKeyLen)).toString('hex');
             reader.readBytes(sigLen); // Skip MLDSA signature
+            console.log('[OPNet] parseMLDSAData: read full public key:', fullPublicKey.substring(0, 32) + '...');
+        } else {
+            console.log('[OPNet] parseMLDSAData: not enough bytes for full key+sig, bytesLeft:', reader.bytesLeft());
         }
     }
 
@@ -555,9 +565,12 @@ function parseMLDSAData(data: Buffer): MLDSALinkInfo | null {
     let legacySignature = '';
     if (reader.bytesLeft() >= 64) {
         legacySignature = Buffer.from(reader.readBytes(64)).toString('hex');
+        console.log('[OPNet] parseMLDSAData: read legacy signature:', legacySignature.substring(0, 32) + '...');
+    } else {
+        console.log('[OPNet] parseMLDSAData: not enough bytes for legacy signature, bytesLeft:', reader.bytesLeft());
     }
 
-    console.log('[OPNet] parseMLDSAData: level:', level, 'hash:', hashedPublicKey.substring(0, 16) + '...');
+    console.log('[OPNet] parseMLDSAData: SUCCESS level:', level, 'hash:', hashedPublicKey.substring(0, 16) + '...');
 
     return {
         level,
@@ -598,50 +611,45 @@ export function parseFullOPNetWitness(witness: string[], blockHeight?: number): 
             return null;
         }
 
-        const flags = parsed.header.flags;
-
-        const features: OPNetFeatures = {
-            hasAccessList: (flags & Features.ACCESS_LIST) === Features.ACCESS_LIST,
-            hasEpochSubmission: (flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION,
-            hasMLDSALink: (flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY,
-            featureFlags: flags,
+        const opnetFeatures: OPNetFeatures = {
+            hasAccessList: (parsed.flags & Features.ACCESS_LIST) === Features.ACCESS_LIST,
+            hasEpochSubmission: (parsed.flags & Features.EPOCH_SUBMISSION) === Features.EPOCH_SUBMISSION,
+            hasMLDSALink: (parsed.flags & Features.MLDSA_LINK_PUBKEY) === Features.MLDSA_LINK_PUBKEY,
+            featureFlags: parsed.flags,
         };
 
         const result: FullOPNetWitnessData = {
-            features,
-            priorityFeeSat: parsed.header.priorityFeeSat,
-            publicKeyPrefix: parsed.header.publicKeyPrefix,
-            minerMLDSAPublicKey: parsed.header.minerMLDSAPublicKey.toString('hex'),
-            solution: parsed.header.solution.toString('hex'),
+            features: opnetFeatures,
+            priorityFeeSat: parsed.priorityFeeSat,
+            publicKeyPrefix: parsed.publicKeyPrefix,
+            minerMLDSAPublicKey: parsed.minerMLDSAPublicKey.toString('hex'),
+            solution: parsed.solution.toString('hex'),
         };
 
-        if (parsed.featuresData && flags !== 0) {
-            const decodedFeatures = decodeFeaturesData(flags, parsed.featuresData);
+        if (parsed.featuresData && parsed.flags !== 0) {
+            const decodedFeatures = decodeFeaturesData(parsed.flags, parsed.featuresData);
 
             for (const feature of decodedFeatures) {
                 if (feature.type === 'epoch') {
-                    const reader = new BinaryReader(feature.data);
-                    if (feature.data.length >= 64) {
-                        const mldsaPublicKey = Buffer.from(reader.readBytes(32));
-                        const salt = Buffer.from(reader.readBytes(32));
+                    const epochData = feature.data;
+                    if (epochData.length >= 64) {
+                        const epochReader = new BinaryReader(epochData);
+                        const mldsaPublicKey = Buffer.from(epochReader.readBytes(32));
+                        const epochSolution = Buffer.from(epochReader.readBytes(32));
 
                         let graffiti: string | undefined;
                         let graffitiHex: string | undefined;
 
-                        if (reader.bytesLeft() > 0) {
+                        if (epochReader.bytesLeft() > 0) {
                             try {
-                                const graffitiBytes = Buffer.from(reader.readBytesWithLength());
+                                const graffitiBytes = Buffer.from(epochReader.readBytesWithLength());
                                 if (graffitiBytes.length > 0) {
                                     graffitiHex = graffitiBytes.toString('hex');
                                     try {
                                         graffiti = graffitiBytes.toString('utf-8');
-                                    } catch {
-                                        // ignore
-                                    }
+                                    } catch {}
                                 }
-                            } catch {
-                                // ignore
-                            }
+                            } catch {}
                         }
 
                         const epochNumber = blockHeight !== undefined ? Math.floor(blockHeight / 5).toString() : '0';
@@ -649,8 +657,8 @@ export function parseFullOPNetWitness(witness: string[], blockHeight?: number): 
                         result.epochSubmission = {
                             epochNumber,
                             minerPublicKey: mldsaPublicKey.toString('hex'),
-                            solution: parsed.header.solution.toString('hex'),
-                            salt: salt.toString('hex'),
+                            solution: epochSolution.toString('hex'),
+                            salt: parsed.solution.toString('hex'),
                             graffiti,
                             graffitiHex,
                             signature: '',

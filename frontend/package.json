@@ -87,6 +87,7 @@
     "esbuild": "^0.25.8",
     "ngx-echarts": "~20.0.2",
     "ngx-infinite-scroll": "^20.0.0",
+    "pako": "^2.1.0",
     "qrcode": "1.5.1",
     "rxjs": "~7.8.1",
     "tlite": "^0.1.9",
