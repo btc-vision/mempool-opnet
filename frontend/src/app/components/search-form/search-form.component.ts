@@ -1,15 +1,50 @@
-import { Component, OnInit, ChangeDetectionStrategy, EventEmitter, Output, ViewChild, HostListener, ElementRef, Input } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  OnInit,
+  Output,
+  ViewChild,
+} from '@angular/core';
+import {
+  UntypedFormBuilder,
+  UntypedFormGroup,
+  Validators,
+} from '@angular/forms';
 import { EventType, NavigationStart, Router } from '@angular/router';
 import { AssetsService } from '@app/services/assets.service';
 import { Env, StateService } from '@app/services/state.service';
-import { Observable, of, Subject, zip, BehaviorSubject, combineLatest } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError, map, startWith,  tap } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  combineLatest,
+  Observable,
+  of,
+  Subject,
+  zip,
+} from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  startWith,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { RelativeUrlPipe } from '@app/shared/pipes/relative-url/relative-url.pipe';
 import { ApiService } from '@app/services/api.service';
 import { SearchResultsComponent } from '@components/search-form/search-results/search-results.component';
-import { Network, findOtherNetworks, getRegex, getTargetUrl, needBaseModuleChange } from '@app/shared/regex.utils';
+import {
+  findOtherNetworks,
+  getRegex,
+  getTargetUrl,
+  needBaseModuleChange,
+  Network,
+} from '@app/shared/regex.utils';
 
 @Component({
   selector: 'app-search-form',
@@ -200,7 +235,7 @@ export class SearchFormComponent implements OnInit {
           const otherNetworks = findOtherNetworks(searchText, this.network as any || 'mainnet', this.env);
           const liquidAsset = this.assets ? (this.assets[searchText] || []) : [];
           const pools = this.pools.filter(pool => pool["name"].toLowerCase().includes(searchText.toLowerCase())).slice(0, 10);
-          
+
           if (matchesDateTime && searchText.indexOf('/') !== -1) {
             searchText = searchText.replace(/\//g, '-');
           }
@@ -262,7 +297,7 @@ export class SearchFormComponent implements OnInit {
   }
 
   search(result?: string): void {
-    const searchText = result || this.searchForm.value.searchText.trim();
+    const searchText = result || this.searchForm.value?.searchText?.trim();
     if (searchText) {
       this.isSearching = true;
 
@@ -329,18 +364,18 @@ export class SearchFormComponent implements OnInit {
       this.apiService.listPools$('1y')
     ]).pipe(
       map(([poolsResponse, activePoolsResponse]) => {
-        const activePoolSlugs = new Set(activePoolsResponse.body.pools.map(pool => pool.slug));
+        const activePoolSlugs = new Set(activePoolsResponse.body.pools.map(pool => pool?.slug));
 
         return poolsResponse.body.map(pool => ({
-          name: pool.name,
-          slug: pool.slug,
-          active: activePoolSlugs.has(pool.slug)
+          name: pool?.name,
+          slug: pool?.slug,
+          active: activePoolSlugs.has(pool?.slug)
         }))
           // Sort: active pools first, then alphabetically
           .sort((a, b) => {
             if (a.active && !b.active) return -1;
             if (!a.active && b.active) return 1;
-            return a.slug < b.slug ? -1 : 1;
+            return a?.slug < b?.slug ? -1 : 1;
           });
 
       }),

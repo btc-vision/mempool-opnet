@@ -26,7 +26,7 @@ class Mining {
   private blocksPriceIndexingRunning = false;
   public lastHashrateIndexingDate: number | null = null;
   public lastWeeklyHashrateIndexingDate: number | null = null;
-  
+
   public reindexHashrateRequested = false;
   public reindexDifficultyAdjustmentRequested = false;
 
@@ -66,7 +66,7 @@ class Mining {
       {from, to}
     );
   }
-  
+
   /**
    * Get historical block rewards
    */
@@ -120,6 +120,10 @@ class Mining {
     let rank = 1;
 
     poolsInfo.forEach((poolInfo: PoolInfo) => {
+      if(!poolInfo) {
+        return;
+      }
+
       const emptyBlocksCount = emptyBlocks.filter((emptyCount) => emptyCount.poolId === poolInfo.poolId);
       const poolStat: PoolStats = {
         poolId: poolInfo.poolId, // mysql row id
@@ -128,7 +132,7 @@ class Mining {
         blockCount: poolInfo.blockCount,
         rank: rank++,
         emptyBlocks: emptyBlocksCount.length > 0 ? emptyBlocksCount[0]['count'] : 0,
-        slug: poolInfo.slug,
+        slug: poolInfo?.slug,
         avgMatchRate: poolInfo.avgMatchRate !== null ? Math.round(100 * poolInfo.avgMatchRate) / 100 : null,
         avgFeeDelta: poolInfo.avgFeeDelta,
         poolUniqueId: poolInfo.poolUniqueId
@@ -175,8 +179,8 @@ class Mining {
     const blockCount1w: number = await BlocksRepository.$blockCount(pool.id, '1w');
     const totalBlock1w: number = await BlocksRepository.$blockCount(null, '1w');
 
-    const avgHealth = await BlocksRepository.$getAvgBlockHealthPerPoolId(pool.id);    
-    const totalReward = await BlocksRepository.$getTotalRewardForPoolId(pool.id);    
+    const avgHealth = await BlocksRepository.$getAvgBlockHealthPerPoolId(pool.id);
+    const totalReward = await BlocksRepository.$getTotalRewardForPoolId(pool.id);
 
     let currentEstimatedHashrate = 0;
     try {
@@ -235,7 +239,7 @@ class Mining {
 
       const indexedTimestamp = await HashratesRepository.$getWeeklyHashrateTimestamps();
       const hashrates: any[] = [];
- 
+
       const lastMonday = new Date(now.setDate(now.getDate() - (now.getDay() + 6) % 7));
       const lastMondayMidnight = this.getDateMidnight(lastMonday);
       let toTimestamp = lastMondayMidnight.getTime();
@@ -537,7 +541,7 @@ class Mining {
 
     let totalInserted = 0;
     try {
-      const prices: any[] = await PricesRepository.$getPricesTimesAndId();    
+      const prices: any[] = await PricesRepository.$getPricesTimesAndId();
       const blocksWithoutPrices: any[] = await BlocksRepository.$getBlocksWithoutPrice();
 
       const blocksPrices: BlockPrice[] = [];
@@ -609,11 +613,11 @@ class Mining {
     while (currentBlockHeight > 0) {
       const indexedBlocks = await BlocksRepository.$getBlocksMissingCoinStatsIndex(
         currentBlockHeight, currentBlockHeight - 10000);
-        
+
       for (const block of indexedBlocks) {
         const txoutset = await bitcoinClient.getTxoutSetinfo('none', block.height);
         await BlocksRepository.$updateCoinStatsIndexData(block.hash, txoutset.txouts,
-          Math.round(txoutset.block_info.prevout_spent * 100000000));        
+          Math.round(txoutset.block_info.prevout_spent * 100000000));
         ++totalIndexed;
 
         const elapsedSeconds = Math.max(1, new Date().getTime() / 1000 - timer);
@@ -688,7 +692,7 @@ class Mining {
       default: return 1 * scale;
     }
   }
-  
+
 
   // Finds the oldest block in a consecutive chain back from the tip
   // assumes `blocks` is sorted in ascending height order

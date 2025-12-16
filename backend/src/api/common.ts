@@ -1,6 +1,15 @@
 import * as bitcoinjs from 'bitcoinjs-lib';
 import { Request } from 'express';
-import { EffectiveFeeStats, MempoolBlockWithTransactions, TransactionExtended, MempoolTransactionExtended, TransactionStripped, WorkingEffectiveFeeStats, TransactionClassified, TransactionFlags } from '../mempool.interfaces';
+import {
+  EffectiveFeeStats,
+  MempoolBlockWithTransactions,
+  MempoolTransactionExtended,
+  TransactionClassified,
+  TransactionExtended,
+  TransactionFlags,
+  TransactionStripped,
+  WorkingEffectiveFeeStats,
+} from '../mempool.interfaces';
 import config from '../config';
 import { NodeSocket } from '../repositories/NodesSocketsRepository';
 import { isIP } from 'net';
@@ -20,6 +29,7 @@ const MAX_STANDARD_P2WSH_STACK_ITEMS = 100;
 const MAX_STANDARD_P2WSH_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_TAPSCRIPT_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_P2WSH_SCRIPT_SIZE = 3600;
+const MAX_STANDARD_P2OP_STACK_ITEM_SIZE = 80;
 const MAX_STANDARD_SCRIPTSIG_SIZE = 1650;
 const DUST_RELAY_TX_FEE = 3;
 const MAX_OP_RETURN_RELAY = 83;
@@ -285,6 +295,28 @@ export class Common {
             return false;
           }
         }
+      } else if (vin.prevout?.scriptpubkey_type === 'v16_p2op' && vin.witness?.length) {
+        const hasAnnex = vin.witness.length > 1 &&
+          vin.witness[vin.witness.length - 1].startsWith('50');
+
+        if (hasAnnex) {
+          return true;
+        }
+
+        // Rule 2 – Must be a script-path spend:  at least 2 witness items
+        if (vin.witness.length < 2) {
+          return true;
+        }
+
+        // Rule 3 – Every stack item **except the script itself (last item)**
+        //          must not exceed 80 bytes (160 hex chars)
+        if (
+          vin.witness
+            .slice(0, vin.witness.length - 1)
+            .some(itemHex => itemHex.length > MAX_STANDARD_P2OP_STACK_ITEM_SIZE * 2)
+        ) {
+          return true;
+        }
       }
       // TODO: other bad-witness-nonstandard cases
     }
@@ -542,19 +574,103 @@ export class Common {
     ].includes(pubkey);
   }
 
-  static isInscription(vin, flags): bigint {
+  static decodeTaprootFlags(vin, flags): bigint {
     // in taproot, if the last witness item begins with 0x50, it's an annex
     const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
     // script spends have more than one witness item, not counting the annex (if present)
     if (vin.witness.length > (hasAnnex ? 2 : 1)) {
       // the script itself is the second-to-last witness item, not counting the annex
       const asm = vin.inner_witnessscript_asm || transactionUtils.convertScriptSigAsm(vin.witness[vin.witness.length - (hasAnnex ? 3 : 2)]);
+      if(!asm) {
+        return flags;
+      }
+
       // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-      if (asm?.includes('OP_0 OP_IF')) {
+      const isInscription = asm.includes('OP_0 OP_IF');
+      const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
+      const isSmartContract = Common.checkIsSmartContract(asm);
+      const isInteraction = Common.checkIsInteraction(asm);
+
+      if(isInscription) {
         flags |= TransactionFlags.inscription;
       }
+
+      if(isOP_NET) {
+        flags |= TransactionFlags.opnet;
+      }
+
+      if(isSmartContract) {
+        flags |= TransactionFlags.smart_contract;
+      }
+
+      if(isInteraction) {
+        flags |= TransactionFlags.interaction;
+      }
     }
+
     return flags;
+  }
+
+  static checkIsInteraction(script: string): boolean {
+    if (!script) {
+      return false;
+    }
+
+    const ops = script.split(' ');
+
+    // Check the script structure
+    const requiredSequence = [
+      'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+      'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
+      'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+      'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3'
+    ];
+
+    // Extracting the necessary part of the script for comparison
+    const firstPart = ops.filter((op) => {
+      return op.startsWith('OP_');
+    });
+
+    // Check the structure matches the required sequence
+    for (let i = 0; i < requiredSequence.length; i++) {
+      if (firstPart[i] !== requiredSequence[i]) {
+        return false;
+      }
+    }
+
+    // Legacy OP_NET interaction
+    return true;
+  }
+
+  static checkIsSmartContract(script: string): boolean {
+    if (!script) {
+      return false;
+    }
+
+    const ops = script.split(' ');
+
+    // Check the script structure
+    const requiredSequence = [
+      'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
+      'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH256',
+      'OP_PUSHBYTES_32', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
+      'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3', 'OP_PUSHNUM_NEG1'
+    ];
+
+    // Extracting the necessary part of the script for comparison
+    const firstPart = ops.filter((op) => {
+      return op.startsWith('OP_');
+    });
+
+    // Check the structure matches the required sequence
+    for (let i = 0; i < requiredSequence.length; i++) {
+      if (firstPart[i] !== requiredSequence[i]) {
+        return false;
+      }
+    }
+
+    // Legacy OP_NET smart contract
+    return true;
   }
 
   static inputIsMaybeInscription(vin: IEsploraApi.Vin): boolean {
@@ -652,20 +768,26 @@ export class Common {
           case 'v1_p2tr': {
             flags |= TransactionFlags.p2tr;
             if (vin.witness?.length) {
-              flags = Common.isInscription(vin, flags);
+              flags = Common.decodeTaprootFlags(vin, flags);
+
               const hasAnnex = vin.witness.length > 1 && vin.witness[vin.witness.length - 1].startsWith('50');
               if (hasAnnex) {
                 flags |= TransactionFlags.annex;
               }
             }
-          } break;
+            break;
+          }
+          case 'v16_p2op': {
+            flags |= TransactionFlags.p2op;
+            break;
+          }
         }
       } else {
         // no prevouts, optimistically check witness-bearing inputs
         if (vin.witness?.length >= 2 && Common.inputIsMaybeInscription(vin)) {
           // try to parse the witness as a taproot inscription
           try {
-            flags = Common.isInscription(vin, flags);
+            flags = Common.decodeTaprootFlags(vin, flags);
           } catch {
             // witness script parsing will fail if this isn't really a taproot output
           }
@@ -716,11 +838,14 @@ export class Common {
         case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
         case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
         case 'v1_p2tr': flags |= TransactionFlags.p2tr; break;
+        case 'v16_p2op': flags |= TransactionFlags.p2op; break;
         case 'op_return': flags |= TransactionFlags.op_return; break;
       }
+
       if (vout.scriptpubkey_address) {
         reusedOutputAddresses[vout.scriptpubkey_address] = (reusedOutputAddresses[vout.scriptpubkey_address] || 0) + 1;
       }
+
       if (vout.scriptpubkey_type === 'v0_p2wsh') {
         if (!P2WSHCount) {
           olgaSize = parseInt(vout.scriptpubkey.slice(4, 8), 16);
@@ -735,8 +860,10 @@ export class Common {
       } else {
         P2WSHCount = 0;
       }
+
       outValues[vout.value || Math.random()] = (outValues[vout.value || Math.random()] || 0) + 1;
     }
+
     if (hasFakePubkey) {
       flags |= TransactionFlags.fake_pubkey;
     }
@@ -747,10 +874,12 @@ export class Common {
     if (!addressReuse && tx.vin.length >= 5 && tx.vout.length >= 5 && (Object.keys(inValues).length + Object.keys(outValues).length) <= (tx.vin.length + tx.vout.length) / 2 ) {
       flags |= TransactionFlags.coinjoin;
     }
+
     // more than 5:1 input:output ratio
     if (tx.vin.length / tx.vout.length >= 5) {
       flags |= TransactionFlags.consolidation;
     }
+
     // less than 1:5 input:output ratio
     if (tx.vin.length / tx.vout.length <= 0.2) {
       flags |= TransactionFlags.batch_payout;
@@ -854,7 +983,7 @@ export class Common {
 
   static indexingEnabled(): boolean {
     return (
-      ['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK) &&
+      ['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK) &&
       config.DATABASE.ENABLED === true &&
       config.MEMPOOL.INDEXING_BLOCKS_AMOUNT !== 0
     );
@@ -911,7 +1040,7 @@ export class Common {
     if (id.indexOf('/') !== -1) {
       id = id.slice(0, -2);
     }
-    
+
     if (id.indexOf('x') !== -1) { // Already a short id
       return id;
     }
@@ -1081,7 +1210,7 @@ export class Common {
   }
 
   static getTransactionFromRequest(req: Request, form: boolean): string {
-    let rawTx: any = typeof req.body === 'object' && form
+    const rawTx: any = typeof req.body === 'object' && form
       ? Object.values(req.body)[0] as any
       : req.body;
     if (typeof rawTx !== 'string') {
@@ -1182,7 +1311,7 @@ export class Common {
             }
           }
         }
-      })
+      });
     }
 
     // Pass through the input string untouched
@@ -1220,14 +1349,14 @@ export class Common {
 /**
  * Class to calculate average fee rates of a list of transactions
  * at certain weight percentiles, in a single pass
- * 
+ *
  * init with:
  *   maxWeight - the total weight to measure percentiles relative to (e.g. 4MW for a single block)
  *   percentileBandWidth - how many weight units to average over for each percentile (as a % of maxWeight)
  *   percentiles - an array of weight percentiles to compute, in %
- * 
+ *
  * then call .processNext(tx) for each transaction, in descending order
- * 
+ *
  * retrieve the final results with .getFeeStats()
  */
 export class OnlineFeeStatsCalculator {

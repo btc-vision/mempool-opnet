@@ -67,7 +67,7 @@ export class BlocksList implements OnInit {
 
     if (!this.widget) {
       this.websocketService.want(['blocks']);
-      
+
       this.seoService.setTitle($localize`:@@8a7b4bd44c0ac71b2e72de0398b303257f7d2f54:Blocks`);
       this.ogService.setManualOgImage('recent-blocks.jpg');
       if( this.stateService.network==='liquid'||this.stateService.network==='liquidtestnet' ) {
@@ -110,7 +110,7 @@ export class BlocksList implements OnInit {
 
     this.skeletonLines = this.widget === true ? [...Array(6).keys()] : [...Array(15).keys()];
     this.paginationMaxSize = window.matchMedia('(max-width: 670px)').matches ? 3 : 5;
-    
+
     this.blocks$ = combineLatest([
       this.fromHeightSubject.pipe(
         filter(fromBlockHeight => fromBlockHeight !== this.lastBlockHeightFetched),
@@ -131,10 +131,8 @@ export class BlocksList implements OnInit {
               map(blocks => {
                 if (this.stateService.env.BASE_MODULE === 'mempool') {
                   for (const block of blocks) {
-                    if (block.extras?.pool) {
-                      // @ts-ignore: Need to add an extra field for the template
-                      block.extras.pool.logo = `/resources/mining-pools/` + block.extras.pool.slug + '.svg';
-                    }
+                    // @ts-ignore: Need to add an extra field for the template
+                    block.extras.pool.logo = `/resources/mining-pools/` + block.extras.pool?.slug + '.svg';
                   }
                 }
                 if (this.widget) {
@@ -168,7 +166,7 @@ export class BlocksList implements OnInit {
             if (this.isMempoolModule && blocks[1][0].extras?.pool) {
               // @ts-ignore: Need to add an extra field for the template
               blocks[1][0].extras.pool.logo = `/resources/mining-pools/` +
-                blocks[1][0].extras.pool.slug + '.svg';
+                blocks[1][0].extras.pool?.slug + '.svg';
             }
             acc.unshift(blocks[1][0]);
             acc = acc.slice(0, this.widget ? 6 : 15);

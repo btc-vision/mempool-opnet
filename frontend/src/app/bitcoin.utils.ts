@@ -23,6 +23,7 @@ export function calcSegwitFeeGains(tx: Transaction) {
     const isP2wsh        = vin.prevout.scriptpubkey_type === 'v0_p2wsh';
     const isP2wpkh       = vin.prevout.scriptpubkey_type === 'v0_p2wpkh';
     const isP2tr         = vin.prevout.scriptpubkey_type === 'v1_p2tr';
+    const isP2OP         = vin.prevout.scriptpubkey_type === 'v16_p2op';
 
     const op = vin.scriptsig ? vin.scriptsig_asm.split(' ')[0] : null;
     const isP2shP2Wpkh = isP2sh && !!vin.witness && op === 'OP_PUSHBYTES_22';
@@ -32,6 +33,7 @@ export function calcSegwitFeeGains(tx: Transaction) {
       // Native Segwit - P2WPKH/P2WSH/P2TR
       case isP2wpkh:
       case isP2wsh:
+      case isP2OP:
       case isP2tr:
         // maximal gains: the scriptSig is moved entirely to the witness part
         // if taproot is used savings are 42 WU higher because it produces smaller signatures and doesn't require a pubkey in the witness
@@ -266,25 +268,35 @@ const featureActivation = {
     rbf: 399701,
     segwit: 477120,
     taproot: 709632,
+    smart_contract: 0,
   },
   testnet: {
     rbf: 720255,
     segwit: 872730,
     taproot: 2032291,
+    smart_contract: 0,
   },
   testnet4: {
     rbf: 0,
     segwit: 0,
     taproot: 0,
+    smart_contract: 0,
+  },
+  regtest: {
+    rbf: 0,
+    segwit: 0,
+    taproot: 0,
+    smart_contract: 0,
   },
   signet: {
     rbf: 0,
     segwit: 0,
     taproot: 0,
+    smart_contract: 0,
   },
 };
 
-export function isFeatureActive(network: string, height: number, feature: 'rbf' | 'segwit' | 'taproot'): boolean {
+export function isFeatureActive(network: string, height: number, feature: 'rbf' | 'segwit' | 'taproot' | 'smart_contract'): boolean {
   const activationHeight = featureActivation[network || 'mainnet']?.[feature];
   if (activationHeight != null) {
     return height >= activationHeight;

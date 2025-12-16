@@ -1,5 +1,14 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { Observable, Subscription, delay, filter, tap } from 'rxjs';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+} from '@angular/core';
+import { delay, filter, Observable, Subscription, tap } from 'rxjs';
 import { StateService } from '@app/services/state.service';
 import { specialBlocks } from '@app/app.constants';
 import { BlockExtended } from '@interfaces/node-api.interface';
@@ -30,7 +39,7 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
   @Input() spotlight: number = 0;
   @Input() showPools: boolean = true;
   @Input() getHref?: (index, block) => string = (index, block) => `/block/${block.id}`;
-  
+
   specialBlocks = specialBlocks;
   network = '';
   blocks: BlockchainBlock[] = [];
@@ -72,6 +81,7 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
     'liquidtestnet': ['var(--liquidtestnet)', 'var(--liquidtestnet-alt)'],
     testnet: ['var(--testnet)', 'var(--testnet-alt)'],
     testnet4: ['var(--testnet)', 'var(--testnet-alt)'],
+    regtest: ['var(--testnet)', 'var(--testnet-alt)'],
     signet: ['var(--signet)', 'var(--signet-alt)'],
   };
 

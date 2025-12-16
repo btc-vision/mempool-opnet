@@ -70,7 +70,7 @@ export class PoolComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.slugSubscription = this.route.params.pipe(map((params) => params.slug)).subscribe((slug) => {
+    this.slugSubscription = this.route.params.pipe(map((params) => params?.slug)).subscribe((slug) => {
       this.isLoading = true;
       this.blocks = [];
       this.chartOptions = {};
@@ -99,7 +99,7 @@ export class PoolComponent implements OnInit {
           poolStats.pool.regexes = regexes.slice(0, -3);
 
           return Object.assign({
-            logo: `/resources/mining-pools/` + poolStats.pool.slug + '.svg'
+            logo: `/resources/mining-pools/` + poolStats.pool?.slug + '.svg'
           }, poolStats);
         }),
         catchError(() => {
@@ -129,7 +129,7 @@ export class PoolComponent implements OnInit {
         share(),
       );
 
-    this.oobFees$ = this.route.params.pipe(map((params) => params.slug)).pipe(
+    this.oobFees$ = this.route.params.pipe(map((params) => params?.slug)).pipe(
       filter(() => this.stateService.env.PUBLIC_ACCELERATIONS === true && this.stateService.network === ''),
       switchMap(slug => {
         return combineLatest([
@@ -222,9 +222,9 @@ export class PoolComponent implements OnInit {
               hashrateString = `${tick.marker} ${tick.seriesName}: ${this.amountShortenerPipe.transform(tick.data[1], 3, 'H/s', false, true)}<br>`;
             } else if (tick.seriesIndex === 1) {
               dominanceString = `${tick.marker} ${tick.seriesName}: ${formatNumber(tick.data[1], this.locale, '1.0-2')}%`;
-            }             
+            }
           }
-          
+
           return `
             <b style="color: white; margin-left: 18px">${ticks[0].axisValueLabel}</b><br>
             <span>${hashrateString}</span>

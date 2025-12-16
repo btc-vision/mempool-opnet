@@ -1,19 +1,29 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, HostListener, ViewChild, ElementRef, Inject, ChangeDetectorRef } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  Inject,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import {
-  switchMap,
-  filter,
   catchError,
-  retryWhen,
   delay,
-  mergeMap,
-  tap,
+  filter,
   map,
-  retry,
-  startWith,
+  mergeMap,
   repeat,
-  take
+  retry,
+  retryWhen,
+  startWith,
+  switchMap,
+  take,
+  tap,
 } from 'rxjs/operators';
 import { Transaction } from '@interfaces/electrs.interface';
 import { of, merge, Subscription, Observable, Subject, from, throwError, combineLatest, BehaviorSubject, timer } from 'rxjs';
@@ -25,9 +35,20 @@ import { ApiService } from '@app/services/api.service';
 import { SeoService } from '@app/services/seo.service';
 import { StorageService } from '@app/services/storage.service';
 import { seoDescriptionNetwork } from '@app/shared/common.utils';
-import { getTransactionFlags, getUnacceleratedFeeRate } from '@app/shared/transaction.utils';
-import { Filter, TransactionFlags, toFilters } from '@app/shared/filters.utils';
-import { BlockExtended, CpfpInfo, RbfTree, MempoolPosition, DifficultyAdjustment, Acceleration, AccelerationPosition } from '@interfaces/node-api.interface';
+import {
+  getTransactionFlags,
+  getUnacceleratedFeeRate,
+} from '@app/shared/transaction.utils';
+import { Filter, toFilters, TransactionFlags } from '@app/shared/filters.utils';
+import {
+  Acceleration,
+  AccelerationPosition,
+  BlockExtended,
+  CpfpInfo,
+  DifficultyAdjustment,
+  MempoolPosition,
+  RbfTree,
+} from '@interfaces/node-api.interface';
 import { LiquidUnblinding } from '@components/transaction/liquid-ublinding';
 import { RelativeUrlPipe } from '@app/shared/pipes/relative-url/relative-url.pipe';
 import { PriceService } from '@app/services/price.service';
@@ -147,6 +168,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   segwitEnabled: boolean;
   rbfEnabled: boolean;
   taprootEnabled: boolean;
+  smartContractsEnabled: boolean;
   hasEffectiveFeeRate: boolean;
   accelerateCtaType: 'alert' | 'button' = 'button';
   acceleratorAvailable: boolean = this.stateService.env.ACCELERATOR_BUTTON && this.stateService.network === '';
@@ -890,7 +912,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.accelerationCanceled = true;
       this.setIsAccelerated(firstCpfp);
     }
-    
+
     if (this.notAcceleratedOnLoad === null) {
       this.notAcceleratedOnLoad = !this.isAcceleration;
     }
@@ -911,11 +933,11 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setIsAccelerated(initialState: boolean = false) {
-    this.isAcceleration = 
+    this.isAcceleration =
       (
-        (this.tx.acceleration && (!this.tx.status.confirmed || this.waitingForAccelerationInfo)) || 
+        (this.tx.acceleration && (!this.tx.status.confirmed || this.waitingForAccelerationInfo)) ||
         (this.accelerationInfo && this.pool && this.accelerationInfo.pools.some(pool => (pool === this.pool.id)))
-      ) && 
+      ) &&
       !this.accelerationCanceled;
     if (this.isAcceleration) {
       if (initialState) {
@@ -937,6 +959,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.segwitEnabled = !this.tx.status.confirmed || isFeatureActive(this.stateService.network, this.tx.status.block_height, 'segwit');
       this.taprootEnabled = !this.tx.status.confirmed || isFeatureActive(this.stateService.network, this.tx.status.block_height, 'taproot');
       this.rbfEnabled = !this.tx.status.confirmed || isFeatureActive(this.stateService.network, this.tx.status.block_height, 'rbf');
+      this.smartContractsEnabled = !this.tx.status.confirmed || isFeatureActive(this.stateService.network, this.tx.status.block_height, 'smart_contract');
       const txHeight = this.tx.status?.block_height || (this.stateService.latestBlockHeight >= 0 ? this.stateService.latestBlockHeight + 1 : null);
       this.tx.flags = getTransactionFlags(this.tx, null, null, txHeight, this.stateService.network);
       this.filters = this.tx.flags ? toFilters(this.tx.flags).filter(f => f.txPage) : [];
@@ -945,8 +968,9 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.segwitEnabled = false;
       this.taprootEnabled = false;
       this.rbfEnabled = false;
+      this.smartContractsEnabled = false;
     }
-    this.featuresEnabled = this.segwitEnabled || this.taprootEnabled || this.rbfEnabled;
+    this.featuresEnabled = this.segwitEnabled || this.taprootEnabled || this.rbfEnabled || this.smartContractsEnabled;
   }
 
   checkAccelerationEligibility() {

@@ -23,6 +23,7 @@ class PoolsParser {
 
   public setMiningPools(pools): void {
     for (const pool of pools) {
+      if(!pool) continue;
       pool.regexes = pool.tags;
       pool.slug = pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
       delete(pool.tags);
@@ -196,6 +197,8 @@ class PoolsParser {
     if (config.MEMPOOL.NETWORK === 'testnet') {
       firstKnownBlockPool = 21106; // https://mempool.space/testnet/block/0000000070b701a5b6a1b965f6a38e0472e70b2bb31b973e4638dec400877581
     } else if (['signet', 'testnet4'].includes(config.MEMPOOL.NETWORK)) {
+      firstKnownBlockPool = 0;
+    } else if (config.MEMPOOL.NETWORK === 'regtest') {
       firstKnownBlockPool = 0;
     }
 

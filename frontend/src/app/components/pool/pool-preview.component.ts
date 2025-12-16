@@ -44,7 +44,7 @@ export class PoolPreviewComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.poolStats$ = this.route.params.pipe(map((params) => params.slug))
+    this.poolStats$ = this.route.params.pipe(map((params) => params?.slug))
       .pipe(
         switchMap((slug: any) => {
           this.isLoading = true;
@@ -95,7 +95,7 @@ export class PoolPreviewComponent implements OnInit {
 
           this.openGraphService.waitOver({ event: 'pool-stats-' + this.slug, sessionId: this.ogSession });
 
-          const logoSrc = `/resources/mining-pools/` + poolStats.pool.slug + '.svg';
+          const logoSrc = `/resources/mining-pools/` + poolStats.pool?.slug + '.svg';
           if (logoSrc === this.lastImgSrc) {
             this.openGraphService.waitOver({ event: 'pool-img-' + this.slug, sessionId: this.ogSession });
           }

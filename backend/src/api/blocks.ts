@@ -327,7 +327,7 @@ class Blocks {
       extras.totalInputAmt = null;
     }
 
-    if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK)) {
+    if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK)) {
       let pool: PoolTag;
       if (coinbaseTx !== undefined) {
         pool = await this.$findBlockMiner(coinbaseTx);
@@ -1282,7 +1282,7 @@ class Blocks {
     }
 
     // Not Bitcoin network, return the block as it from the bitcoin backend
-    if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK) === false) {
+    if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK) === false) {
       return await bitcoinCoreApi.$getBlock(hash);
     }
 
@@ -1365,15 +1365,15 @@ class Blocks {
 
   /**
    * Get 15 blocks
-   * 
+   *
    * Internally this function uses two methods to get the blocks, and
    * the method is automatically selected:
    *  - Using previous block hash links
    *  - Using block height
-   * 
-   * @param fromHeight 
-   * @param limit 
-   * @returns 
+   *
+   * @param fromHeight
+   * @param limit
+   * @returns
    */
   public async $getBlocks(fromHeight?: number, limit: number = 15): Promise<BlockExtended[]> {
     let currentHeight = fromHeight !== undefined ? fromHeight : this.currentBlockHeight;
@@ -1405,9 +1405,9 @@ class Blocks {
 
   /**
    * Used for bulk block data query
-   * 
-   * @param fromHeight 
-   * @param toHeight 
+   *
+   * @param fromHeight
+   * @param toHeight
    */
   public async $getBlocksBetweenHeight(fromHeight: number, toHeight: number): Promise<any> {
     if (!Common.indexingEnabled()) {
@@ -1465,8 +1465,8 @@ class Blocks {
         coinbase_addresses: block.extras.coinbaseAddresses ?? null,
         coinbase_signature: block.extras.coinbaseSignature ?? null,
         coinbase_signature_ascii: block.extras.coinbaseSignatureAscii ?? null,
-        pool_slug: block.extras.pool.slug ?? null,
-        pool_id: block.extras.pool.id ?? null,
+        pool_slug: block.extras.pool?.slug ?? null,
+        pool_id: block.extras.pool?.id ?? null,
       };
 
       if (Common.blocksSummariesIndexingEnabled() && cleanBlock.fee_amt_percentiles === null) {
@@ -1525,7 +1525,7 @@ class Blocks {
   }
 
   public async $getBlockAuditSummary(hash: string): Promise<BlockAudit | null> {
-    if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK) && Common.auditIndexingEnabled()) {
+    if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK) && Common.auditIndexingEnabled()) {
       return BlocksAuditsRepository.$getBlockAudit(hash);
     } else {
       return null;
@@ -1533,7 +1533,7 @@ class Blocks {
   }
 
   public async $getBlockTxAuditSummary(hash: string, txid: string): Promise<TransactionAudit | null> {
-    if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK) && Common.auditIndexingEnabled()) {
+    if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK) && Common.auditIndexingEnabled()) {
       return BlocksAuditsRepository.$getBlockTxAudit(hash, txid);
     } else {
       return null;

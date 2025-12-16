@@ -7,7 +7,7 @@ import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class EnterpriseService {
   exclusiveHostName = '.mempool.space';
@@ -21,10 +21,13 @@ export class EnterpriseService {
     private apiService: ApiService,
     private seoService: SeoService,
     private stateService: StateService,
-    private activatedRoute: ActivatedRoute,
+    private activatedRoute: ActivatedRoute
   ) {
-    const subdomain = this.stateService.env.customize?.enterprise || this.document.location.hostname.indexOf(this.exclusiveHostName) > -1
-      && this.document.location.hostname.split(this.exclusiveHostName)[0] || false;
+    const subdomain =
+      this.stateService.env.customize?.enterprise ||
+      (this.document.location.hostname.indexOf(this.exclusiveHostName) > -1 &&
+        this.document.location.hostname.split(this.exclusiveHostName)[0]) ||
+      false;
     if (subdomain && subdomain.match(/^[A-z0-9-_]+$/)) {
       this.subdomain = subdomain;
       this.fetchSubdomainInfo();
@@ -41,6 +44,7 @@ export class EnterpriseService {
 
   disableSubnetworks(): void {
     this.stateService.env.TESTNET_ENABLED = false;
+    this.stateService.env.REGTEST_ENABLED = false;
     this.stateService.env.TESTNET4_ENABLED = false;
     this.stateService.env.LIQUID_ENABLED = false;
     this.stateService.env.LIQUID_TESTNET_ENABLED = false;
@@ -54,16 +58,19 @@ export class EnterpriseService {
       this.seoService.setEnterpriseTitle(info.title, true);
       this.info$.next(info);
     } else {
-      this.apiService.getEnterpriseInfo$(this.subdomain).subscribe((info) => {
-        this.insertMatomo(info.site_id);
-        this.seoService.setEnterpriseTitle(info.title);
-        this.info$.next(info);
-      },
-      (error) => {
-        if (error.status === 404) {
-          window.location.href = 'https://mempool.space' + window.location.pathname;
+      this.apiService.getEnterpriseInfo$(this.subdomain).subscribe(
+        (info) => {
+          this.insertMatomo(info.site_id);
+          this.seoService.setEnterpriseTitle(info.title);
+          this.info$.next(info);
+        },
+        (error) => {
+          if (error.status === 404) {
+            window.location.href =
+              'https://mempool.space' + window.location.pathname;
+          }
         }
-      });
+      );
     }
   }
 
@@ -98,7 +105,7 @@ export class EnterpriseService {
 
     // @ts-ignore
     if (window._paq && window['Matomo']) {
-      window['Matomo'].addTracker(statsUrl+'m.php', siteId.toString());
+      window['Matomo'].addTracker(statsUrl + 'm.php', siteId.toString());
       const matomo = this.getMatomo();
       matomo.setDocumentTitle(this.seoService.getTitle());
       matomo.setCustomUrl(this.getCustomUrl());
@@ -109,21 +116,26 @@ export class EnterpriseService {
       // @ts-ignore
       const alreadyInitialized = !!window._paq;
       // @ts-ignore
-      const _paq = window._paq = window._paq || [];
+      const _paq = (window._paq = window._paq || []);
       _paq.push(['setDocumentTitle', this.seoService.getTitle()]);
       _paq.push(['setCustomUrl', this.getCustomUrl()]);
       _paq.push(['disableCookies']);
       _paq.push(['trackPageView']);
       _paq.push(['enableLinkTracking']);
       if (alreadyInitialized) {
-        _paq.push(['addTracker', statsUrl+'m.php', siteId.toString()]);
+        _paq.push(['addTracker', statsUrl + 'm.php', siteId.toString()]);
       } else {
-        (function() {
-          _paq.push(['setTrackerUrl', statsUrl+'m.php']);
+        (function () {
+          _paq.push(['setTrackerUrl', statsUrl + 'm.php']);
           _paq.push(['setSiteId', siteId.toString()]);
-          const d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+          const d = document,
+            g = d.createElement('script'),
+            s = d.getElementsByTagName('script')[0];
           // @ts-ignore
-          g.type='text/javascript'; g.async=true; g.src=statsUrl+'m.js'; s.parentNode.insertBefore(g,s);
+          g.type = 'text/javascript';
+          g.async = true;
+          g.src = statsUrl + 'm.js';
+          s.parentNode.insertBefore(g, s);
         })();
       }
     }
@@ -131,7 +143,7 @@ export class EnterpriseService {
 
   private getMatomo() {
     if (this.siteId != null) {
-      return window['Matomo']?.getTracker(this.statsUrl+'m.php', this.siteId);
+      return window['Matomo']?.getTracker(this.statsUrl + 'm.php', this.siteId);
     }
   }
 

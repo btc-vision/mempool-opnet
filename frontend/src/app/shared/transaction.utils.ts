@@ -1,8 +1,16 @@
 import { TransactionFlags } from '@app/shared/filters.utils';
-import { getVarIntLength, parseMultisigScript, isPoint, parseTapscriptMultisig, parseTapscriptUnanimousMultisig, ScriptInfo } from '@app/shared/script.utils';
+import {
+  checkIsInteraction,
+  checkIsSmartContract,
+  getVarIntLength,
+  isPoint,
+  parseMultisigScript,
+  parseTapscriptMultisig,
+  parseTapscriptUnanimousMultisig,
+  ScriptInfo,
+} from '@app/shared/script.utils';
 import { Transaction, Vin } from '@interfaces/electrs.interface';
-import { CpfpInfo, RbfInfo, TransactionStripped } from '@interfaces/node-api.interface';
-import { StateService } from '@app/services/state.service';
+import { CpfpInfo, TransactionStripped } from '@interfaces/node-api.interface';
 import { hash, Hash } from '@app/shared/sha256';
 import { AddressType, AddressTypeInfo } from '@app/shared/address-utils';
 import * as secp256k1 from '@noble/secp256k1';
@@ -303,7 +311,7 @@ export function processInputSignatures(vin: Vin): SigInfo[] {
   return signatures;
 }
 
-/*  
+/*
  * returns the number of missing signatures, the number of bytes to add to the transaction
  * and whether these should benefit from witness discounting
  * - Add a DER sig     in scriptsig/witness: 71 bytes signature + 1 push or witness size byte = 72 bytes
@@ -629,6 +637,7 @@ function isNonStandardVersion(tx: Transaction, height?: number, network?: string
 }
 
 const ANCHOR_STANDARDNESS_ACTIVATION_HEIGHT = {
+  'regtest': 0,
   'testnet4': 42_000,
   'testnet': 2_900_000,
   'signet': 211_000,
@@ -797,6 +806,47 @@ export function isBurnKey(pubkey: string): boolean {
   ].includes(pubkey);
 }
 
+export function decodeTaprootFlags(vin: Vin, flags: bigint): bigint {
+  // in taproot, if the last witness item begins with 0x50, it's an annex
+  const hasAnnex = vin.witness?.[vin.witness.length - 1].startsWith('50');
+  // script spends have more than one witness item, not counting the annex (if present)
+  if (vin.witness?.length > (hasAnnex ? 2 : 1)) {
+    // the script itself is the second-to-last witness item, not counting the annex
+    const asm = vin.inner_witnessscript_asm;
+    if(!asm) {
+      return flags;
+    }
+
+    // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
+    const isInscription = asm.includes('OP_0 OP_IF');
+    const isOP_NET = asm.includes('OP_DEPTH OP_PUSHNUM_1 OP_NUMEQUAL OP_IF');
+    const isSmartContract = checkIsSmartContract(asm);
+    const isInteraction = checkIsInteraction(asm);
+
+    if(isInscription) {
+      flags |= TransactionFlags.inscription;
+    }
+
+    if(isOP_NET) {
+      flags |= TransactionFlags.opnet;
+    }
+
+    if(isSmartContract) {
+      flags |= TransactionFlags.smart_contract;
+    }
+
+    if(isInteraction) {
+      flags |= TransactionFlags.interaction;
+    }
+  }
+
+  if (hasAnnex) {
+    flags |= TransactionFlags.annex;
+  }
+
+  return flags;
+}
+
 export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replacement?: boolean, height?: number, network?: string): bigint {
   let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
@@ -842,24 +892,15 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
       case 'p2sh': flags |= TransactionFlags.p2sh; break;
       case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
       case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
+      case 'v16_p2op': flags |= TransactionFlags.p2op; break;
       case 'v1_p2tr': {
         flags |= TransactionFlags.p2tr;
         // every valid taproot input has at least one witness item, however transactions
         // created before taproot activation don't need to have any witness data
         // (see https://mempool.space/tx/b10c007c60e14f9d087e0291d4d0c7869697c6681d979c6639dbd960792b4d41)
         if (vin.witness?.length) {
-          const taprootInfo = parseTaproot(vin.witness);
-          if (taprootInfo.scriptPath) {
-            // the script itself is the second-to-last witness item, not counting the annex
-            const asm = vin.inner_witnessscript_asm;
-            // inscriptions smuggle data within an 'OP_0 OP_IF ... OP_ENDIF' envelope
-            if (asm?.includes('OP_0 OP_IF')) {
-              flags |= TransactionFlags.inscription;
-            }
-          }
-          if (taprootInfo.annex) {
-            flags |= TransactionFlags.annex;
-          }
+          // decode taproot flags
+          flags = decodeTaprootFlags(vin, flags);
         }
       } break;
     }
@@ -908,6 +949,7 @@ export function getTransactionFlags(tx: Transaction, cpfpInfo?: CpfpInfo, replac
       case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
       case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
       case 'v1_p2tr': flags |= TransactionFlags.p2tr; break;
+      case 'v16_p2op': flags |= TransactionFlags.p2op; break;
       case 'op_return': flags |= TransactionFlags.op_return; break;
     }
     if (vout.scriptpubkey_address) {
@@ -1188,7 +1230,7 @@ function fromBuffer(buffer: Uint8Array, network: string, inputs?: PsbtKeyValueMa
       block_time: null,
     }
   } as Transaction;
-  
+
   [tx.version, offset] = readInt32(buffer, offset);
 
   let marker, flag;
@@ -1250,7 +1292,7 @@ function fromBuffer(buffer: Uint8Array, network: string, inputs?: PsbtKeyValueMa
   if (offset !== buffer.length) {
     throw new Error('Transaction has unexpected data');
   }
-  
+
   // Optionally add data from PSBT: prevouts, redeem/witness scripts and signatures
   if (inputs) {
     for (let i = 0; i < tx.vin.length; i++) {
@@ -1419,7 +1461,7 @@ function fromBuffer(buffer: Uint8Array, network: string, inputs?: PsbtKeyValueMa
           }
         }
       }
-    }    
+    }
   }
 
   // Calculate final size, weight, and txid
@@ -1756,6 +1798,16 @@ function scriptPubKeyToAddress(scriptPubKey: string, network: string): { address
   if (/^5120[0-9a-f]{64}$/.test(scriptPubKey)) {
     return { address: p2tr(scriptPubKey.substring(4, 4 + 64), network), type: 'v1_p2tr' };
   }
+  console.log(`Unknown scriptPubKey: ${scriptPubKey} for network: ${network}`, /^6015[0-9a-f]{42}$/.test(scriptPubKey));
+  // P2OP
+  if (/^6015[0-9a-f]{42}$/.test(scriptPubKey)) {
+    const progHex = scriptPubKey.substring(4, 46);
+    return {
+      address: p2op(progHex, network),
+      type: 'v16_p2op',
+    };
+  }
+
   // multisig
   if (/^[0-9a-f]+ae$/.test(scriptPubKey)) {
     return { address: null, type: 'multisig' };
@@ -1771,51 +1823,47 @@ function scriptPubKeyToAddress(scriptPubKey: string, network: string): { address
   return { address: null, type: 'unknown' };
 }
 
+const REGTEST        = 'regtest';
+const TESTNET_FAMILY = ['testnet', 'testnet4', 'signet'];
+
+const isTestnetLike = (n: string) => TESTNET_FAMILY.includes(n) || n === REGTEST;
+const versionP2PKH = (n: string) => isTestnetLike(n) ? 0x6f : 0x00;        // 0x6f is also regtest
+const versionP2SH  = (n: string) => isTestnetLike(n) ? 0xc4 : 0x05;        // 0xc4 is also regtest
+const hrpSegwit = (n: string) =>
+  n === REGTEST ? 'bcrt' : TESTNET_FAMILY.includes(n) ? 'tb' : 'bc';       // regtest uses “bcrt”
+const hrpOpnet = (n: string) =>
+  n === REGTEST ? 'opr' : TESTNET_FAMILY.includes(n) ? 'opt' : 'op';       // convention: op / opt / opr
+
 function p2pkh(pubKeyHash: string, network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array(pubKeyHash);
-  const version = ['testnet', 'testnet4', 'signet'].includes(network) ? 0x6f : 0x00;
-  const versionedPayload = Uint8Array.from([version, ...pubkeyHashArray]);
-  const hash1 = new Hash().update(versionedPayload).digest();
-  const hash2 = new Hash().update(hash1).digest();
-  const checksum = hash2.slice(0, 4);
-  const finalPayload = Uint8Array.from([...versionedPayload, ...checksum]);
-  const bitcoinAddress = base58Encode(finalPayload);
-  return bitcoinAddress;
+  const payload   = Uint8Array.from([versionP2PKH(network), ...hexStringToUint8Array(pubKeyHash)]);
+  const checksum  = new Hash().update(new Hash().update(payload).digest()).digest().slice(0, 4);
+  return base58Encode(Uint8Array.from([...payload, ...checksum]));
 }
 
 function p2sh(scriptHash: string, network: string): string {
-  const scriptHashArray = hexStringToUint8Array(scriptHash);
-  const version = ['testnet', 'testnet4', 'signet'].includes(network) ? 0xc4 : 0x05;
-  const versionedPayload = Uint8Array.from([version, ...scriptHashArray]);
-  const hash1 = new Hash().update(versionedPayload).digest();
-  const hash2 = new Hash().update(hash1).digest();
-  const checksum = hash2.slice(0, 4);
-  const finalPayload = Uint8Array.from([...versionedPayload, ...checksum]);
-  const bitcoinAddress = base58Encode(finalPayload);
-  return bitcoinAddress;
+  const payload   = Uint8Array.from([versionP2SH(network), ...hexStringToUint8Array(scriptHash)]);
+  const checksum  = new Hash().update(new Hash().update(payload).digest()).digest().slice(0, 4);
+  return base58Encode(Uint8Array.from([...payload, ...checksum]));
 }
 
 function p2wpkh(pubKeyHash: string, network: string): string {
-  const pubkeyHashArray = hexStringToUint8Array(pubKeyHash);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 0;
-  const words = [version].concat(toWords(pubkeyHashArray));
-  const bech32Address = bech32Encode(hrp, words);
-  return bech32Address;
+  const words = [0].concat(toWords(hexStringToUint8Array(pubKeyHash)));
+  return bech32Encode(hrpSegwit(network), words);                          // Bech32 (v0)
 }
 
 function p2wsh(scriptHash: string, network: string): string {
-  const scriptHashArray = hexStringToUint8Array(scriptHash);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
-  const version = 0;
-  const words = [version].concat(toWords(scriptHashArray));
-  const bech32Address = bech32Encode(hrp, words);
-  return bech32Address;
+  const words = [0].concat(toWords(hexStringToUint8Array(scriptHash)));
+  return bech32Encode(hrpSegwit(network), words);                          // Bech32 (v0)
+}
+
+function p2op(versionPlusHash: string, network: string): string {
+  const words = [16].concat(toWords(hexStringToUint8Array(versionPlusHash)));
+  return bech32Encode(hrpOpnet(network), words, 'bech32m');              // Bech32m (v16)
 }
 
 function p2tr(pubKey: string, network: string): string {
   const pubkeyArray = hexStringToUint8Array(pubKey);
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
+  const hrp = ['testnet', 'testnet4', 'signet', 'regtest'].includes(network) ? 'tb' : 'bc';
   const version = 1;
   const words = [version].concat(toWords(pubkeyArray));
   const bech32Address = bech32Encode(hrp, words, 'bech32m');
@@ -1824,7 +1872,7 @@ function p2tr(pubKey: string, network: string): string {
 
 function p2a(network: string): string {
   const pubkeyHashArray = hexStringToUint8Array('4e73');
-  const hrp = ['testnet', 'testnet4', 'signet'].includes(network) ? 'tb' : 'bc';
+  const hrp = ['testnet', 'testnet4', 'signet', 'regtest'].includes(network) ? 'tb' : 'bc';
   const version = 1;
   const words = [version].concat(toWords(pubkeyHashArray));
   const bech32Address = bech32Encode(hrp, words, 'bech32m');
@@ -1845,7 +1893,7 @@ function base58Encode(data: Uint8Array): string {
   let hexString = Array.from(data)
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('');
-  
+
   let num = BigInt("0x" + hexString);
 
   let encoded = "";

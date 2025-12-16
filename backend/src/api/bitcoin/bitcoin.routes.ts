@@ -1,5 +1,4 @@
 import { Application, Request, Response } from 'express';
-import axios from 'axios';
 import * as bitcoinjs from 'bitcoinjs-lib';
 import config from '../../config';
 import websocketHandler from '../websocket-handler';
@@ -486,7 +485,7 @@ class BitcoinRoutes {
 
   private async getBlocks(req: Request, res: Response) {
     try {
-      if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK)) { // Bitcoin
+      if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK)) { // Bitcoin
         const height = req.params.height === undefined ? undefined : parseInt(req.params.height, 10);
         res.setHeader('Expires', new Date(Date.now() + 1000 * 60).toUTCString());
         res.json(await blocks.$getBlocks(height, 15));
@@ -500,7 +499,7 @@ class BitcoinRoutes {
 
   private async getBlocksByBulk(req: Request, res: Response) {
     try {
-      if (['mainnet', 'testnet', 'signet', 'testnet4'].includes(config.MEMPOOL.NETWORK) === false) { // Liquid - Not implemented
+      if (['mainnet', 'testnet', 'signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK) === false) { // Liquid - Not implemented
         handleError(req, res, 404, `This API is only available for Bitcoin networks`);
         return;
       }
@@ -1134,7 +1133,7 @@ class BitcoinRoutes {
                 value: Math.round(rawPrevout.value * 100000000),
                 scriptpubkey: rawPrevout.scriptPubKey.hex,
                 scriptpubkey_asm: rawPrevout.scriptPubKey.asm ? transactionUtils.convertScriptSigAsm(rawPrevout.scriptPubKey.hex) : '',
-                scriptpubkey_type: transactionUtils.translateScriptPubKeyType(rawPrevout.scriptPubKey.type),
+                scriptpubkey_type: transactionUtils.translateScriptPubKeyType(rawPrevout.scriptPubKey.type, rawPrevout.scriptPubKey.hex),
                 scriptpubkey_address: rawPrevout.scriptPubKey && rawPrevout.scriptPubKey.address ? rawPrevout.scriptPubKey.address : '',
               };
               unconfirmed = false;

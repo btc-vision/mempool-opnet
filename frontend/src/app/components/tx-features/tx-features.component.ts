@@ -1,8 +1,13 @@
-import { Component, ChangeDetectionStrategy, OnChanges, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Input,
+  OnChanges,
+} from '@angular/core';
 import { calcSegwitFeeGains, isFeatureActive } from '@app/bitcoin.utils';
 import { Transaction } from '@interfaces/electrs.interface';
-import { TransactionFlags } from '@app/shared/filters.utils';
 import { StateService } from '@app/services/state.service';
+import { TransactionFlags } from '@app/shared/filters.utils';
 
 @Component({
   selector: 'app-tx-features',
@@ -19,7 +24,7 @@ export class TxFeaturesComponent implements OnChanges {
     potentialSegwitGains: 0,
     potentialP2shSegwitGains: 0,
     potentialTaprootGains: 0,
-    realizedTaprootGains: 0
+    realizedTaprootGains: 0,
   };
   isRbfTransaction: boolean;
   isTaproot: boolean;
@@ -32,11 +37,9 @@ export class TxFeaturesComponent implements OnChanges {
   smartContractsEnabled: boolean;
   bip360Enabled: boolean;
 
-  constructor(
-    private stateService: StateService,
-  ) { }
+  constructor(private stateService: StateService) {}
 
-  ngOnChanges() {
+  ngOnChanges(): void {
     if (!this.tx) {
       return;
     }
@@ -66,7 +69,14 @@ export class TxFeaturesComponent implements OnChanges {
       );
 
     // OPNet smart contracts are enabled
-    this.smartContractsEnabled = true;
+    this.smartContractsEnabled =
+      !this.tx.status.confirmed ||
+      isFeatureActive(
+        this.stateService.network,
+        this.tx.status.block_height,
+        'smart_contract'
+      );
+
     // BIP360 is enabled (pre-quantum phase - OPNet supports MLDSA linking)
     this.bip360Enabled = true;
 

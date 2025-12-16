@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, Input, ViewChild } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Env, StateService } from '@app/services/state.service';
-import { Observable, merge, of, Subscription } from 'rxjs';
+import { merge, Observable, of, Subscription } from 'rxjs';
 import { LanguageService } from '@app/services/language.service';
 import { EnterpriseService } from '@app/services/enterprise.service';
 import { NavigationService } from '@app/services/navigation.service';
@@ -34,7 +34,7 @@ export class MasterPageComponent implements OnInit, OnDestroy {
   servicesEnabled = false;
   menuOpen = false;
   isDropdownVisible: boolean;
-  
+
   enterpriseInfo: any;
   enterpriseInfo$: Subscription;
 
@@ -71,7 +71,7 @@ export class MasterPageComponent implements OnInit, OnDestroy {
     this.enterpriseInfo$ = this.enterpriseService.info$.subscribe(info => {
       this.enterpriseInfo = info;
     });
-    
+
     this.servicesEnabled = this.officialMempoolSpace && this.stateService.env.ACCELERATOR === true && this.stateService.network === '';
     this.refreshAuth();
 
@@ -82,6 +82,7 @@ export class MasterPageComponent implements OnInit, OnDestroy {
 
   setDropdownVisibility(): void {
     const networks = [
+      this.env.REGTEST_ENABLED,
       this.env.TESTNET_ENABLED,
       this.env.TESTNET4_ENABLED,
       this.env.SIGNET_ENABLED,
@@ -89,6 +90,7 @@ export class MasterPageComponent implements OnInit, OnDestroy {
       this.env.LIQUID_TESTNET_ENABLED,
       this.env.MAINNET_ENABLED,
     ];
+
     const enabledNetworksCount = networks.filter((networkEnabled) => networkEnabled).length;
     this.isDropdownVisible = enabledNetworksCount > 1;
   }

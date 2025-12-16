@@ -133,7 +133,7 @@ export class MiningService {
         lastEstimatedHashrate3d: poolStat.blockCount / stats.blockCount * stats.lastEstimatedHashrate3d / hashrateDivider,
         lastEstimatedHashrate1w: poolStat.blockCount / stats.blockCount * stats.lastEstimatedHashrate1w / hashrateDivider,
         emptyBlockRatio: (poolStat.emptyBlocks / poolStat.blockCount * 100).toFixed(2),
-        logo: `/resources/mining-pools/` + poolStat.slug + '.svg',
+        logo: `/resources/mining-pools/` + poolStat?.slug + '.svg',
         ...poolStat
       };
     });

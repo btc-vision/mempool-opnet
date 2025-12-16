@@ -17,7 +17,7 @@ class GeneralLightningRoutes {
   }
 
   private async $searchNodesAndChannels(req: Request, res: Response) {
-    if (typeof req.query.searchText !== 'string') {
+    if (typeof req.query?.searchText !== 'string') {
       res.status(400).send('Missing parameter: searchText');
       return;
     }

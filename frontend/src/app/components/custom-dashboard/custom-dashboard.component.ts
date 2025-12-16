@@ -74,7 +74,8 @@ export class CustomDashboardComponent implements OnInit, OnDestroy, AfterViewIni
     { index: 0, name: $localize`:@@dfc3c34e182ea73c5d784ff7c8135f087992dac1:All`, mode: 'and', filters: [], gradient: 'age' },
     { index: 1, name: $localize`Consolidation`, mode: 'and', filters: ['consolidation'], gradient: 'fee' },
     { index: 2, name: $localize`Coinjoin`, mode: 'and', filters: ['coinjoin'], gradient: 'fee' },
-    { index: 3, name: $localize`Data`, mode: 'or', filters: ['inscription', 'fake_pubkey', 'fake_scripthash', 'op_return'], gradient: 'fee' },
+    { index: 3, name: $localize`Data`, mode: 'or', filters: ['inscription', 'opnet', 'fake_pubkey', 'fake_scripthash', 'op_return'], gradient: 'fee' },
+    { index: 4, name: $localize`Contract`, mode: 'and', filters: ['smart_contract', 'interaction'], gradient: 'fee' },
   ];
   goggleFlags = 0n;
   goggleMode: FilterMode = 'and';
@@ -214,11 +215,9 @@ export class CustomDashboardComponent implements OnInit, OnDestroy, AfterViewIni
         switchMap((blocks) => {
           if (this.stateService.env.MINING_DASHBOARD === true) {
             for (const block of blocks) {
-              if (block.extras?.pool) {
-                // @ts-ignore: Need to add an extra field for the template
-                block.extras.pool.logo = `/resources/mining-pools/` +
-                  block.extras.pool.slug + '.svg';
-              }
+              // @ts-ignore: Need to add an extra field for the template
+              block.extras.pool.logo = `/resources/mining-pools/` +
+                block.extras.pool?.slug + '.svg';
             }
           }
           return of(blocks.slice(0, 6));
@@ -288,7 +287,7 @@ export class CustomDashboardComponent implements OnInit, OnDestroy, AfterViewIni
   getArrayFromNumber(num: number): number[] {
     return Array.from({ length: num }, (_, i) => i + 1);
   }
-  
+
   setFilter(index): void {
     const selected = this.goggleCycle[index];
     this.stateService.activeGoggles$.next(selected);
@@ -298,7 +297,7 @@ export class CustomDashboardComponent implements OnInit, OnDestroy, AfterViewIni
     if (this.stateService.env.customize && this.stateService.env.customize.dashboard.widgets.some(w => w.props?.address)) {
       let addressString = this.stateService.env.customize.dashboard.widgets.find(w => w.props?.address).props.address;
       addressString = (/^[A-Z]{2,5}1[AC-HJ-NP-Z02-9]{8,100}|04[a-fA-F0-9]{128}|(02|03)[a-fA-F0-9]{64}$/.test(addressString)) ? addressString.toLowerCase() : addressString;
-      
+
       this.addressSubscription = (
         addressString.match(/04[a-fA-F0-9]{128}|(02|03)[a-fA-F0-9]{64}/)
         ? this.electrsApiService.getPubKeyAddress$(addressString)

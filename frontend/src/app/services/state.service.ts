@@ -1,9 +1,37 @@
-import { Inject, Injectable, PLATFORM_ID, LOCALE_ID } from '@angular/core';
-import { ReplaySubject, BehaviorSubject, Subject, fromEvent, Observable } from 'rxjs';
+import { Inject, Injectable, LOCALE_ID, PLATFORM_ID } from '@angular/core';
+import {
+  BehaviorSubject,
+  fromEvent,
+  Observable,
+  ReplaySubject,
+  Subject,
+} from 'rxjs';
 import { Transaction } from '@interfaces/electrs.interface';
-import { AccelerationDelta, HealthCheckHost, IBackendInfo, MempoolBlock, MempoolBlockUpdate, MempoolInfo, Recommendedfees, ReplacedTransaction, ReplacementInfo, StratumJob, isMempoolState } from '@interfaces/websocket.interface';
-import { Acceleration, AccelerationPosition, BlockExtended, CpfpInfo, DifficultyAdjustment, MempoolPosition, OptimizedMempoolStats, RbfTree, TransactionStripped } from '@interfaces/node-api.interface';
-import { Router, NavigationStart } from '@angular/router';
+import {
+  AccelerationDelta,
+  HealthCheckHost,
+  IBackendInfo,
+  isMempoolState,
+  MempoolBlock,
+  MempoolBlockUpdate,
+  MempoolInfo,
+  Recommendedfees,
+  ReplacedTransaction,
+  ReplacementInfo,
+  StratumJob,
+} from '@interfaces/websocket.interface';
+import {
+  Acceleration,
+  AccelerationPosition,
+  BlockExtended,
+  CpfpInfo,
+  DifficultyAdjustment,
+  MempoolPosition,
+  OptimizedMempoolStats,
+  RbfTree,
+  TransactionStripped,
+} from '@interfaces/node-api.interface';
+import { NavigationStart, Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { filter, map, scan, share, shareReplay } from 'rxjs/operators';
 import { StorageService } from '@app/services/storage.service';
@@ -47,6 +75,7 @@ export type SignaturesMode = 'all' | 'interesting' | 'none' | null;
 export interface Env {
   MAINNET_ENABLED: boolean;
   TESTNET_ENABLED: boolean;
+  REGTEST_ENABLED: boolean;
   TESTNET4_ENABLED: boolean;
   SIGNET_ENABLED: boolean;
   LIQUID_ENABLED: boolean;
@@ -93,6 +122,7 @@ const defaultEnv: Env = {
   'MAINNET_ENABLED': true,
   'TESTNET_ENABLED': false,
   'TESTNET4_ENABLED': false,
+  'REGTEST_ENABLED': false,
   'SIGNET_ENABLED': false,
   'LIQUID_ENABLED': false,
   'LIQUID_TESTNET_ENABLED': false,
@@ -141,7 +171,7 @@ export class StateService {
   isProdDomain: boolean;
   backend: 'esplora' | 'electrum' | 'none' = 'esplora';
   network = '';
-  lightningNetworks = ['', 'mainnet', 'bitcoin', 'testnet', 'signet'];
+  lightningNetworks = ['', 'regtest', 'mainnet', 'bitcoin', 'testnet', 'signet'];
   lightning = false;
   blockVSize: number;
   env: Env;
@@ -367,7 +397,7 @@ export class StateService {
     this.hideAudit.subscribe((hide) => {
       this.storageService.setValue('audit-preference', hide ? 'hide' : 'show');
     });
-    
+
     const fiatPreference = this.storageService.getValue('fiat-preference');
     this.fiatCurrency$ = new BehaviorSubject<string>(fiatPreference || 'USD');
 
@@ -398,7 +428,7 @@ export class StateService {
     // (?:preview\/)?                               optional "preview" prefix (non-capturing)
     // (testnet|signet)/                            network string (captured as networkMatches[1])
     // ($|\/)                                       network string must end or end with a slash
-    let networkMatches: object = url.match(/^\/(?:[a-z]{2}(?:-[A-Z]{2})?\/)?(?:preview\/)?(testnet4?|signet)($|\/)/);
+    let networkMatches: object = url.match(/^\/(?:[a-z]{2}(?:-[A-Z]{2})?\/)?(?:preview\/)?(testnet4?|signet|regtest)($|\/)/);
 
     if (!networkMatches && this.env.ROOT_NETWORK) {
       networkMatches = { 1: this.env.ROOT_NETWORK };
@@ -426,6 +456,12 @@ export class StateService {
         if (this.network !== 'testnet4') {
           this.network = 'testnet4';
           this.networkChanged$.next('testnet4');
+        }
+        return;
+      case 'regtest':
+        if (this.network !== 'regtest') {
+          this.network = 'regtest';
+          this.networkChanged$.next('regtest');
         }
         return;
       default:
@@ -484,7 +520,7 @@ export class StateService {
   }
 
   isAnyTestnet(): boolean {
-    return ['testnet', 'testnet4', 'signet', 'liquidtestnet'].includes(this.network);
+    return ['testnet', 'testnet4', 'signet', 'liquidtestnet', 'regtest'].includes(this.network);
   }
 
   resetChainTip() {
@@ -513,7 +549,7 @@ export class StateService {
   focusSearchInputDesktop() {
     if (!hasTouchScreen()) {
       this.searchFocus$.next(true);
-    }    
+    }
   }
 
   private testIsProdDomain(prodDomains: string[]): boolean {
