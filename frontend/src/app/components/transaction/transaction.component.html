@@ -60,6 +60,44 @@
       (accelerateClicked)="onAccelerateClicked()"
       (toggleCpfp$)="this.showCpfpDetails = !this.showCpfpDetails"
     ></app-transaction-details>
+
+    <!-- OPNet Smart Contract Info Bar -->
+    <div class="opnet-info-bar" *ngIf="tx?.opnet">
+      <div class="opnet-info-content">
+        <div class="opnet-type-section">
+          <span class="opnet-label">OPNet</span>
+          <span class="opnet-type-badge" [ngClass]="{
+            'type-generic': tx.opnet.opnetType === 'Generic',
+            'type-deployment': tx.opnet.opnetType === 'Deployment',
+            'type-interaction': tx.opnet.opnetType === 'Interaction'
+          }">{{ tx.opnet.opnetType }}</span>
+        </div>
+        <div class="opnet-features">
+          <span *ngIf="tx.opnet.features?.hasMLDSALink || tx.opnet.mldsaLink" class="opnet-feature-badge feature-quantum">
+            <span class="quantum-icon">Q</span>BIP360
+          </span>
+          <span *ngIf="tx.opnet.features?.hasEpochSubmission || tx.opnet.epochSubmission" class="opnet-feature-badge feature-epoch">
+            Epoch #{{ tx.opnet.epochSubmission?.epochNumber || '?' }}
+          </span>
+          <span *ngIf="tx.opnet.interaction" class="opnet-contract-address">
+            <fa-icon [icon]="['fas', 'file-contract']" [fixedWidth]="true"></fa-icon>
+            <a [routerLink]="['/address', tx.opnet.interaction.contractAddress]" class="contract-link">
+              {{ tx.opnet.interaction.contractAddress | slice:0:10 }}...{{ tx.opnet.interaction.contractAddress | slice:-6 }}
+            </a>
+          </span>
+          <span *ngIf="tx.opnet.deployment" class="opnet-contract-address">
+            <fa-icon [icon]="['fas', 'rocket']" [fixedWidth]="true"></fa-icon>
+            <a [routerLink]="['/address', tx.opnet.deployment.contractAddress]" class="contract-link">
+              {{ tx.opnet.deployment.contractAddress | slice:0:10 }}...{{ tx.opnet.deployment.contractAddress | slice:-6 }}
+            </a>
+          </span>
+        </div>
+        <button type="button" class="opnet-details-btn" (click)="openOPNetModal()">
+          <fa-icon [icon]="['fas', 'expand-alt']" [fixedWidth]="true"></fa-icon>
+          Details
+        </button>
+      </div>
+    </div>
   }
 
   <span id="accelerate"></span>
@@ -226,21 +264,6 @@
                 <td i18n="transaction.hex">Transaction hex</td>
                 <td><a target="_blank" href="{{ network === '' ? '' : '/' + network }}/api/tx/{{ txId }}/hex"><fa-icon [icon]="['fas', 'external-link-alt']" [fixedWidth]="true"></fa-icon></a></td>
               </tr>
-              <tr *ngIf="tx?.opnet">
-                <td>OPNet</td>
-                <td>
-                  <span class="badge mr-1" [ngClass]="{
-                    'badge-primary': tx.opnet.opnetType === 'Generic',
-                    'badge-info': tx.opnet.opnetType === 'Deployment',
-                    'badge-opnet': tx.opnet.opnetType === 'Interaction'
-                  }">{{ tx.opnet.opnetType }}</span>
-                  <span *ngIf="tx.opnet.features?.hasMLDSALink || tx.opnet.mldsaLink" class="badge badge-quantum mr-1">BIP360</span>
-                  <span *ngIf="tx.opnet.features?.hasEpochSubmission || tx.opnet.epochSubmission" class="badge badge-epoch mr-1">Epoch</span>
-                  <button type="button" class="btn btn-outline-info btn-sm btn-small-height ml-1" (click)="openOPNetModal()">
-                    <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"></fa-icon>
-                  </button>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -249,116 +272,191 @@
 
     <!-- OPNet Details Modal -->
     <ng-template #opnetModal let-modal>
-      <div class="modal-header">
-        <h4 class="modal-title">OPNet Transaction Details</h4>
-        <button type="button" class="close" aria-label="Close" (click)="modal.dismiss()">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body opnet-modal-body" *ngIf="tx?.opnet">
-        <!-- Transaction Type -->
-        <div class="opnet-modal-section">
-          <div class="opnet-modal-label">Transaction Type</div>
-          <div class="opnet-modal-value">
-            <span class="badge" [ngClass]="{
-              'badge-primary': tx.opnet.opnetType === 'Generic',
-              'badge-info': tx.opnet.opnetType === 'Deployment',
-              'badge-opnet': tx.opnet.opnetType === 'Interaction'
-            }">{{ tx.opnet.opnetType }}</span>
-          </div>
-        </div>
-
-        <!-- Contract Info -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.interaction">
-          <div class="opnet-modal-label">Contract Address</div>
-          <div class="opnet-modal-value">
-            <a [routerLink]="['/address', tx.opnet.interaction.contractAddress]" class="mono" (click)="modal.dismiss()">
-              {{ tx.opnet.interaction.contractAddress }}
-            </a>
-            <app-clipboard class="ml-1" [text]="tx.opnet.interaction.contractAddress"></app-clipboard>
-          </div>
-          <div class="opnet-modal-meta" *ngIf="tx.opnet.interaction.calldataLength">
-            Calldata: {{ tx.opnet.interaction.calldataLength | number }} bytes
-            <span *ngIf="tx.opnet.interaction.wasCompressed" class="badge badge-secondary ml-1">Compressed</span>
-          </div>
-        </div>
-
-        <!-- Deployment Info -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.deployment">
-          <div class="opnet-modal-label">Deployed Contract</div>
-          <div class="opnet-modal-value">
-            <a [routerLink]="['/address', tx.opnet.deployment.contractAddress]" class="mono" (click)="modal.dismiss()">
-              {{ tx.opnet.deployment.contractAddress }}
-            </a>
-            <app-clipboard class="ml-1" [text]="tx.opnet.deployment.contractAddress"></app-clipboard>
-          </div>
-          <div class="opnet-modal-meta">
-            Bytecode: {{ tx.opnet.deployment.bytecodeLength | number }} bytes
-            <span *ngIf="tx.opnet.deployment.wasCompressed" class="badge badge-secondary ml-1">Compressed</span>
-          </div>
-        </div>
-
-        <!-- BIP360 / MLDSA Info -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.mldsaLink">
-          <div class="opnet-modal-label">
-            <span class="badge badge-quantum mr-1">BIP360</span> Quantum-Safe Key
-          </div>
-          <div class="opnet-modal-value">
-            <span class="badge" [ngClass]="{
-              'badge-success': tx.opnet.mldsaLink.level === 'LEVEL2',
-              'badge-primary': tx.opnet.mldsaLink.level === 'LEVEL3',
-              'badge-info': tx.opnet.mldsaLink.level === 'LEVEL5'
-            }">{{ tx.opnet.mldsaLink.level }}</span>
-            <span class="ml-2 text-muted">
-              {{ tx.opnet.mldsaLink.level === 'LEVEL2' ? 'ML-DSA-44' :
-                 tx.opnet.mldsaLink.level === 'LEVEL3' ? 'ML-DSA-65' : 'ML-DSA-87' }}
+      <div class="opnet-modal" *ngIf="tx?.opnet">
+        <div class="opnet-modal-header">
+          <div class="opnet-modal-title">
+            <span class="opnet-icon">
+              <fa-icon [icon]="['fas', 'microchip']" [fixedWidth]="true"></fa-icon>
             </span>
+            OPNet Transaction
           </div>
-          <div class="opnet-modal-meta" *ngIf="tx.opnet.mldsaLink.hashedPublicKey">
-            Key Hash: <span class="mono">{{ tx.opnet.mldsaLink.hashedPublicKey | slice:0:32 }}...</span>
-            <app-clipboard class="ml-1" [text]="tx.opnet.mldsaLink.hashedPublicKey"></app-clipboard>
+          <button type="button" class="opnet-modal-close" aria-label="Close" (click)="modal.dismiss()">
+            <fa-icon [icon]="['fas', 'times']" [fixedWidth]="true"></fa-icon>
+          </button>
+        </div>
+
+        <div class="opnet-modal-content">
+          <!-- Transaction Type Card -->
+          <div class="opnet-card">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'tag']" [fixedWidth]="true"></fa-icon>
+              Type
+            </div>
+            <div class="opnet-card-body">
+              <span class="opnet-type-tag" [ngClass]="{
+                'type-generic': tx.opnet.opnetType === 'Generic',
+                'type-deployment': tx.opnet.opnetType === 'Deployment',
+                'type-interaction': tx.opnet.opnetType === 'Interaction'
+              }">{{ tx.opnet.opnetType }}</span>
+            </div>
           </div>
-          <div class="opnet-modal-meta" *ngIf="tx.opnet.mldsaLink.isVerified">
-            <span class="badge badge-success">Verified</span>
+
+          <!-- Contract Interaction Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.interaction">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'file-contract']" [fixedWidth]="true"></fa-icon>
+              Contract Interaction
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-field">
+                <span class="opnet-field-label">Address</span>
+                <div class="opnet-field-value">
+                  <a [routerLink]="['/address', tx.opnet.interaction.contractAddress]" class="opnet-address" (click)="modal.dismiss()">
+                    {{ tx.opnet.interaction.contractAddress }}
+                  </a>
+                  <app-clipboard [text]="tx.opnet.interaction.contractAddress"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.calldataLength">
+                <span class="opnet-field-label">Calldata</span>
+                <span class="opnet-field-value">
+                  {{ tx.opnet.interaction.calldataLength | number }} bytes
+                  <span *ngIf="tx.opnet.interaction.wasCompressed" class="opnet-tag tag-compressed">Compressed</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contract Deployment Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.deployment">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'rocket']" [fixedWidth]="true"></fa-icon>
+              Contract Deployment
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-field">
+                <span class="opnet-field-label">Deployed Address</span>
+                <div class="opnet-field-value">
+                  <a [routerLink]="['/address', tx.opnet.deployment.contractAddress]" class="opnet-address" (click)="modal.dismiss()">
+                    {{ tx.opnet.deployment.contractAddress }}
+                  </a>
+                  <app-clipboard [text]="tx.opnet.deployment.contractAddress"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field">
+                <span class="opnet-field-label">Bytecode</span>
+                <span class="opnet-field-value">
+                  {{ tx.opnet.deployment.bytecodeLength | number }} bytes
+                  <span *ngIf="tx.opnet.deployment.wasCompressed" class="opnet-tag tag-compressed">Compressed</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BIP360 / MLDSA Card -->
+          <div class="opnet-card card-quantum" *ngIf="tx.opnet.mldsaLink">
+            <div class="opnet-card-header">
+              <span class="quantum-badge">Q</span>
+              BIP360 Quantum-Safe Key
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-field">
+                <span class="opnet-field-label">Security Level</span>
+                <span class="opnet-field-value">
+                  <span class="opnet-level-badge" [ngClass]="{
+                    'level-2': tx.opnet.mldsaLink.level === 'LEVEL2',
+                    'level-3': tx.opnet.mldsaLink.level === 'LEVEL3',
+                    'level-5': tx.opnet.mldsaLink.level === 'LEVEL5'
+                  }">{{ tx.opnet.mldsaLink.level }}</span>
+                  <span class="opnet-algorithm">
+                    {{ tx.opnet.mldsaLink.level === 'LEVEL2' ? 'ML-DSA-44' :
+                       tx.opnet.mldsaLink.level === 'LEVEL3' ? 'ML-DSA-65' : 'ML-DSA-87' }}
+                  </span>
+                </span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.hashedPublicKey">
+                <span class="opnet-field-label">Key Hash</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.mldsaLink.hashedPublicKey }}</span>
+                  <app-clipboard [text]="tx.opnet.mldsaLink.hashedPublicKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.isVerified">
+                <span class="opnet-field-label">Status</span>
+                <span class="opnet-field-value">
+                  <span class="opnet-tag tag-verified">
+                    <fa-icon [icon]="['fas', 'check-circle']" [fixedWidth]="true"></fa-icon>
+                    Verified
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Epoch Submission Card -->
+          <div class="opnet-card card-epoch" *ngIf="tx.opnet.epochSubmission">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'cube']" [fixedWidth]="true"></fa-icon>
+              Epoch Mining Submission
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-field">
+                <span class="opnet-field-label">Epoch</span>
+                <span class="opnet-field-value opnet-epoch-number">#{{ tx.opnet.epochSubmission.epochNumber }}</span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.minerPublicKey">
+                <span class="opnet-field-label">Miner</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.minerPublicKey }}</span>
+                  <app-clipboard [text]="tx.opnet.epochSubmission.minerPublicKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.solution">
+                <span class="opnet-field-label">Solution</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.solution }}</span>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.graffiti">
+                <span class="opnet-field-label">Graffiti</span>
+                <span class="opnet-field-value">{{ tx.opnet.epochSubmission.graffiti }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gas Usage Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.gasInfo && (+tx.opnet.gasInfo.gasUsed > 0 || +tx.opnet.gasInfo.specialGasUsed > 0)">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'gas-pump']" [fixedWidth]="true"></fa-icon>
+              Gas Usage
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-gas-row">
+                <span class="opnet-gas-label">Used</span>
+                <span class="opnet-gas-value">{{ tx.opnet.gasInfo.gasUsed | number }}</span>
+              </div>
+              <div class="opnet-gas-row" *ngIf="+tx.opnet.gasInfo.specialGasUsed > 0">
+                <span class="opnet-gas-label">Special</span>
+                <span class="opnet-gas-value">{{ tx.opnet.gasInfo.specialGasUsed | number }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contract Events Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.events?.length">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'list']" [fixedWidth]="true"></fa-icon>
+              Contract Events
+            </div>
+            <div class="opnet-card-body">
+              <span class="opnet-events-count">{{ tx.opnet.events.length }} event(s) emitted</span>
+            </div>
           </div>
         </div>
 
-        <!-- Epoch Submission -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.epochSubmission">
-          <div class="opnet-modal-label">
-            <span class="badge badge-epoch mr-1">Epoch</span> Mining Submission
-          </div>
-          <div class="opnet-modal-value">
-            Epoch #{{ tx.opnet.epochSubmission.epochNumber }}
-          </div>
-          <div class="opnet-modal-meta" *ngIf="tx.opnet.epochSubmission.minerPublicKey">
-            Miner: <span class="mono">{{ tx.opnet.epochSubmission.minerPublicKey | slice:0:20 }}...{{ tx.opnet.epochSubmission.minerPublicKey | slice:-8 }}</span>
-            <app-clipboard class="ml-1" [text]="tx.opnet.epochSubmission.minerPublicKey"></app-clipboard>
-          </div>
-          <div class="opnet-modal-meta" *ngIf="tx.opnet.epochSubmission?.graffiti">
-            Graffiti: {{ tx.opnet.epochSubmission?.graffiti }}
-          </div>
+        <div class="opnet-modal-footer">
+          <button type="button" class="opnet-btn" (click)="modal.close()">Close</button>
         </div>
-
-        <!-- Gas Usage -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.gasInfo && (+tx.opnet.gasInfo.gasUsed > 0 || +tx.opnet.gasInfo.specialGasUsed > 0)">
-          <div class="opnet-modal-label">Gas Usage</div>
-          <div class="opnet-modal-value">
-            <span *ngIf="+tx.opnet.gasInfo.gasUsed > 0">{{ tx.opnet.gasInfo.gasUsed | number }}</span>
-            <span *ngIf="+tx.opnet.gasInfo.specialGasUsed > 0" class="text-muted ml-2">
-              (+ {{ tx.opnet.gasInfo.specialGasUsed | number }} special)
-            </span>
-          </div>
-        </div>
-
-        <!-- Contract Events -->
-        <div class="opnet-modal-section" *ngIf="tx.opnet.events?.length">
-          <div class="opnet-modal-label">Contract Events</div>
-          <div class="opnet-modal-value">{{ tx.opnet.events.length }} event(s)</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="modal.close()">Close</button>
       </div>
     </ng-template>
 

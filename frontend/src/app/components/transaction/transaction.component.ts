@@ -60,6 +60,7 @@ import { EnterpriseService } from '@app/services/enterprise.service';
 import { ZONE_SERVICE } from '@app/injection-tokens';
 import { MiningService, MiningStats } from '@app/services/mining.service';
 import { ETA, EtaService } from '@app/services/eta.service';
+import { parseOPNetFeaturesFromWitness, extractMLDSAFromWitness } from '@app/shared/opnet-witness.utils';
 
 export interface Pool {
   id: number;
@@ -530,11 +531,53 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
         )
       )
     ).subscribe((opnetData) => {
-      if (opnetData && this.tx) {
-        // Create new object reference to trigger OnPush change detection in child components
-        this.tx = { ...this.tx, opnet: opnetData.opnet };
-        this.txChanged$.next(true);
-        this.cd.detectChanges();
+      if (this.tx) {
+        let opnet = opnetData?.opnet || null;
+
+        // Parse MLDSA/BIP360 from raw witness data (frontend parsing)
+        // The backend doesn't have access to witness data, but electrs provides it
+        if (this.tx.vin?.[0]?.witness) {
+          const witness = this.tx.vin[0].witness;
+
+          // Parse features from witness header
+          const witnessFeatures = parseOPNetFeaturesFromWitness(witness);
+          if (witnessFeatures) {
+            // Merge features with backend data
+            if (opnet) {
+              opnet = {
+                ...opnet,
+                features: {
+                  ...opnet.features,
+                  hasAccessList: witnessFeatures.hasAccessList || opnet.features?.hasAccessList || false,
+                  hasMLDSALink: witnessFeatures.hasMLDSALink || opnet.features?.hasMLDSALink || false,
+                  hasEpochSubmission: witnessFeatures.hasEpochSubmission || opnet.features?.hasEpochSubmission || false,
+                  featureFlags: witnessFeatures.featureFlags || opnet.features?.featureFlags || 0,
+                },
+              };
+            } else {
+              // No backend data, create from witness features
+              opnet = {
+                opnetType: 'Generic',
+                features: witnessFeatures,
+              };
+            }
+          }
+
+          // Extract MLDSA link data
+          if (witnessFeatures?.hasMLDSALink || opnet?.features?.hasMLDSALink) {
+            const mldsaLink = extractMLDSAFromWitness(witness);
+            if (mldsaLink && opnet) {
+              opnet = { ...opnet, mldsaLink };
+            }
+          }
+        }
+
+        if (opnet) {
+          // Create new object reference to trigger OnPush change detection
+          this.tx = { ...this.tx, opnet };
+          this.txChanged$.next(true);
+          this.cd.detectChanges();
+        }
       }
     });
 
