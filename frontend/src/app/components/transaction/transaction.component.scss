@@ -781,3 +781,130 @@
     box-shadow: 0 4px 12px rgba(147, 57, 244, 0.4);
   }
 }
+
+// Additional tag styles
+.opnet-tag {
+  &.tag-active {
+    background: rgba(40, 167, 69, 0.2);
+    color: #51cf66;
+    border: 1px solid rgba(40, 167, 69, 0.4);
+  }
+
+  &.tag-inactive {
+    background: rgba(108, 117, 125, 0.15);
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(108, 117, 125, 0.3);
+  }
+
+  &.tag-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.4);
+  }
+}
+
+.opnet-features-row {
+  gap: 6px;
+}
+
+// Expandable/truncated content
+.opnet-expandable {
+  flex-direction: column;
+  align-items: flex-start !important;
+}
+
+.opnet-truncate {
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+// Graffiti styling
+.opnet-graffiti {
+  font-style: italic;
+  color: #f48fb1;
+}
+
+// Revert styling
+.opnet-revert {
+  color: #ff6b6b;
+  font-family: 'Roboto Mono', monospace;
+  padding: 8px 12px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #ff6b6b;
+}
+
+// Gas refund
+.opnet-gas-refund {
+  color: #51cf66;
+}
+
+// Events styling
+.opnet-event {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  margin-bottom: 10px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.opnet-event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.opnet-event-index {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.opnet-event-type {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9339f4;
+}
+
+// Access list styling
+.opnet-access-entry {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  margin-bottom: 10px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.opnet-storage-keys {
+  margin-top: 8px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(147, 57, 244, 0.3);
+}
+
+.opnet-storage-key {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.75rem;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+}

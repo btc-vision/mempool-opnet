@@ -73,20 +73,36 @@ export interface AccessList {
 
 export interface OPNetDeploymentData {
   contractAddress: string;
+  contractPublicKey?: string;
   bytecode: string;
   bytecodeLength: number;
   deployerPubKey: string;
   deployerAddress: string;
   contractSeed?: string;
+  contractSaltHash?: string;
   wasCompressed?: boolean;
 }
 
 export interface OPNetInteractionData {
   calldata?: string;
   calldataLength?: number;
+  senderPubKeyHash?: string;
+  contractSecret?: string;
+  interactionPubKey?: string;
   contractAddress: string;
   from: string;
   wasCompressed?: boolean;
+}
+
+export interface OPNetTransactionReceipt {
+  receipt?: string;
+  receiptProofs?: string[];
+  events?: {
+    [contractAddress: string]: { type: string; data: string }[];
+  };
+  revert?: string;
+  gasUsed: string;
+  specialGasUsed: string;
 }
 
 export interface OPNetFeatures {
@@ -123,6 +139,7 @@ export interface OPNetTransactionExtension {
   interaction?: OPNetInteractionData;
   mldsaLink?: MLDSALinkInfo;
   epochSubmission?: EpochSubmissionInfo;
+  receipt?: OPNetTransactionReceipt;
   gasInfo?: GasInfo;
   pqInfo?: PostQuantumInfo;
   events?: ContractEvent[];

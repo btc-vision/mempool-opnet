@@ -80,7 +80,7 @@
             Epoch #{{ tx.opnet.epochSubmission?.epochNumber || '?' }}
           </span>
           <span *ngIf="tx.opnet.interaction" class="opnet-contract-address">
-            <fa-icon [icon]="['fas', 'file-contract']" [fixedWidth]="true"></fa-icon>
+            <fa-icon [icon]="['fas', 'code']" [fixedWidth]="true"></fa-icon>
             <a [routerLink]="['/address', tx.opnet.interaction.contractAddress]" class="contract-link">
               {{ tx.opnet.interaction.contractAddress | slice:0:10 }}...{{ tx.opnet.interaction.contractAddress | slice:-6 }}
             </a>
@@ -93,7 +93,7 @@
           </span>
         </div>
         <button type="button" class="opnet-details-btn" (click)="openOPNetModal()">
-          <fa-icon [icon]="['fas', 'expand-alt']" [fixedWidth]="true"></fa-icon>
+          <fa-icon [icon]="['fas', 'external-link-alt']" [fixedWidth]="true"></fa-icon>
           Details
         </button>
       </div>
@@ -276,40 +276,65 @@
         <div class="opnet-modal-header">
           <div class="opnet-modal-title">
             <span class="opnet-icon">
-              <fa-icon [icon]="['fas', 'microchip']" [fixedWidth]="true"></fa-icon>
+              <fa-icon [icon]="['fas', 'cogs']" [fixedWidth]="true"></fa-icon>
             </span>
             OPNet Transaction
           </div>
           <button type="button" class="opnet-modal-close" aria-label="Close" (click)="modal.dismiss()">
-            <fa-icon [icon]="['fas', 'times']" [fixedWidth]="true"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-xmark']" [fixedWidth]="true"></fa-icon>
           </button>
         </div>
 
         <div class="opnet-modal-content">
-          <!-- Transaction Type Card -->
+          <!-- Transaction Type & Features Card -->
           <div class="opnet-card">
             <div class="opnet-card-header">
-              <fa-icon [icon]="['fas', 'tag']" [fixedWidth]="true"></fa-icon>
-              Type
+              <fa-icon [icon]="['fas', 'filter']" [fixedWidth]="true"></fa-icon>
+              Transaction Type
             </div>
             <div class="opnet-card-body">
-              <span class="opnet-type-tag" [ngClass]="{
-                'type-generic': tx.opnet.opnetType === 'Generic',
-                'type-deployment': tx.opnet.opnetType === 'Deployment',
-                'type-interaction': tx.opnet.opnetType === 'Interaction'
-              }">{{ tx.opnet.opnetType }}</span>
+              <div class="opnet-field">
+                <span class="opnet-field-label">Type</span>
+                <span class="opnet-field-value">
+                  <span class="opnet-type-tag" [ngClass]="{
+                    'type-generic': tx.opnet.opnetType === 'Generic',
+                    'type-deployment': tx.opnet.opnetType === 'Deployment',
+                    'type-interaction': tx.opnet.opnetType === 'Interaction'
+                  }">{{ tx.opnet.opnetType }}</span>
+                </span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.features">
+                <span class="opnet-field-label">Feature Flags</span>
+                <div class="opnet-field-value opnet-features-row">
+                  <span class="opnet-tag" [class.tag-active]="tx.opnet.features.hasAccessList" [class.tag-inactive]="!tx.opnet.features.hasAccessList">
+                    Access List
+                  </span>
+                  <span class="opnet-tag" [class.tag-active]="tx.opnet.features.hasEpochSubmission" [class.tag-inactive]="!tx.opnet.features.hasEpochSubmission">
+                    Epoch
+                  </span>
+                  <span class="opnet-tag" [class.tag-active]="tx.opnet.features.hasMLDSALink" [class.tag-inactive]="!tx.opnet.features.hasMLDSALink">
+                    MLDSA
+                  </span>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.features?.featureFlags">
+                <span class="opnet-field-label">Raw Flags (Hex)</span>
+                <span class="opnet-field-value">
+                  <span class="opnet-hash">0x{{ tx.opnet.features.featureFlags.toString(16).padStart(6, '0') }}</span>
+                </span>
+              </div>
             </div>
           </div>
 
           <!-- Contract Interaction Card -->
           <div class="opnet-card" *ngIf="tx.opnet.interaction">
             <div class="opnet-card-header">
-              <fa-icon [icon]="['fas', 'file-contract']" [fixedWidth]="true"></fa-icon>
+              <fa-icon [icon]="['fas', 'code']" [fixedWidth]="true"></fa-icon>
               Contract Interaction
             </div>
             <div class="opnet-card-body">
               <div class="opnet-field">
-                <span class="opnet-field-label">Address</span>
+                <span class="opnet-field-label">Contract Address</span>
                 <div class="opnet-field-value">
                   <a [routerLink]="['/address', tx.opnet.interaction.contractAddress]" class="opnet-address" (click)="modal.dismiss()">
                     {{ tx.opnet.interaction.contractAddress }}
@@ -317,12 +342,49 @@
                   <app-clipboard [text]="tx.opnet.interaction.contractAddress"></app-clipboard>
                 </div>
               </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.from">
+                <span class="opnet-field-label">From Address</span>
+                <div class="opnet-field-value">
+                  <a [routerLink]="['/address', tx.opnet.interaction.from]" class="opnet-address" (click)="modal.dismiss()">
+                    {{ tx.opnet.interaction.from }}
+                  </a>
+                  <app-clipboard [text]="tx.opnet.interaction.from"></app-clipboard>
+                </div>
+              </div>
               <div class="opnet-field" *ngIf="tx.opnet.interaction.calldataLength">
-                <span class="opnet-field-label">Calldata</span>
+                <span class="opnet-field-label">Calldata Size</span>
                 <span class="opnet-field-value">
                   {{ tx.opnet.interaction.calldataLength | number }} bytes
                   <span *ngIf="tx.opnet.interaction.wasCompressed" class="opnet-tag tag-compressed">Compressed</span>
                 </span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.calldata">
+                <span class="opnet-field-label">Calldata (Hex)</span>
+                <div class="opnet-field-value opnet-expandable">
+                  <span class="opnet-hash opnet-truncate">{{ tx.opnet.interaction.calldata }}</span>
+                  <app-clipboard [text]="tx.opnet.interaction.calldata"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.senderPubKeyHash">
+                <span class="opnet-field-label">Sender PubKey Hash</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.interaction.senderPubKeyHash }}</span>
+                  <app-clipboard [text]="tx.opnet.interaction.senderPubKeyHash"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.interactionPubKey">
+                <span class="opnet-field-label">Interaction PubKey</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.interaction.interactionPubKey }}</span>
+                  <app-clipboard [text]="tx.opnet.interaction.interactionPubKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.interaction.contractSecret">
+                <span class="opnet-field-label">Contract Secret</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.interaction.contractSecret }}</span>
+                  <app-clipboard [text]="tx.opnet.interaction.contractSecret"></app-clipboard>
+                </div>
               </div>
             </div>
           </div>
@@ -335,7 +397,7 @@
             </div>
             <div class="opnet-card-body">
               <div class="opnet-field">
-                <span class="opnet-field-label">Deployed Address</span>
+                <span class="opnet-field-label">Contract Address</span>
                 <div class="opnet-field-value">
                   <a [routerLink]="['/address', tx.opnet.deployment.contractAddress]" class="opnet-address" (click)="modal.dismiss()">
                     {{ tx.opnet.deployment.contractAddress }}
@@ -343,12 +405,56 @@
                   <app-clipboard [text]="tx.opnet.deployment.contractAddress"></app-clipboard>
                 </div>
               </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.contractPublicKey">
+                <span class="opnet-field-label">Contract Public Key</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.deployment.contractPublicKey }}</span>
+                  <app-clipboard [text]="tx.opnet.deployment.contractPublicKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.deployerAddress">
+                <span class="opnet-field-label">Deployer Address</span>
+                <div class="opnet-field-value">
+                  <a [routerLink]="['/address', tx.opnet.deployment.deployerAddress]" class="opnet-address" (click)="modal.dismiss()">
+                    {{ tx.opnet.deployment.deployerAddress }}
+                  </a>
+                  <app-clipboard [text]="tx.opnet.deployment.deployerAddress"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.deployerPubKey">
+                <span class="opnet-field-label">Deployer PubKey</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.deployment.deployerPubKey }}</span>
+                  <app-clipboard [text]="tx.opnet.deployment.deployerPubKey"></app-clipboard>
+                </div>
+              </div>
               <div class="opnet-field">
-                <span class="opnet-field-label">Bytecode</span>
+                <span class="opnet-field-label">Bytecode Size</span>
                 <span class="opnet-field-value">
                   {{ tx.opnet.deployment.bytecodeLength | number }} bytes
                   <span *ngIf="tx.opnet.deployment.wasCompressed" class="opnet-tag tag-compressed">Compressed</span>
                 </span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.bytecode">
+                <span class="opnet-field-label">Bytecode (Hex)</span>
+                <div class="opnet-field-value opnet-expandable">
+                  <span class="opnet-hash opnet-truncate">{{ tx.opnet.deployment.bytecode }}</span>
+                  <app-clipboard [text]="tx.opnet.deployment.bytecode"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.contractSeed">
+                <span class="opnet-field-label">Contract Seed</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.deployment.contractSeed }}</span>
+                  <app-clipboard [text]="tx.opnet.deployment.contractSeed"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.deployment.contractSaltHash">
+                <span class="opnet-field-label">Contract Salt Hash</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.deployment.contractSaltHash }}</span>
+                  <app-clipboard [text]="tx.opnet.deployment.contractSaltHash"></app-clipboard>
+                </div>
               </div>
             </div>
           </div>
@@ -357,7 +463,7 @@
           <div class="opnet-card card-quantum" *ngIf="tx.opnet.mldsaLink">
             <div class="opnet-card-header">
               <span class="quantum-badge">Q</span>
-              BIP360 Quantum-Safe Key
+              BIP360 Quantum-Safe Key Linking
             </div>
             <div class="opnet-card-body">
               <div class="opnet-field">
@@ -369,26 +475,54 @@
                     'level-5': tx.opnet.mldsaLink.level === 'LEVEL5'
                   }">{{ tx.opnet.mldsaLink.level }}</span>
                   <span class="opnet-algorithm">
-                    {{ tx.opnet.mldsaLink.level === 'LEVEL2' ? 'ML-DSA-44' :
-                       tx.opnet.mldsaLink.level === 'LEVEL3' ? 'ML-DSA-65' : 'ML-DSA-87' }}
+                    {{ tx.opnet.mldsaLink.level === 'LEVEL2' ? 'ML-DSA-44 (2420 byte keys)' :
+                       tx.opnet.mldsaLink.level === 'LEVEL3' ? 'ML-DSA-65 (1952 byte keys)' : 'ML-DSA-87 (2592 byte keys)' }}
+                  </span>
+                </span>
+              </div>
+              <div class="opnet-field">
+                <span class="opnet-field-label">Verification Status</span>
+                <span class="opnet-field-value">
+                  <span class="opnet-tag" [class.tag-verified]="tx.opnet.mldsaLink.isVerified" [class.tag-pending]="!tx.opnet.mldsaLink.isVerified">
+                    <fa-icon [icon]="tx.opnet.mldsaLink.isVerified ? ['fas', 'circle-check'] : ['fas', 'clock']" [fixedWidth]="true"></fa-icon>
+                    {{ tx.opnet.mldsaLink.isVerified ? 'Verified' : 'Pending' }}
                   </span>
                 </span>
               </div>
               <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.hashedPublicKey">
-                <span class="opnet-field-label">Key Hash</span>
+                <span class="opnet-field-label">Hashed Public Key (SHA256)</span>
                 <div class="opnet-field-value">
                   <span class="opnet-hash">{{ tx.opnet.mldsaLink.hashedPublicKey }}</span>
                   <app-clipboard [text]="tx.opnet.mldsaLink.hashedPublicKey"></app-clipboard>
                 </div>
               </div>
-              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.isVerified">
-                <span class="opnet-field-label">Status</span>
-                <span class="opnet-field-value">
-                  <span class="opnet-tag tag-verified">
-                    <fa-icon [icon]="['fas', 'check-circle']" [fixedWidth]="true"></fa-icon>
-                    Verified
-                  </span>
-                </span>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.fullPublicKey">
+                <span class="opnet-field-label">Full ML-DSA Public Key</span>
+                <div class="opnet-field-value opnet-expandable">
+                  <span class="opnet-hash opnet-truncate">{{ tx.opnet.mldsaLink.fullPublicKey }}</span>
+                  <app-clipboard [text]="tx.opnet.mldsaLink.fullPublicKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.tweakedKey">
+                <span class="opnet-field-label">Tweaked secp256k1 Key</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.mldsaLink.tweakedKey }}</span>
+                  <app-clipboard [text]="tx.opnet.mldsaLink.tweakedKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.originalKey">
+                <span class="opnet-field-label">Original secp256k1 Key</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.mldsaLink.originalKey }}</span>
+                  <app-clipboard [text]="tx.opnet.mldsaLink.originalKey"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.mldsaLink.legacySignature">
+                <span class="opnet-field-label">Legacy Schnorr Signature</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.mldsaLink.legacySignature }}</span>
+                  <app-clipboard [text]="tx.opnet.mldsaLink.legacySignature"></app-clipboard>
+                </div>
               </div>
             </div>
           </div>
@@ -396,48 +530,104 @@
           <!-- Epoch Submission Card -->
           <div class="opnet-card card-epoch" *ngIf="tx.opnet.epochSubmission">
             <div class="opnet-card-header">
-              <fa-icon [icon]="['fas', 'cube']" [fixedWidth]="true"></fa-icon>
+              <fa-icon [icon]="['fas', 'bolt']" [fixedWidth]="true"></fa-icon>
               Epoch Mining Submission
             </div>
             <div class="opnet-card-body">
               <div class="opnet-field">
-                <span class="opnet-field-label">Epoch</span>
+                <span class="opnet-field-label">Epoch Number</span>
                 <span class="opnet-field-value opnet-epoch-number">#{{ tx.opnet.epochSubmission.epochNumber }}</span>
               </div>
               <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.minerPublicKey">
-                <span class="opnet-field-label">Miner</span>
+                <span class="opnet-field-label">Miner Address</span>
                 <div class="opnet-field-value">
-                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.minerPublicKey }}</span>
+                  <a [routerLink]="['/address', tx.opnet.epochSubmission.minerPublicKey]" class="opnet-address" (click)="modal.dismiss()">
+                    {{ tx.opnet.epochSubmission.minerPublicKey }}
+                  </a>
                   <app-clipboard [text]="tx.opnet.epochSubmission.minerPublicKey"></app-clipboard>
                 </div>
               </div>
               <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.solution">
-                <span class="opnet-field-label">Solution</span>
+                <span class="opnet-field-label">PoW Solution (SHA-1)</span>
                 <div class="opnet-field-value">
                   <span class="opnet-hash">{{ tx.opnet.epochSubmission.solution }}</span>
+                  <app-clipboard [text]="tx.opnet.epochSubmission.solution"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.salt">
+                <span class="opnet-field-label">Random Salt</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.salt }}</span>
+                  <app-clipboard [text]="tx.opnet.epochSubmission.salt"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.signature">
+                <span class="opnet-field-label">Submission Signature</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.signature }}</span>
+                  <app-clipboard [text]="tx.opnet.epochSubmission.signature"></app-clipboard>
                 </div>
               </div>
               <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.graffiti">
-                <span class="opnet-field-label">Graffiti</span>
-                <span class="opnet-field-value">{{ tx.opnet.epochSubmission.graffiti }}</span>
+                <span class="opnet-field-label">Graffiti Message</span>
+                <span class="opnet-field-value opnet-graffiti">"{{ tx.opnet.epochSubmission.graffiti }}"</span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.epochSubmission.graffitiHex">
+                <span class="opnet-field-label">Graffiti (Hex)</span>
+                <div class="opnet-field-value">
+                  <span class="opnet-hash">{{ tx.opnet.epochSubmission.graffitiHex }}</span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Gas Usage Card -->
-          <div class="opnet-card" *ngIf="tx.opnet.gasInfo && (+tx.opnet.gasInfo.gasUsed > 0 || +tx.opnet.gasInfo.specialGasUsed > 0)">
+          <div class="opnet-card" *ngIf="tx.opnet.gasInfo">
             <div class="opnet-card-header">
-              <fa-icon [icon]="['fas', 'gas-pump']" [fixedWidth]="true"></fa-icon>
+              <fa-icon [icon]="['fas', 'tachometer-alt']" [fixedWidth]="true"></fa-icon>
               Gas Usage
             </div>
             <div class="opnet-card-body">
+              <div class="opnet-gas-row" *ngIf="tx.opnet.gasInfo.estimatedGas && +tx.opnet.gasInfo.estimatedGas > 0">
+                <span class="opnet-gas-label">Estimated</span>
+                <span class="opnet-gas-value">{{ tx.opnet.gasInfo.estimatedGas | number }}</span>
+              </div>
               <div class="opnet-gas-row">
                 <span class="opnet-gas-label">Used</span>
                 <span class="opnet-gas-value">{{ tx.opnet.gasInfo.gasUsed | number }}</span>
               </div>
               <div class="opnet-gas-row" *ngIf="+tx.opnet.gasInfo.specialGasUsed > 0">
-                <span class="opnet-gas-label">Special</span>
+                <span class="opnet-gas-label">Special Gas</span>
                 <span class="opnet-gas-value">{{ tx.opnet.gasInfo.specialGasUsed | number }}</span>
+              </div>
+              <div class="opnet-gas-row" *ngIf="tx.opnet.gasInfo.refundedGas && +tx.opnet.gasInfo.refundedGas > 0">
+                <span class="opnet-gas-label">Refunded</span>
+                <span class="opnet-gas-value opnet-gas-refund">+{{ tx.opnet.gasInfo.refundedGas | number }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Receipt Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.receipt">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'file-alt']" [fixedWidth]="true"></fa-icon>
+              Transaction Receipt
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-field" *ngIf="tx.opnet.receipt.revert">
+                <span class="opnet-field-label">Revert Reason</span>
+                <span class="opnet-field-value opnet-revert">{{ tx.opnet.receipt.revert }}</span>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.receipt.receipt">
+                <span class="opnet-field-label">Receipt Data</span>
+                <div class="opnet-field-value opnet-expandable">
+                  <span class="opnet-hash opnet-truncate">{{ tx.opnet.receipt.receipt }}</span>
+                  <app-clipboard [text]="tx.opnet.receipt.receipt"></app-clipboard>
+                </div>
+              </div>
+              <div class="opnet-field" *ngIf="tx.opnet.receipt.receiptProofs?.length">
+                <span class="opnet-field-label">Receipt Proofs</span>
+                <span class="opnet-field-value">{{ tx.opnet.receipt.receiptProofs.length }} proof(s)</span>
               </div>
             </div>
           </div>
@@ -445,11 +635,57 @@
           <!-- Contract Events Card -->
           <div class="opnet-card" *ngIf="tx.opnet.events?.length">
             <div class="opnet-card-header">
-              <fa-icon [icon]="['fas', 'list']" [fixedWidth]="true"></fa-icon>
-              Contract Events
+              <fa-icon [icon]="['fas', 'bolt']" [fixedWidth]="true"></fa-icon>
+              Contract Events ({{ tx.opnet.events.length }})
             </div>
             <div class="opnet-card-body">
-              <span class="opnet-events-count">{{ tx.opnet.events.length }} event(s) emitted</span>
+              <div class="opnet-event" *ngFor="let event of tx.opnet.events; let i = index">
+                <div class="opnet-event-header">
+                  <span class="opnet-event-index">#{{ i + 1 }}</span>
+                  <span class="opnet-event-type">{{ event.type }}</span>
+                </div>
+                <div class="opnet-field">
+                  <span class="opnet-field-label">Contract</span>
+                  <div class="opnet-field-value">
+                    <a [routerLink]="['/address', event.contractAddress]" class="opnet-address" (click)="modal.dismiss()">
+                      {{ event.contractAddress | slice:0:20 }}...{{ event.contractAddress | slice:-8 }}
+                    </a>
+                  </div>
+                </div>
+                <div class="opnet-field" *ngIf="event.data">
+                  <span class="opnet-field-label">Data</span>
+                  <div class="opnet-field-value opnet-expandable">
+                    <span class="opnet-hash opnet-truncate">{{ event.data }}</span>
+                    <app-clipboard [text]="event.data"></app-clipboard>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Access List Card -->
+          <div class="opnet-card" *ngIf="tx.opnet.accessList && (tx.opnet.accessList | keyvalue)?.length">
+            <div class="opnet-card-header">
+              <fa-icon [icon]="['fas', 'database']" [fixedWidth]="true"></fa-icon>
+              Storage Access List
+            </div>
+            <div class="opnet-card-body">
+              <div class="opnet-access-entry" *ngFor="let entry of tx.opnet.accessList | keyvalue">
+                <div class="opnet-field">
+                  <span class="opnet-field-label">Contract</span>
+                  <div class="opnet-field-value">
+                    <a [routerLink]="['/address', entry.key]" class="opnet-address" (click)="modal.dismiss()">
+                      {{ entry.key | slice:0:20 }}...{{ entry.key | slice:-8 }}
+                    </a>
+                  </div>
+                </div>
+                <div class="opnet-storage-keys">
+                  <div class="opnet-storage-key" *ngFor="let storage of entry.value | keyvalue">
+                    <span class="opnet-field-label">{{ storage.key | slice:0:16 }}...</span>
+                    <span class="opnet-hash">{{ storage.value | slice:0:32 }}...</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
