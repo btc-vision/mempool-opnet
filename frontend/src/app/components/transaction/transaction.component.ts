@@ -731,10 +731,6 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           this.setFeatures();
           this.isCached = false;
 
-          // Always check for OPNet witness features (MLDSA/Epoch)
-          // These can be present even without smart contract flags
-          this.parseWitnessFeatures();
-
           // Fetch OPNet data if transaction has smart contract or interaction flags
           if (this.tx.flags && (
             (this.tx.flags & TransactionFlags.smart_contract) ||
@@ -759,6 +755,10 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           this.websocketService.startTrackTransaction(tx.txid);
           this.graphExpanded = false;
           this.setupGraph();
+
+          // Check for OPNet witness features (MLDSA/Epoch) in next tick
+          // This avoids interfering with feature flags and ensures proper rendering order
+          Promise.resolve().then(() => this.parseWitnessFeatures());
 
           if (!tx.status?.confirmed) {
             if (tx.firstSeen) {
@@ -1123,7 +1123,8 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Update tx with opnet data - create new reference to trigger change detection
     this.tx = { ...this.tx, opnet };
-    this.cd.detectChanges();
+    this.txChanged$.next(true);
+    this.cd.markForCheck();
   }
 
   checkAccelerationEligibility() {

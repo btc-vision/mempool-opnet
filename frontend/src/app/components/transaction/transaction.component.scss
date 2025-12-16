@@ -474,19 +474,23 @@
 // ===========================================
 
 // Modal backdrop - grey out page
-::ng-deep .modal-backdrop {
-  background-color: #000;
+::ng-deep ngb-modal-backdrop.modal-backdrop {
+  background-color: #000 !important;
+  z-index: 1050 !important;
 
   &.show {
-    opacity: 0.8;
+    opacity: 0.8 !important;
   }
+}
+
+// Modal window container - must be above backdrop
+::ng-deep ngb-modal-window.modal {
+  z-index: 1060 !important;
 }
 
 ::ng-deep .modal-dialog {
   max-width: 800px;
   width: 90%;
-  z-index: 1100;
-  position: relative;
 }
 
 ::ng-deep .modal-content {
