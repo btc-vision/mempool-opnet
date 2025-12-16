@@ -32,7 +32,7 @@ interface SvgLine {
 }
 
 interface Xput {
-  type: 'input' | 'output' | 'fee';
+  type: 'input' | 'output' | 'fee' | 'contract';
   value?: number;
   displayValue?: number;
   index?: number;
@@ -48,6 +48,8 @@ interface Xput {
   timestamp?: number;
   blockHeight?: number;
   asset?: string;
+  isContract?: boolean;
+  contractAddress?: string;
 }
 
 @Component({
@@ -184,8 +186,16 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
     const totalValue = this.calcTotalValue(this.tx);
     let voutWithFee = this.tx.vout.map((v, i) => {
+      // Detect OPNet contract outputs (P2OP = v16_p2op)
+      const isContract = v.scriptpubkey_type === 'v16_p2op';
+      let outputType: 'output' | 'fee' | 'contract' = 'output';
+      if (v.scriptpubkey_type === 'fee') {
+        outputType = 'fee';
+      } else if (isContract) {
+        outputType = 'contract';
+      }
       return {
-        type: v.scriptpubkey_type === 'fee' ? 'fee' : 'output',
+        type: outputType,
         value: this.getOutputValue(v),
         displayValue: v?.value,
         address: v?.scriptpubkey_address || v?.scriptpubkey_type?.toUpperCase(),
@@ -195,6 +205,8 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
         timestamp: this.tx.status.block_time,
         blockHeight: this.tx.status.block_height,
         asset: v?.asset,
+        isContract,
+        contractAddress: isContract ? v?.scriptpubkey_address : undefined,
       } as Xput;
     });
 

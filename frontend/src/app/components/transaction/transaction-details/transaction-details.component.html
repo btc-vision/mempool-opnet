@@ -320,39 +320,3 @@
   </tr>
 </ng-template>
 
-<!-- OPNet Smart Contract Details -->
-<ng-container *ngIf="tx?.opnet">
-  <!-- Contract Flow Graph -->
-  <app-contract-flow-graph
-    *ngIf="tx.opnet.opnetType !== 'Generic'"
-    [tx]="tx"
-    [contractType]="tx.opnet.opnetType === 'Deployment' ? 'deployment' : 'interaction'"
-    [contractAddress]="tx.opnet.deployment?.contractAddress || tx.opnet.interaction?.contractAddress"
-    [width]="600"
-    [height]="200">
-  </app-contract-flow-graph>
-
-  <!-- Post Quantum Details -->
-  <app-post-quantum-details
-    *ngIf="tx.opnet.pqInfo"
-    [pqInfo]="tx.opnet.pqInfo">
-  </app-post-quantum-details>
-
-  <!-- Gas Breakdown -->
-  <app-gas-breakdown
-    *ngIf="tx.opnet.gasInfo"
-    [gasInfo]="tx.opnet.gasInfo">
-  </app-gas-breakdown>
-
-  <!-- Contract Events -->
-  <app-contract-events
-    *ngIf="tx.opnet.events?.length"
-    [events]="tx.opnet.events">
-  </app-contract-events>
-
-  <!-- Contract State Diff -->
-  <app-contract-state-diff
-    *ngIf="tx.opnet.accessList"
-    [accessList]="tx.opnet.accessList">
-  </app-contract-state-diff>
-</ng-container>

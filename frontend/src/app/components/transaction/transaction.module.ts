@@ -12,11 +12,7 @@ import { AccelerateFeeGraphComponent } from '@components/accelerate-checkout/acc
 import { TransactionRawComponent } from '@components/transaction/transaction-raw.component';
 import { CpfpInfoComponent } from '@components/transaction/cpfp-info.component';
 // OPNet Smart Contract Components
-import { PostQuantumDetailsComponent } from '@components/post-quantum-details/post-quantum-details.component';
-import { ContractFlowGraphComponent } from '@components/contract-flow-graph/contract-flow-graph.component';
-import { GasBreakdownComponent } from '@components/gas-breakdown/gas-breakdown.component';
 import { ContractEventsComponent } from '@components/contract-events/contract-events.component';
-import { ContractStateDiffComponent } from '@components/contract-state-diff/contract-state-diff.component';
 
 const routes: Routes = [
   {
@@ -64,11 +60,7 @@ export class TransactionRoutingModule { }
     TransactionRawComponent,
     CpfpInfoComponent,
     // OPNet Smart Contract Components
-    PostQuantumDetailsComponent,
-    ContractFlowGraphComponent,
-    GasBreakdownComponent,
     ContractEventsComponent,
-    ContractStateDiffComponent,
   ],
   exports: [
     TransactionComponent,
@@ -77,11 +69,7 @@ export class TransactionRoutingModule { }
     AccelerateFeeGraphComponent,
     CpfpInfoComponent,
     // OPNet Smart Contract Components
-    PostQuantumDetailsComponent,
-    ContractFlowGraphComponent,
-    GasBreakdownComponent,
     ContractEventsComponent,
-    ContractStateDiffComponent,
   ]
 })
 export class TransactionModule { }

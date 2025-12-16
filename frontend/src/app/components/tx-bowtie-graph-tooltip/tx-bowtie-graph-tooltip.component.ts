@@ -6,7 +6,7 @@ import { ApiService } from '@app/services/api.service';
 import { environment } from '@environments/environment';
 
 interface Xput {
-  type: 'input' | 'output' | 'fee';
+  type: 'input' | 'output' | 'fee' | 'contract';
   value?: number;
   displayValue?: number;
   index?: number;
@@ -24,6 +24,8 @@ interface Xput {
   status?: any;
   spent?: boolean;
   asset?: string;
+  isContract?: boolean;
+  contractAddress?: string;
 }
 
 @Component({

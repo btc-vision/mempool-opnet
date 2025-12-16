@@ -172,6 +172,21 @@
 
     <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true"></app-transactions-list>
 
+    <!-- OPNet Contract Events (collapsible) -->
+    <ng-container *ngIf="tx?.opnet?.events?.length">
+      <div class="subtitle-block mt-3">
+        <div class="title">
+          <h3 class="d-flex align-items-center" style="cursor: pointer;" (click)="showContractEvents = !showContractEvents">
+            <fa-icon [icon]="['fas', showContractEvents ? 'angle-down' : 'angle-right']" [fixedWidth]="true" class="mr-2"></fa-icon>
+            <span>Contract Events ({{ tx.opnet.events.length }})</span>
+          </h3>
+        </div>
+      </div>
+      <div *ngIf="showContractEvents">
+        <app-contract-events [events]="tx.opnet.events"></app-contract-events>
+      </div>
+    </ng-container>
+
     <div class="title text-left">
       <h2 i18n="transaction.details|Transaction Details">Details</h2>
     </div>

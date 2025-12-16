@@ -95,6 +95,32 @@
         <stop offset="50%" [attr.stop-color]="gradient[1]" />
         <stop offset="100%" stop-color="transparent" />
       </linearGradient>
+      <!-- OPNet Contract gradients (purple) -->
+      <marker id="contract-arrow" viewBox="-5 -5 10 10"
+          refX="0" refY="0"
+          markerUnits="strokeWidth"
+          markerWidth="1.5" markerHeight="1"
+          orient="auto">
+        <path d="M 1 -5 L 0 -5 L -5 0 L 0 5 L 1 5 Z" stroke-width="0" fill="#9339f4"/>
+      </marker>
+      <linearGradient id="contract-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6225b2" />
+        <stop offset="100%" stop-color="#9339f4" />
+      </linearGradient>
+      <linearGradient id="contract-hover-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6225b2" />
+        <stop offset="70%" stop-color="white" />
+        <stop offset="100%" stop-color="#9339f4" />
+      </linearGradient>
+      <linearGradient id="contract-highlight-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6225b2" />
+        <stop offset="70%" stop-color="var(--info)" />
+        <stop offset="100%" stop-color="#9339f4" />
+      </linearGradient>
+      <linearGradient id="contract-connector-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="20%" stop-color="#9339f4" />
+        <stop offset="100%" stop-color="transparent" />
+      </linearGradient>
     </defs>
     <path *ngIf="hasLine" [attr.d]="middle.path" class="line middle" [style]="middle.style"/>
     <ng-container *ngFor="let input of inputs; let i = index">

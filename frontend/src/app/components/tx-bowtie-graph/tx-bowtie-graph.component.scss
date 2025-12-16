@@ -15,6 +15,9 @@
     &.fee {
       stroke: url(#fee-gradient);
     }
+    &.contract {
+      stroke: url(#contract-gradient);
+    }
     &.zerovalue {
       stroke: url(#gradient0);
       stroke-linecap: round;
@@ -28,6 +31,9 @@
       }
       &.output {
         stroke: url(#output-highlight-gradient);
+      }
+      &.contract {
+        stroke: url(#contract-highlight-gradient);
       }
       &.zerovalue {
         stroke: var(--info);
@@ -47,6 +53,9 @@
     &.fee {
       stroke: url(#fee-hover-gradient);
     }
+    &.contract {
+      stroke: url(#contract-hover-gradient);
+    }
     &.zerovalue {
       stroke: white;
     }
@@ -62,6 +71,9 @@
     &.output {
       fill: url(#output-connector-gradient);
     }
+    &.contract {
+      fill: url(#contract-connector-gradient);
+    }
   }
 
   .connector:hover {
@@ -70,6 +82,9 @@
     }
     &.output {
       fill: url(#output-hover-connector-gradient);
+    }
+    &.contract {
+      fill: url(#contract-hover-gradient);
     }
   }
 
