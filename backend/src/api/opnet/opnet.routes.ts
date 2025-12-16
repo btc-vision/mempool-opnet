@@ -15,8 +15,6 @@ import {
   OPNetGasInfo,
   OPNetEvent,
   OPNetStatusResponse,
-  PostQuantumInfo,
-  MLDSASecurityLevel,
   OPNetFeatures,
 } from './opnet.interfaces';
 
@@ -73,12 +71,6 @@ class OPNetRoutes {
 
       const extension = this.parseOPNetTransaction(rawTx);
 
-      // Debug: Log parsed extension
-      logger.debug(`Parsed tx ${txId}: type=${extension.opnetType}, hasMLDSA=${extension.features.hasMLDSALink}, hasEpoch=${extension.features.hasEpochSubmission}`, this.tag);
-      if (extension.mldsaLink) {
-        logger.debug(`  mldsaLink: level=${extension.mldsaLink.level}, hashedKey=${extension.mldsaLink.hashedPublicKey?.substring(0, 16)}...`, this.tag);
-      }
-
       // Fetch full epoch submission data if this tx has epoch submission
       if (extension.features.hasEpochSubmission && rawTx.blockNumber) {
         try {
@@ -88,43 +80,11 @@ class OPNetRoutes {
         }
       }
 
-      // Fetch MLDSA/BIP360 public key info for relevant addresses
-      const addressToCheck = extension.interaction?.from || extension.deployment?.deployerAddress;
-      logger.debug(`Checking MLDSA for address: ${addressToCheck}`, this.tag);
-      if (addressToCheck) {
-        try {
-          const pubKeyInfo = await opnetClient.getPublicKeyInfo([addressToCheck]);
-          logger.debug(`getPublicKeyInfo returned: ${pubKeyInfo ? 'data' : 'null'}, has address key: ${!!(pubKeyInfo && pubKeyInfo[addressToCheck])}`, this.tag);
-          if (pubKeyInfo && pubKeyInfo[addressToCheck]) {
-            const addrInfo = pubKeyInfo[addressToCheck];
-            logger.debug(`addrInfo mldsaPublicKey: ${addrInfo.mldsaPublicKey ? 'present (' + (addrInfo.mldsaPublicKey as Uint8Array).length + ' bytes)' : 'missing'}, mldsaLevel: ${addrInfo.mldsaLevel}`, this.tag);
-            // Check if MLDSA public key is linked
-            if (addrInfo.mldsaPublicKey) {
-              const serialized = opnetClient.serializeAddress(addrInfo);
-              const mldsaLevel = (serialized.mldsaLevel as MLDSASecurityLevel) || MLDSASecurityLevel.LEVEL3;
-
-              // Extract detailed MLDSA link info using the new method
-              const mldsaLink = opnetClient.extractMLDSALinkInfo(addrInfo);
-              if (mldsaLink) {
-                extension.mldsaLink = mldsaLink;
-                // Update features to reflect MLDSA link detection
-                extension.features.hasMLDSALink = true;
-                extension.features.featureFlags |= 0b100; // FEATURE_MLDSA_LINK
-              }
-
-              // Keep pqInfo for backward compatibility
-              extension.pqInfo = {
-                mldsaPublicKey: serialized.mldsaPublicKey as string,
-                tweakedKey: serialized.tweakedPublicKey as string || '',
-                legacySignatureType: 'schnorr',
-                securityLevel: this.mapMLDSALevel(mldsaLevel),
-                algorithm: mldsaLevel,
-              };
-            }
-          }
-        } catch (pubKeyErr) {
-          // Non-fatal: just don't include pqInfo
-          logger.debug(`Could not fetch public key info for ${addressToCheck}: ${pubKeyErr}`, this.tag);
+      // Extract MLDSA/BIP360 info from transaction witness data
+      if (extension.features.hasMLDSALink) {
+        const mldsaLink = opnetClient.extractMLDSAFromWitness(rawTx);
+        if (mldsaLink) {
+          extension.mldsaLink = mldsaLink;
         }
       }
 
@@ -192,18 +152,6 @@ class OPNetRoutes {
       if (extension.epochSubmission) {
         extension.epochSubmission.epochNumber = epochNumber.toString();
       }
-    }
-  }
-
-  /**
-   * Map MLDSA level to security level
-   */
-  private mapMLDSALevel(level: MLDSASecurityLevel): 'LEVEL2' | 'LEVEL3' | 'LEVEL5' {
-    switch (level) {
-      case MLDSASecurityLevel.LEVEL2: return 'LEVEL2';
-      case MLDSASecurityLevel.LEVEL3: return 'LEVEL3';
-      case MLDSASecurityLevel.LEVEL5: return 'LEVEL5';
-      default: return 'LEVEL3';
     }
   }
 
@@ -488,17 +436,6 @@ class OPNetRoutes {
         wasCompressed: deployTx.wasCompressed,
       };
       extension.deployment = deployment;
-
-      // Extract MLDSA info from deployer Address if available
-      if (deployTx.deployerAddress && typeof deployTx.deployerAddress !== 'string') {
-        const mldsaLink = opnetClient.extractMLDSALinkInfo(deployTx.deployerAddress);
-        if (mldsaLink) {
-          extension.mldsaLink = mldsaLink;
-          extension.features.hasMLDSALink = true;
-          extension.features.featureFlags |= 0b100; // FEATURE_MLDSA_LINK
-          logger.debug(`MLDSA link found in deployer address: ${mldsaLink.level}`, this.tag);
-        }
-      }
     }
 
     // Parse interaction data
@@ -515,20 +452,6 @@ class OPNetRoutes {
         wasCompressed: interTx.wasCompressed,
       };
       extension.interaction = interaction;
-
-      // Extract MLDSA info directly from the sender Address object if available
-      if (interTx.from && typeof interTx.from !== 'string') {
-        logger.debug(`interTx.from type: ${Object.prototype.toString.call(interTx.from)}, keys: ${Object.keys(interTx.from || {}).join(',')}`, this.tag);
-        const mldsaLink = opnetClient.extractMLDSALinkInfo(interTx.from);
-        if (mldsaLink) {
-          extension.mldsaLink = mldsaLink;
-          extension.features.hasMLDSALink = true;
-          extension.features.featureFlags |= 0b100; // FEATURE_MLDSA_LINK
-          logger.debug(`MLDSA link found in tx from address: ${mldsaLink.level}`, this.tag);
-        }
-      } else if (interTx.from) {
-        logger.debug(`interTx.from is string: ${interTx.from}`, this.tag);
-      }
     }
 
     // Parse gas info

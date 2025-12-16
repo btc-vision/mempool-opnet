@@ -26,6 +26,13 @@ const FEATURE_ACCESS_LIST = 0b001;
 const FEATURE_EPOCH_SUBMISSION = 0b010;
 const FEATURE_MLDSA_LINK = 0b100;
 
+// MLDSA public key sizes by level
+const MLDSA_PUBKEY_SIZES: { [key: number]: 'LEVEL2' | 'LEVEL3' | 'LEVEL5' } = {
+  1312: 'LEVEL2',  // ML-DSA-44
+  1952: 'LEVEL3',  // ML-DSA-65
+  2592: 'LEVEL5',  // ML-DSA-87
+};
+
 // Helper to check if result is an error
 function isCallError(result: CallResult | ICallRequestError): result is ICallRequestError {
   return 'error' in result;
@@ -381,22 +388,129 @@ class OPNetClient {
       features.featureFlags |= FEATURE_EPOCH_SUBMISSION;
     }
 
-    // MLDSA link detection requires checking the address's public key info
-    // This will be done separately via getPublicKeyInfo
+    // Check for MLDSA link in transaction witness data
+    // Parse the header from first input's witness to detect feature flags
+    if (tx.inputs && tx.inputs.length > 0) {
+      const rawFlags = this.parseFeatureFlagsFromWitness(tx.inputs[0]);
+      if (rawFlags & FEATURE_MLDSA_LINK) {
+        features.hasMLDSALink = true;
+        features.featureFlags |= FEATURE_MLDSA_LINK;
+      }
+    }
 
     return features;
+  }
+
+  /**
+   * Parse feature flags from transaction input witness data
+   * Header format: 12 bytes where byte 4 contains feature flags
+   */
+  private parseFeatureFlagsFromWitness(input: { transactionInWitness?: string[] }): number {
+    if (!input.transactionInWitness || input.transactionInWitness.length === 0) {
+      return 0;
+    }
+
+    // The first witness item should contain the header
+    // Header is 12 bytes: version(4) + flags(4) + reserved(4)
+    const firstWitness = input.transactionInWitness[0];
+    if (!firstWitness || firstWitness.length < 24) { // 12 bytes = 24 hex chars
+      return 0;
+    }
+
+    try {
+      // Feature flags are at byte position 4 (little endian)
+      // In hex: bytes 8-15 (4 bytes = 8 hex chars)
+      const flagsHex = firstWitness.substring(8, 16);
+      const flags = parseInt(flagsHex.match(/../g)?.reverse().join('') || '0', 16);
+      return flags;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Extract MLDSA link info from transaction witness data
+   * The MLDSA data follows the header in the witness
+   */
+  public extractMLDSAFromWitness(tx: TransactionBase<OPNetTransactionTypes>): MLDSALinkInfo | null {
+    if (!tx.inputs || tx.inputs.length === 0) {
+      return null;
+    }
+
+    const input = tx.inputs[0];
+    if (!input.transactionInWitness || input.transactionInWitness.length < 2) {
+      return null;
+    }
+
+    // Check if MLDSA flag is set
+    const flags = this.parseFeatureFlagsFromWitness(input);
+    if (!(flags & FEATURE_MLDSA_LINK)) {
+      return null;
+    }
+
+    try {
+      // MLDSA data is typically in witness items after the header
+      // Look for the hashed public key (32 bytes) and signature data
+      // The exact position depends on which features are enabled
+
+      // Parse the witness stack - look for 32-byte items (potential hashed keys)
+      // and 64-byte items (potential Schnorr signatures)
+      let hashedPublicKey = '';
+      let legacySignature = '';
+      let level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5' = 'LEVEL3';
+
+      for (const witnessItem of input.transactionInWitness) {
+        const itemLen = witnessItem.length / 2; // hex to bytes
+
+        // 32 bytes could be hashed public key
+        if (itemLen === 32 && !hashedPublicKey) {
+          hashedPublicKey = witnessItem;
+        }
+        // 64 bytes is Schnorr signature
+        else if (itemLen === 64 && !legacySignature) {
+          legacySignature = witnessItem;
+        }
+        // MLDSA public key sizes
+        else if (MLDSA_PUBKEY_SIZES[itemLen]) {
+          level = MLDSA_PUBKEY_SIZES[itemLen];
+        }
+      }
+
+      // If we found a hashed public key, we have MLDSA data
+      if (hashedPublicKey) {
+        return {
+          level,
+          hashedPublicKey,
+          fullPublicKey: undefined,
+          legacySignature,
+          isVerified: true,
+          tweakedKey: undefined,
+          originalKey: undefined,
+        };
+      }
+
+      // Fallback: Even if we couldn't parse exact data,
+      // if the flag is set, return basic info
+      return {
+        level: 'LEVEL3',
+        hashedPublicKey: '',
+        fullPublicKey: undefined,
+        legacySignature: '',
+        isVerified: false,
+        tweakedKey: undefined,
+        originalKey: undefined,
+      };
+    } catch (e) {
+      logger.warn(`Failed to parse MLDSA from witness: ${e}`);
+      return null;
+    }
   }
 
   /**
    * Extract MLDSA link info from Address object
    */
   public extractMLDSALinkInfo(addr: Address): MLDSALinkInfo | null {
-    // Debug: Log what's in the address object
-    logger.debug(`extractMLDSALinkInfo: addr type=${typeof addr}, isAddress=${addr instanceof Address}`, 'OPNetClient');
-    logger.debug(`extractMLDSALinkInfo: mldsaPublicKey=${addr.mldsaPublicKey ? 'present' : 'missing'}, mldsaLevel=${addr.mldsaLevel}`, 'OPNetClient');
-
     if (!addr.mldsaPublicKey) {
-      logger.debug('extractMLDSALinkInfo: No mldsaPublicKey found, returning null', 'OPNetClient');
       return null;
     }
 
@@ -404,8 +518,6 @@ class OPNetClient {
     const fullPublicKey = addr.mldsaPublicKey
       ? Buffer.from(addr.mldsaPublicKey).toString('hex')
       : '';
-
-    logger.debug(`extractMLDSALinkInfo: Found MLDSA! level=${level}, keyLen=${fullPublicKey.length}`, 'OPNetClient');
 
     // Hash the MLDSA public key to get the hashed public key (SHA256)
     // For now, we'll use the first 32 bytes of the key as a simplified hash
