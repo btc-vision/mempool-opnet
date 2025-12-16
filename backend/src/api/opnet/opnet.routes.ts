@@ -17,6 +17,7 @@ import {
   OPNetStatusResponse,
   PostQuantumInfo,
   MLDSASecurityLevel,
+  OPNetFeatures,
 } from './opnet.interfaces';
 
 class OPNetRoutes {
@@ -83,6 +84,17 @@ class OPNetRoutes {
             if (addrInfo.mldsaPublicKey) {
               const serialized = opnetClient.serializeAddress(addrInfo);
               const mldsaLevel = (serialized.mldsaLevel as MLDSASecurityLevel) || MLDSASecurityLevel.LEVEL3;
+
+              // Extract detailed MLDSA link info using the new method
+              const mldsaLink = opnetClient.extractMLDSALinkInfo(addrInfo);
+              if (mldsaLink) {
+                extension.mldsaLink = mldsaLink;
+                // Update features to reflect MLDSA link detection
+                extension.features.hasMLDSALink = true;
+                extension.features.featureFlags |= 0b100; // FEATURE_MLDSA_LINK
+              }
+
+              // Keep pqInfo for backward compatibility
               extension.pqInfo = {
                 mldsaPublicKey: serialized.mldsaPublicKey as string,
                 tweakedKey: serialized.tweakedPublicKey as string || '',
@@ -358,10 +370,33 @@ class OPNetRoutes {
    * Parse raw OPNet transaction into extension format
    */
   private parseOPNetTransaction(rawTx: TransactionBase<OPNetTransactionTypes>): OPNetTransactionExtension {
+    // Parse feature flags from transaction
+    const features: OPNetFeatures = opnetClient.parseFeatures(rawTx);
+
     const extension: OPNetTransactionExtension = {
       opnetType: rawTx.OPNetType === OPNetTransactionTypes.Deployment ? 'Deployment' :
                  rawTx.OPNetType === OPNetTransactionTypes.Interaction ? 'Interaction' : 'Generic',
+      features,
     };
+
+    // Extract epoch submission info if present
+    const epochSubmission = opnetClient.extractEpochSubmission(rawTx);
+    if (epochSubmission) {
+      // Populate miner public key from transaction sender if available
+      if (rawTx.OPNetType === OPNetTransactionTypes.Interaction) {
+        const interTx = rawTx as InteractionTransaction;
+        if (interTx.from) {
+          epochSubmission.minerPublicKey = interTx.from.p2tr(opnetClient.getNetwork());
+        }
+      }
+      // Compute epoch number from block height if available
+      if (rawTx.blockNumber) {
+        const blocksPerEpoch = 2016n;
+        const epochNum = rawTx.blockNumber / blocksPerEpoch;
+        epochSubmission.epochNumber = epochNum.toString();
+      }
+      extension.epochSubmission = epochSubmission;
+    }
 
     // Parse deployment data
     if (rawTx.OPNetType === OPNetTransactionTypes.Deployment) {

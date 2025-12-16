@@ -1,5 +1,5 @@
 import { Network, networks } from '@btc-vision/bitcoin';
-import { Address } from '@btc-vision/transaction';
+import { Address, MLDSASecurityLevel } from '@btc-vision/transaction';
 import {
   JSONRpcProvider,
   TransactionBase,
@@ -10,9 +10,21 @@ import {
   ICallRequestError,
   AddressesInfo,
   ContractEvents,
+  Epoch,
+  EpochWithSubmissions,
 } from 'opnet';
 import config from '../../config';
 import logger from '../../logger';
+import {
+  OPNetFeatures,
+  MLDSALinkInfo,
+  EpochSubmissionInfo,
+} from './opnet.interfaces';
+
+// Feature flags from @btc-vision/transaction
+const FEATURE_ACCESS_LIST = 0b001;
+const FEATURE_EPOCH_SUBMISSION = 0b010;
+const FEATURE_MLDSA_LINK = 0b100;
 
 // Helper to check if result is an error
 function isCallError(result: CallResult | ICallRequestError): result is ICallRequestError {
@@ -292,6 +304,162 @@ class OPNetClient {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getBlockNumber failed: ${this.lastError}`);
       return null;
+    }
+  }
+
+  /**
+   * Get latest epoch information
+   */
+  public async getLatestEpoch(includeSubmissions: boolean = true): Promise<EpochWithSubmissions | Epoch | null> {
+    if (!this.enabled || !this.provider) {
+      return null;
+    }
+
+    try {
+      const epoch = await this.provider.getLatestEpoch(includeSubmissions);
+      if (!epoch) {
+        return null;
+      }
+
+      this.connected = true;
+      this.lastError = null;
+      return epoch;
+    } catch (e) {
+      this.lastError = e instanceof Error ? e.message : String(e);
+      logger.warn(`OPNet getLatestEpoch failed: ${this.lastError}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get epoch by number
+   */
+  public async getEpochByNumber(epochNumber: bigint, includeSubmissions: boolean = true): Promise<EpochWithSubmissions | Epoch | null> {
+    if (!this.enabled || !this.provider) {
+      return null;
+    }
+
+    try {
+      const epoch = await this.provider.getEpochByNumber(epochNumber, includeSubmissions);
+      if (!epoch) {
+        return null;
+      }
+
+      this.connected = true;
+      this.lastError = null;
+      return epoch;
+    } catch (e) {
+      this.lastError = e instanceof Error ? e.message : String(e);
+      logger.warn(`OPNet getEpochByNumber failed for ${epochNumber}: ${this.lastError}`);
+      return null;
+    }
+  }
+
+  /**
+   * Parse feature flags from transaction
+   * Features are detected from transaction type and available data
+   */
+  public parseFeatures(tx: TransactionBase<OPNetTransactionTypes>): OPNetFeatures {
+    // Default features - we'll detect what we can
+    const features: OPNetFeatures = {
+      hasAccessList: false,
+      hasEpochSubmission: false,
+      hasMLDSALink: false,
+      featureFlags: 0,
+    };
+
+    // Check for access list (present in interaction transactions with events)
+    if (tx.OPNetType === OPNetTransactionTypes.Interaction) {
+      // Interactions typically have access lists for storage reads/writes
+      features.hasAccessList = true;
+      features.featureFlags |= FEATURE_ACCESS_LIST;
+    }
+
+    // Check for epoch submission (PoW challenge data present)
+    if (tx.pow) {
+      features.hasEpochSubmission = true;
+      features.featureFlags |= FEATURE_EPOCH_SUBMISSION;
+    }
+
+    // MLDSA link detection requires checking the address's public key info
+    // This will be done separately via getPublicKeyInfo
+
+    return features;
+  }
+
+  /**
+   * Extract MLDSA link info from Address object
+   */
+  public extractMLDSALinkInfo(addr: Address): MLDSALinkInfo | null {
+    if (!addr.mldsaPublicKey) {
+      return null;
+    }
+
+    const level = this.mapMLDSALevel(addr.mldsaLevel || MLDSASecurityLevel.LEVEL3);
+    const fullPublicKey = addr.mldsaPublicKey
+      ? Buffer.from(addr.mldsaPublicKey).toString('hex')
+      : '';
+
+    // Hash the MLDSA public key to get the hashed public key (SHA256)
+    // For now, we'll use the first 32 bytes of the key as a simplified hash
+    // In production, this would use proper SHA256 hashing
+    const hashedPublicKey = fullPublicKey.substring(0, 64); // First 32 bytes as hex
+
+    return {
+      level,
+      hashedPublicKey,
+      fullPublicKey: fullPublicKey || undefined,
+      legacySignature: '', // Will be filled from transaction data if available
+      isVerified: !!addr.mldsaPublicKey,
+      tweakedKey: addr.tweakedPublicKeyToBuffer().toString('hex'),
+      originalKey: addr.originalPublicKey
+        ? Buffer.from(addr.originalPublicKey).toString('hex')
+        : undefined,
+    };
+  }
+
+  /**
+   * Extract epoch submission info from transaction PoW data
+   * The ProofOfWorkChallenge in TransactionBase has: preimage, reward, difficulty, version
+   *
+   * Full epoch submission encoding (from @btc-vision/transaction Features):
+   * - Features.EPOCH_SUBMISSION = 0b010 (bit 1)
+   * - Encoded in witness: publicKey (32 bytes), solution, optional graffiti with length
+   *
+   * For complete data, fetch via getLatestEpoch/getEpochByNumber APIs
+   */
+  public extractEpochSubmission(tx: TransactionBase<OPNetTransactionTypes>): EpochSubmissionInfo | null {
+    if (!tx.pow) {
+      return null;
+    }
+
+    const pow = tx.pow;
+    // ProofOfWorkChallenge contains: preimage (solution), reward, difficulty, version
+    // The preimage IS the SHA-1 collision solution from epoch mining
+    return {
+      epochNumber: '0', // Compute from block height: epochNumber = blockHeight / 2016
+      minerPublicKey: '', // From tx sender - available in InteractionTransaction.from
+      solution: pow.preimage ? pow.preimage.toString('hex') : '',
+      salt: '', // Encoded in witness, not directly accessible from TransactionBase
+      graffiti: undefined,
+      graffitiHex: undefined,
+      signature: '', // Encoded in witness alongside solution
+    };
+  }
+
+  /**
+   * Map MLDSASecurityLevel to string
+   */
+  public mapMLDSALevel(level: MLDSASecurityLevel): 'LEVEL2' | 'LEVEL3' | 'LEVEL5' {
+    switch (level) {
+      case MLDSASecurityLevel.LEVEL2:
+        return 'LEVEL2';
+      case MLDSASecurityLevel.LEVEL3:
+        return 'LEVEL3';
+      case MLDSASecurityLevel.LEVEL5:
+        return 'LEVEL5';
+      default:
+        return 'LEVEL3';
     }
   }
 

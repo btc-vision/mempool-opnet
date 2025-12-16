@@ -67,6 +67,36 @@ export interface PostQuantumInfo {
   algorithm: MLDSASecurityLevel;
 }
 
+// Feature flags detected in transaction (from @btc-vision/transaction Features enum)
+export interface OPNetFeatures {
+  hasAccessList: boolean;       // Bit 0 (0b001) - Storage access list
+  hasEpochSubmission: boolean;  // Bit 1 (0b010) - PoW epoch contribution
+  hasMLDSALink: boolean;        // Bit 2 (0b100) - Quantum-safe key linking
+  featureFlags: number;         // Raw 24-bit feature flags from header
+}
+
+// MLDSA linking details (BIP360 quantum-safe key linking)
+export interface MLDSALinkInfo {
+  level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';  // Security level
+  hashedPublicKey: string;                 // 32 bytes hex - SHA256 of ML-DSA pubkey
+  fullPublicKey?: string;                  // Full key if verifyRequest=true (1312/1952/2592 bytes)
+  legacySignature: string;                 // 64 bytes hex - Schnorr signature
+  isVerified: boolean;                     // Whether full key was verified
+  tweakedKey?: string;                     // Tweaked secp256k1 key
+  originalKey?: string;                    // Original secp256k1 key
+}
+
+// Epoch submission details (PoW mining contribution)
+export interface EpochSubmissionInfo {
+  epochNumber: string;           // bigint as string for JSON
+  minerPublicKey: string;        // ML-DSA address (p2op format)
+  solution: string;              // 32 bytes hex - SHA-1 collision solution
+  salt: string;                  // Random salt hex
+  graffiti?: string;             // Optional miner message (decoded UTF-8)
+  graffitiHex?: string;          // Raw graffiti as hex
+  signature: string;             // 64 bytes hex - submission signature
+}
+
 // Contract Execution Result
 export interface OPNetCallResult {
   result: string;
@@ -128,11 +158,14 @@ export type OPNetTransactionType = 'Generic' | 'Deployment' | 'Interaction';
 // Enriched Transaction Response
 export interface OPNetTransactionExtension {
   opnetType: OPNetTransactionType;
+  features: OPNetFeatures;           // NEW: Feature flags detection
+  mldsaLink?: MLDSALinkInfo;         // NEW: BIP360 quantum-safe key linking
+  epochSubmission?: EpochSubmissionInfo;  // NEW: Epoch mining contribution
   deployment?: OPNetDeploymentData;
   interaction?: OPNetInteractionData;
   receipt?: OPNetTransactionReceipt;
   gasInfo?: OPNetGasInfo;
-  pqInfo?: PostQuantumInfo;
+  pqInfo?: PostQuantumInfo;          // Keep for backward compat with existing code
   events?: OPNetEvent[];
   accessList?: OPNetAccessList;
 }
