@@ -251,56 +251,76 @@ interface ParsedOPNetScript {
 
 function parseOPNetScript(bytes: Uint8Array): ParsedOPNetScript | null {
   let offset = 0;
+  console.log('[OPNet] parseScript: total bytes:', bytes.length);
 
   // 1. Read header (12 bytes)
   const headerResult = readPushData(bytes, offset);
   if (!headerResult || headerResult.data.length !== OPNET_HEADER_LENGTH) {
+    console.log('[OPNet] parseScript: header read failed, got length:', headerResult?.data?.length);
     return null;
   }
   offset = headerResult.newOffset;
   const header = headerResult.data;
+  console.log('[OPNet] parseScript: header:', toHex(header), 'offset now:', offset);
 
   // Check OP_TOALTSTACK
-  if (bytes[offset++] !== OP_TOALTSTACK) {
+  if (bytes[offset] !== OP_TOALTSTACK) {
+    console.log('[OPNet] parseScript: expected OP_TOALTSTACK (0x6b) at', offset, 'got:', bytes[offset]?.toString(16));
     return null;
   }
+  offset++;
 
   // 2. Read minerMLDSAPublicKey (32 bytes)
   const minerKeyResult = readPushData(bytes, offset);
   if (!minerKeyResult || minerKeyResult.data.length !== 32) {
+    console.log('[OPNet] parseScript: minerKey read failed, got length:', minerKeyResult?.data?.length);
     return null;
   }
   offset = minerKeyResult.newOffset;
   const minerMLDSAPublicKey = minerKeyResult.data;
+  console.log('[OPNet] parseScript: minerKey:', toHex(minerMLDSAPublicKey), 'offset now:', offset);
 
   // Check OP_TOALTSTACK
-  if (bytes[offset++] !== OP_TOALTSTACK) {
+  if (bytes[offset] !== OP_TOALTSTACK) {
+    console.log('[OPNet] parseScript: expected OP_TOALTSTACK at', offset, 'got:', bytes[offset]?.toString(16));
     return null;
   }
+  offset++;
 
   // 3. Read preimage/solution
   const preimageResult = readPushData(bytes, offset);
   if (!preimageResult) {
+    console.log('[OPNet] parseScript: preimage read failed at offset:', offset);
     return null;
   }
   offset = preimageResult.newOffset;
   const preimage = preimageResult.data;
+  console.log('[OPNet] parseScript: preimage length:', preimage.length, 'offset now:', offset);
 
   // Check OP_TOALTSTACK
-  if (bytes[offset++] !== OP_TOALTSTACK) {
+  if (bytes[offset] !== OP_TOALTSTACK) {
+    console.log('[OPNet] parseScript: expected OP_TOALTSTACK at', offset, 'got:', bytes[offset]?.toString(16));
     return null;
   }
+  offset++;
 
   // Parse flags from header
   const flags = (header[1] << 16) | (header[2] << 8) | header[3];
+  console.log('[OPNet] parseScript: flags:', flags, 'binary:', flags.toString(2));
 
   // 4. Read features data (if any flags are set)
   let featuresData: Uint8Array | null = null;
   if (flags !== 0 && offset < bytes.length) {
+    console.log('[OPNet] parseScript: reading features data at offset:', offset, 'remaining bytes:', bytes.length - offset);
     const featuresResult = readPushData(bytes, offset);
     if (featuresResult) {
       featuresData = featuresResult.data;
+      console.log('[OPNet] parseScript: features data length:', featuresData.length, 'hex:', toHex(featuresData.slice(0, 100)));
+    } else {
+      console.log('[OPNet] parseScript: features read failed');
     }
+  } else {
+    console.log('[OPNet] parseScript: no features data (flags:', flags, 'offset:', offset, 'length:', bytes.length, ')');
   }
 
   return {
@@ -327,6 +347,7 @@ interface DecodedFeature {
 function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
   const features: DecodedFeature[] = [];
   let offset = 0;
+  console.log('[OPNet] decodeFeatures: flags:', flags, 'data length:', data.length);
 
   // Decode in priority order
   const featureOrder: Array<{ flag: number; type: DecodedFeature['type'] }> = [
@@ -337,19 +358,26 @@ function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
 
   for (const { flag, type } of featureOrder) {
     if (flags & flag) {
+      console.log('[OPNet] decodeFeatures: reading', type, 'at offset:', offset);
       // Read length-prefixed data
       const lenResult = readVarInt(data, offset);
+      console.log('[OPNet] decodeFeatures:', type, 'varint:', lenResult.value, 'size:', lenResult.size);
       if (lenResult.value > 0 && offset + lenResult.size + lenResult.value <= data.length) {
         offset += lenResult.size;
+        const featureData = data.slice(offset, offset + lenResult.value);
+        console.log('[OPNet] decodeFeatures:', type, 'data length:', featureData.length);
         features.push({
           type,
-          data: data.slice(offset, offset + lenResult.value),
+          data: featureData,
         });
         offset += lenResult.value;
+      } else {
+        console.log('[OPNet] decodeFeatures:', type, 'invalid length or bounds');
       }
     }
   }
 
+  console.log('[OPNet] decodeFeatures: total features:', features.length);
   return features;
 }
 
