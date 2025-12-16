@@ -80,13 +80,8 @@ class OPNetRoutes {
         }
       }
 
-      // Extract MLDSA/BIP360 info from transaction witness data
-      if (extension.features.hasMLDSALink) {
-        const mldsaLink = opnetClient.extractMLDSAFromWitness(rawTx);
-        if (mldsaLink) {
-          extension.mldsaLink = mldsaLink;
-        }
-      }
+      // Note: MLDSA/BIP360 data is parsed on frontend from raw witness data
+      // The OPNet API doesn't provide transactionInWitness, but electrs does
 
       res.status(200).json({
         txid: txId,
