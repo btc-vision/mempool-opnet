@@ -1,22 +1,38 @@
 /**
  * OPNet Witness Data Parsing Utilities
  * Parses MLDSA/BIP360 and other feature data from raw transaction witness
+ *
+ * Based on OPNet transaction structure:
+ * - Header: prefix(1) + flags(3) + priorityFee(8) = 12 bytes
+ * - Features: encoded with length prefixes after header
+ * - Feature order by priority: ACCESS_LIST, EPOCH_SUBMISSION, MLDSA_LINK_PUBKEY
  */
 
 import { MLDSALinkInfo, OPNetFeatures, EpochSubmissionInfo } from '@interfaces/electrs.interface';
 
-// Feature flags (from OPNet header)
-const FEATURE_ACCESS_LIST = 0x01;
-const FEATURE_EPOCH_SUBMISSION = 0x02;
-const FEATURE_MLDSA_LINK = 0x04;
+// Feature flags (from @btc-vision/transaction Features enum)
+const FEATURE_ACCESS_LIST = 0b1;        // 1
+const FEATURE_EPOCH_SUBMISSION = 0b10;  // 2
+const FEATURE_MLDSA_LINK = 0b100;       // 4
 
-// OPNet header is 12 bytes
+// OPNet header is 12 bytes: prefix(1) + flags(3) + priorityFee(8)
 const OPNET_HEADER_LENGTH = 12;
+
+// OP codes
+const OP_TOALTSTACK = 0x6b;
 
 /**
  * Parse OPNet features from raw witness data
- * witness[3] is the script containing the OPNet header
- * Header format (12 bytes): prefix(1) + flags(3 big-endian) + priorityFee(8)
+ * witness[3] is the script containing the OPNet data
+ *
+ * Script structure:
+ * - PUSHDATA header (12 bytes)
+ * - OP_TOALTSTACK
+ * - PUSHDATA minerMLDSAPublicKey (32 bytes)
+ * - OP_TOALTSTACK
+ * - PUSHDATA preimage/solution
+ * - OP_TOALTSTACK
+ * - PUSHDATA features data (length-prefixed features)
  */
 export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures | null {
   if (!witness || witness.length < 4) {
@@ -24,19 +40,29 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
   }
 
   try {
-    // witness[3] is the script - first we need to parse it to extract push data
     const script = witness[3];
     if (!script) {
       return null;
     }
 
-    // Parse the script to get the header (first PUSHBYTES_12)
-    const header = parseFirstPushData(script, OPNET_HEADER_LENGTH);
-    if (!header || header.length < OPNET_HEADER_LENGTH) {
+    const bytes = hexToBytes(script);
+    let offset = 0;
+
+    // Parse header push data
+    const headerResult = readPushData(bytes, offset);
+    if (!headerResult || headerResult.data.length !== OPNET_HEADER_LENGTH) {
       return null;
     }
+    offset = headerResult.newOffset;
+
+    const header = headerResult.data;
 
     // Parse header: prefix(1) + flags(3 big-endian) + priorityFee(8)
+    const prefix = header[0];
+    if (prefix !== 0x02 && prefix !== 0x03) {
+      return null; // Invalid public key prefix
+    }
+
     // Flags are bytes 1-3, read as big-endian 24-bit integer
     const flags = (header[1] << 16) | (header[2] << 8) | header[3];
 
@@ -54,10 +80,10 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
 
 /**
  * Extract Epoch Submission info from witness data
- * The epoch data is in the script after the header when FEATURE_EPOCH_SUBMISSION is set
- * Format: epochNumber(8 bytes LE) + solution(32) + salt(32) + graffitiLen(varint) + graffiti(variable)
+ * Epoch submission format: mldsaPublicKey(32) + salt(32) + graffiti(optional with length)
+ * Note: Epoch NUMBER is calculated from block height, not stored in witness
  */
-export function extractEpochSubmissionFromWitness(witness: string[]): EpochSubmissionInfo | null {
+export function extractEpochSubmissionFromWitness(witness: string[], blockHeight?: number): EpochSubmissionInfo | null {
   if (!witness || witness.length < 4) {
     return null;
   }
@@ -68,43 +94,66 @@ export function extractEpochSubmissionFromWitness(witness: string[]): EpochSubmi
       return null;
     }
 
-    // Get all push data items from the script
-    const pushDataItems = parseAllPushData(script);
-    if (pushDataItems.length < 2) {
+    const bytes = hexToBytes(script);
+
+    // Parse the script structure to find features data
+    const parsed = parseOPNetScript(bytes);
+    if (!parsed || !parsed.featuresData) {
       return null;
     }
 
-    // First item is the header
-    const header = pushDataItems[0];
-    if (!header || header.length < OPNET_HEADER_LENGTH) {
+    // Check if epoch submission flag is set
+    if (!(parsed.flags & FEATURE_EPOCH_SUBMISSION)) {
       return null;
     }
 
-    // Parse flags
-    const flags = (header[1] << 16) | (header[2] << 8) | header[3];
-    if (!(flags & FEATURE_EPOCH_SUBMISSION)) {
+    // Decode features in priority order
+    const features = decodeFeaturesData(parsed.flags, parsed.featuresData);
+    const epochFeature = features.find(f => f.type === 'epoch');
+
+    if (!epochFeature || !epochFeature.data) {
       return null;
     }
 
-    // Epoch submission data comes after header
-    // It's typically in pushDataItems[1] if no access list, or later if access list present
-    let dataIndex = 1;
-    if (flags & FEATURE_ACCESS_LIST) {
-      dataIndex++; // Skip access list data
+    // Parse epoch submission: mldsaPublicKey(32) + salt(32) + graffiti(optional)
+    const data = epochFeature.data;
+    if (data.length < 64) {
+      return null;
     }
 
-    // Look for epoch submission data - should be at least 72 bytes (8 + 32 + 32)
-    for (let i = dataIndex; i < pushDataItems.length; i++) {
-      const item = pushDataItems[i];
-      if (item.length >= 72) {
-        const parsed = parseEpochSubmissionData(item);
-        if (parsed) {
-          return parsed;
+    const minerPublicKey = toHex(data.slice(0, 32));
+    const salt = toHex(data.slice(32, 64));
+
+    // Graffiti is optional - remaining bytes after 64
+    let graffiti: string | undefined;
+    let graffitiHex: string | undefined;
+    if (data.length > 64) {
+      // Read graffiti with length prefix
+      let offset = 64;
+      const graffitiLen = data[offset++];
+      if (graffitiLen > 0 && offset + graffitiLen <= data.length) {
+        const graffitiBytes = data.slice(offset, offset + graffitiLen);
+        graffitiHex = toHex(graffitiBytes);
+        try {
+          graffiti = new TextDecoder().decode(graffitiBytes);
+        } catch {
+          graffiti = undefined;
         }
       }
     }
 
-    return null;
+    // Calculate epoch number from block height (2016 blocks per epoch)
+    const epochNumber = blockHeight ? Math.floor(blockHeight / 2016).toString() : '0';
+
+    return {
+      epochNumber,
+      minerPublicKey,
+      solution: parsed.preimage ? toHex(parsed.preimage) : '',
+      salt,
+      graffiti,
+      graffitiHex,
+      signature: '',
+    };
   } catch (e) {
     console.warn('[OPNet] Failed to extract epoch submission from witness:', e);
     return null;
@@ -112,63 +161,13 @@ export function extractEpochSubmissionFromWitness(witness: string[]): EpochSubmi
 }
 
 /**
- * Parse epoch submission data buffer
- * Format: epochNumber(8 bytes LE) + solution(32) + salt(32) + graffitiLen(varint) + graffiti(variable)
- */
-function parseEpochSubmissionData(data: Uint8Array): EpochSubmissionInfo | null {
-  if (data.length < 72) { // 8 + 32 + 32 minimum
-    return null;
-  }
-
-  let offset = 0;
-
-  // Epoch number (8 bytes, little-endian)
-  const epochLow = data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
-  const epochHigh = data[offset + 4] | (data[offset + 5] << 8) | (data[offset + 6] << 16) | (data[offset + 7] << 24);
-  // Combine as BigInt for large epoch numbers
-  const epochNumber = BigInt(epochLow) + (BigInt(epochHigh) << 32n);
-  offset += 8;
-
-  // Solution hash (32 bytes)
-  const solution = toHex(data.slice(offset, offset + 32));
-  offset += 32;
-
-  // Salt (32 bytes)
-  const salt = toHex(data.slice(offset, offset + 32));
-  offset += 32;
-
-  // Graffiti (variable length with varint prefix)
-  let graffiti: string | undefined;
-  let graffitiHex: string | undefined;
-  if (data.length > offset) {
-    const graffitiLen = readVarInt(data, offset);
-    offset += varIntSize(graffitiLen);
-    if (graffitiLen > 0 && data.length >= offset + graffitiLen) {
-      const graffitiBytes = data.slice(offset, offset + graffitiLen);
-      graffitiHex = toHex(graffitiBytes);
-      try {
-        graffiti = new TextDecoder().decode(graffitiBytes);
-      } catch {
-        graffiti = undefined;
-      }
-    }
-  }
-
-  return {
-    epochNumber: epochNumber.toString(),
-    minerPublicKey: '', // Will be populated from transaction sender
-    solution,
-    salt,
-    graffiti,
-    graffitiHex,
-    signature: '',
-  };
-}
-
-/**
  * Extract MLDSA/BIP360 link info from witness data
- * The MLDSA data is in the script after the header, following other features
- * Format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional] + legacySig(64)
+ * MLDSA format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
+ *
+ * Level values (MLDSASecurityLevel enum):
+ * - 0 = LEVEL2 (ML-DSA-44)
+ * - 1 = LEVEL3 (ML-DSA-65)
+ * - 2 = LEVEL5 (ML-DSA-87)
  */
 export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null {
   if (!witness || witness.length < 4) {
@@ -181,50 +180,28 @@ export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null
       return null;
     }
 
-    // Get all push data items from the script
-    const pushDataItems = parseAllPushData(script);
-    if (pushDataItems.length < 2) {
+    const bytes = hexToBytes(script);
+
+    // Parse the script structure to find features data
+    const parsed = parseOPNetScript(bytes);
+    if (!parsed || !parsed.featuresData) {
       return null;
     }
 
-    // First item is the header
-    const header = pushDataItems[0];
-    if (!header || header.length < OPNET_HEADER_LENGTH) {
+    // Check if MLDSA link flag is set
+    if (!(parsed.flags & FEATURE_MLDSA_LINK)) {
       return null;
     }
 
-    // Parse flags
-    const flags = (header[1] << 16) | (header[2] << 8) | header[3];
-    if (!(flags & FEATURE_MLDSA_LINK)) {
+    // Decode features in priority order
+    const features = decodeFeaturesData(parsed.flags, parsed.featuresData);
+    const mldsaFeature = features.find(f => f.type === 'mldsa');
+
+    if (!mldsaFeature || !mldsaFeature.data) {
       return null;
     }
 
-    // Find MLDSA data - it comes after header and any other features
-    // Features are in order: ACCESS_LIST, EPOCH_SUBMISSION, MLDSA_LINK
-    let dataIndex = 1; // Start after header
-
-    // The MLDSA data should be one of the push data items
-    // We need to find the one that contains level + hashedPubKey format
-    // Try to find it by checking for valid MLDSA level bytes (2, 3, or 5)
-    for (let i = dataIndex; i < pushDataItems.length; i++) {
-      const item = pushDataItems[i];
-      if (item.length >= 34) { // At minimum: level(1) + hashedPubKey(32) + verifyRequest(1)
-        const levelByte = item[0];
-        if (levelByte === 2 || levelByte === 3 || levelByte === 5) {
-          // This looks like MLDSA data
-          return parseMLDSAData(item);
-        }
-      }
-    }
-
-    // Alternative: The MLDSA data might be in OP_PUSHDATA sections
-    // Try to find it in the raw script by looking for the pattern
-    const mldsaData = findMLDSADataInScript(script);
-    if (mldsaData) {
-      return parseMLDSAData(mldsaData);
-    }
-
-    return null;
+    return parseMLDSAData(mldsaFeature.data);
   } catch (e) {
     console.warn('[OPNet] Failed to extract MLDSA from witness:', e);
     return null;
@@ -232,11 +209,126 @@ export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null
 }
 
 /**
+ * Parse the OPNet script structure
+ */
+interface ParsedOPNetScript {
+  header: Uint8Array;
+  flags: number;
+  minerMLDSAPublicKey: Uint8Array;
+  preimage: Uint8Array;
+  featuresData: Uint8Array | null;
+}
+
+function parseOPNetScript(bytes: Uint8Array): ParsedOPNetScript | null {
+  let offset = 0;
+
+  // 1. Read header (12 bytes)
+  const headerResult = readPushData(bytes, offset);
+  if (!headerResult || headerResult.data.length !== OPNET_HEADER_LENGTH) {
+    return null;
+  }
+  offset = headerResult.newOffset;
+  const header = headerResult.data;
+
+  // Check OP_TOALTSTACK
+  if (bytes[offset++] !== OP_TOALTSTACK) {
+    return null;
+  }
+
+  // 2. Read minerMLDSAPublicKey (32 bytes)
+  const minerKeyResult = readPushData(bytes, offset);
+  if (!minerKeyResult || minerKeyResult.data.length !== 32) {
+    return null;
+  }
+  offset = minerKeyResult.newOffset;
+  const minerMLDSAPublicKey = minerKeyResult.data;
+
+  // Check OP_TOALTSTACK
+  if (bytes[offset++] !== OP_TOALTSTACK) {
+    return null;
+  }
+
+  // 3. Read preimage/solution
+  const preimageResult = readPushData(bytes, offset);
+  if (!preimageResult) {
+    return null;
+  }
+  offset = preimageResult.newOffset;
+  const preimage = preimageResult.data;
+
+  // Check OP_TOALTSTACK
+  if (bytes[offset++] !== OP_TOALTSTACK) {
+    return null;
+  }
+
+  // Parse flags from header
+  const flags = (header[1] << 16) | (header[2] << 8) | header[3];
+
+  // 4. Read features data (if any flags are set)
+  let featuresData: Uint8Array | null = null;
+  if (flags !== 0 && offset < bytes.length) {
+    const featuresResult = readPushData(bytes, offset);
+    if (featuresResult) {
+      featuresData = featuresResult.data;
+    }
+  }
+
+  return {
+    header,
+    flags,
+    minerMLDSAPublicKey,
+    preimage,
+    featuresData,
+  };
+}
+
+interface DecodedFeature {
+  type: 'accessList' | 'epoch' | 'mldsa';
+  data: Uint8Array;
+}
+
+/**
+ * Decode features data based on flags
+ * Features are stored with length prefixes and decoded in priority order:
+ * 1. ACCESS_LIST
+ * 2. EPOCH_SUBMISSION
+ * 3. MLDSA_LINK_PUBKEY
+ */
+function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
+  const features: DecodedFeature[] = [];
+  let offset = 0;
+
+  // Decode in priority order
+  const featureOrder: Array<{ flag: number; type: DecodedFeature['type'] }> = [
+    { flag: FEATURE_ACCESS_LIST, type: 'accessList' },
+    { flag: FEATURE_EPOCH_SUBMISSION, type: 'epoch' },
+    { flag: FEATURE_MLDSA_LINK, type: 'mldsa' },
+  ];
+
+  for (const { flag, type } of featureOrder) {
+    if (flags & flag) {
+      // Read length-prefixed data
+      const lenResult = readVarInt(data, offset);
+      if (lenResult.value > 0 && offset + lenResult.size + lenResult.value <= data.length) {
+        offset += lenResult.size;
+        features.push({
+          type,
+          data: data.slice(offset, offset + lenResult.value),
+        });
+        offset += lenResult.value;
+      }
+    }
+  }
+
+  return features;
+}
+
+/**
  * Parse MLDSA data buffer
  * Format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
  */
 function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
-  if (data.length < 34) {
+  if (data.length < 34) { // level(1) + hashedPubKey(32) + verifyRequest(1)
     return null;
   }
 
@@ -272,23 +364,19 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
   // Optional: if verifyRequest is true, there's a full public key and signature
   let fullPublicKey: string | undefined;
   if (verifyRequest && data.length > offset + 2) {
-    // Public key with length prefix
-    const pubKeyLen = readVarInt(data, offset);
-    offset += varIntSize(pubKeyLen);
-    if (data.length >= offset + pubKeyLen) {
+    // Get public key length based on level
+    const pubKeyLen = getMLDSAPublicKeyLength(level);
+    const sigLen = getMLDSASignatureLength(level);
+
+    if (data.length >= offset + pubKeyLen + sigLen) {
       fullPublicKey = toHex(data.slice(offset, offset + pubKeyLen));
       offset += pubKeyLen;
-
-      // MLDSA signature with length prefix (skip it)
-      if (data.length > offset) {
-        const sigLen = readVarInt(data, offset);
-        offset += varIntSize(sigLen);
-        offset += sigLen;
-      }
+      // Skip MLDSA signature
+      offset += sigLen;
     }
   }
 
-  // Legacy signature (64 bytes) - optional
+  // Legacy signature (64 bytes) - optional at the end
   let legacySignature = '';
   if (data.length >= offset + 64) {
     legacySignature = toHex(data.slice(offset, offset + 64));
@@ -304,131 +392,90 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
 }
 
 /**
- * Parse first push data of given length from script hex
+ * Get ML-DSA public key length based on security level
  */
-function parseFirstPushData(scriptHex: string, expectedLength: number): Uint8Array | null {
-  const bytes = hexToBytes(scriptHex);
-  let offset = 0;
+function getMLDSAPublicKeyLength(level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5'): number {
+  switch (level) {
+    case 'LEVEL2': return 1312;  // ML-DSA-44
+    case 'LEVEL3': return 1952;  // ML-DSA-65
+    case 'LEVEL5': return 2592;  // ML-DSA-87
+  }
+}
 
-  while (offset < bytes.length) {
-    const opcode = bytes[offset++];
+/**
+ * Get ML-DSA signature length based on security level
+ */
+function getMLDSASignatureLength(level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5'): number {
+  switch (level) {
+    case 'LEVEL2': return 2420;  // ML-DSA-44
+    case 'LEVEL3': return 3293;  // ML-DSA-65
+    case 'LEVEL5': return 4595;  // ML-DSA-87
+  }
+}
 
-    // OP_PUSHBYTES_1 to OP_PUSHBYTES_75
-    if (opcode >= 0x01 && opcode <= 0x4b) {
-      const len = opcode;
-      if (len === expectedLength && offset + len <= bytes.length) {
-        return bytes.slice(offset, offset + len);
-      }
-      offset += len;
-    }
-    // OP_PUSHDATA1
-    else if (opcode === 0x4c) {
-      if (offset >= bytes.length) break;
-      const len = bytes[offset++];
-      if (len === expectedLength && offset + len <= bytes.length) {
-        return bytes.slice(offset, offset + len);
-      }
-      offset += len;
-    }
-    // OP_PUSHDATA2
-    else if (opcode === 0x4d) {
-      if (offset + 1 >= bytes.length) break;
-      const len = bytes[offset] | (bytes[offset + 1] << 8);
-      offset += 2;
-      if (len === expectedLength && offset + len <= bytes.length) {
-        return bytes.slice(offset, offset + len);
-      }
-      offset += len;
-    }
-    // Other opcodes - skip
-    else {
-      continue;
-    }
+/**
+ * Read push data from script bytes
+ */
+function readPushData(bytes: Uint8Array, offset: number): { data: Uint8Array; newOffset: number } | null {
+  if (offset >= bytes.length) {
+    return null;
+  }
+
+  const opcode = bytes[offset++];
+
+  // OP_PUSHBYTES_1 to OP_PUSHBYTES_75
+  if (opcode >= 0x01 && opcode <= 0x4b) {
+    const len = opcode;
+    if (offset + len > bytes.length) return null;
+    return { data: bytes.slice(offset, offset + len), newOffset: offset + len };
+  }
+  // OP_PUSHDATA1
+  else if (opcode === 0x4c) {
+    if (offset >= bytes.length) return null;
+    const len = bytes[offset++];
+    if (offset + len > bytes.length) return null;
+    return { data: bytes.slice(offset, offset + len), newOffset: offset + len };
+  }
+  // OP_PUSHDATA2
+  else if (opcode === 0x4d) {
+    if (offset + 1 >= bytes.length) return null;
+    const len = bytes[offset] | (bytes[offset + 1] << 8);
+    offset += 2;
+    if (offset + len > bytes.length) return null;
+    return { data: bytes.slice(offset, offset + len), newOffset: offset + len };
+  }
+  // OP_PUSHDATA4
+  else if (opcode === 0x4e) {
+    if (offset + 3 >= bytes.length) return null;
+    const len = bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24);
+    offset += 4;
+    if (offset + len > bytes.length) return null;
+    return { data: bytes.slice(offset, offset + len), newOffset: offset + len };
   }
 
   return null;
 }
 
 /**
- * Parse all push data items from script hex
+ * Read varint from buffer
  */
-function parseAllPushData(scriptHex: string): Uint8Array[] {
-  const bytes = hexToBytes(scriptHex);
-  const items: Uint8Array[] = [];
-  let offset = 0;
-
-  while (offset < bytes.length) {
-    const opcode = bytes[offset++];
-
-    // OP_PUSHBYTES_1 to OP_PUSHBYTES_75
-    if (opcode >= 0x01 && opcode <= 0x4b) {
-      const len = opcode;
-      if (offset + len <= bytes.length) {
-        items.push(bytes.slice(offset, offset + len));
-      }
-      offset += len;
-    }
-    // OP_PUSHDATA1
-    else if (opcode === 0x4c) {
-      if (offset >= bytes.length) break;
-      const len = bytes[offset++];
-      if (offset + len <= bytes.length) {
-        items.push(bytes.slice(offset, offset + len));
-      }
-      offset += len;
-    }
-    // OP_PUSHDATA2
-    else if (opcode === 0x4d) {
-      if (offset + 1 >= bytes.length) break;
-      const len = bytes[offset] | (bytes[offset + 1] << 8);
-      offset += 2;
-      if (offset + len <= bytes.length) {
-        items.push(bytes.slice(offset, offset + len));
-      }
-      offset += len;
-    }
-    // OP_PUSHDATA4
-    else if (opcode === 0x4e) {
-      if (offset + 3 >= bytes.length) break;
-      const len = bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24);
-      offset += 4;
-      if (offset + len <= bytes.length) {
-        items.push(bytes.slice(offset, offset + len));
-      }
-      offset += len;
-    }
+function readVarInt(buffer: Uint8Array, offset: number): { value: number; size: number } {
+  if (offset >= buffer.length) {
+    return { value: 0, size: 0 };
   }
 
-  return items;
-}
-
-/**
- * Try to find MLDSA data pattern in script
- * Look for: level byte (2/3/5) followed by 32+ bytes
- */
-function findMLDSADataInScript(scriptHex: string): Uint8Array | null {
-  const bytes = hexToBytes(scriptHex);
-
-  // Look for MLDSA level bytes followed by enough data
-  for (let i = 0; i < bytes.length - 34; i++) {
-    const b = bytes[i];
-    // Check if this could be a level byte at start of pushed data
-    if ((b === 2 || b === 3 || b === 5)) {
-      // Check if preceded by a push opcode
-      if (i > 0) {
-        const prevByte = bytes[i - 1];
-        // Check various push opcode scenarios
-        if ((prevByte >= 34 && prevByte <= 0x4b) || // OP_PUSHBYTES_N
-            (i > 1 && bytes[i - 2] === 0x4c && prevByte >= 34)) { // OP_PUSHDATA1
-          // This looks like MLDSA data
-          const len = Math.min(bytes.length - i, 200); // Reasonable max
-          return bytes.slice(i, i + len);
-        }
-      }
-    }
+  const first = buffer[offset];
+  if (first < 0xfd) {
+    return { value: first, size: 1 };
+  } else if (first === 0xfd && offset + 2 < buffer.length) {
+    return { value: buffer[offset + 1] | (buffer[offset + 2] << 8), size: 3 };
+  } else if (first === 0xfe && offset + 4 < buffer.length) {
+    return {
+      value: buffer[offset + 1] | (buffer[offset + 2] << 8) | (buffer[offset + 3] << 16) | (buffer[offset + 4] << 24),
+      size: 5
+    };
   }
-
-  return null;
+  return { value: first, size: 1 };
 }
 
 /**
@@ -449,29 +496,4 @@ function toHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
-}
-
-/**
- * Read varint from buffer
- */
-function readVarInt(buffer: Uint8Array, offset: number): number {
-  const first = buffer[offset];
-  if (first < 0xfd) {
-    return first;
-  } else if (first === 0xfd) {
-    return buffer[offset + 1] | (buffer[offset + 2] << 8);
-  } else if (first === 0xfe) {
-    return buffer[offset + 1] | (buffer[offset + 2] << 8) | (buffer[offset + 3] << 16) | (buffer[offset + 4] << 24);
-  }
-  return buffer[offset + 1] | (buffer[offset + 2] << 8) | (buffer[offset + 3] << 16) | (buffer[offset + 4] << 24);
-}
-
-/**
- * Get varint size
- */
-function varIntSize(value: number): number {
-  if (value < 0xfd) return 1;
-  if (value <= 0xffff) return 3;
-  if (value <= 0xffffffff) return 5;
-  return 9;
 }
