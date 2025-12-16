@@ -1,4 +1,4 @@
-import { Network, networks } from '@btc-vision/bitcoin';
+import { Network, networks, script } from '@btc-vision/bitcoin';
 import { Address, MLDSASecurityLevel } from '@btc-vision/transaction';
 import {
   JSONRpcProvider,
@@ -22,15 +22,25 @@ import {
 } from './opnet.interfaces';
 
 // Feature flags from @btc-vision/transaction
-const FEATURE_ACCESS_LIST = 0b001;
-const FEATURE_EPOCH_SUBMISSION = 0b010;
-const FEATURE_MLDSA_LINK = 0b100;
+const FEATURE_ACCESS_LIST = 1;
+const FEATURE_EPOCH_SUBMISSION = 2;
+const FEATURE_MLDSA_LINK = 4;
 
-// MLDSA public key sizes by level
+// OPNet header length
+const OPNET_HEADER_LENGTH = 12; // 4 bytes header + 8 bytes priority fee
+
+// MLDSA public key sizes by level (in bytes)
 const MLDSA_PUBKEY_SIZES: { [key: number]: 'LEVEL2' | 'LEVEL3' | 'LEVEL5' } = {
   1312: 'LEVEL2',  // ML-DSA-44
   1952: 'LEVEL3',  // ML-DSA-65
   2592: 'LEVEL5',  // ML-DSA-87
+};
+
+// MLDSA signature sizes by level
+const MLDSA_SIG_SIZES: { [level: number]: number } = {
+  2: 2420,  // LEVEL2
+  3: 3309,  // LEVEL3
+  5: 4627,  // LEVEL5
 };
 
 // Helper to check if result is an error
@@ -402,108 +412,270 @@ class OPNetClient {
   }
 
   /**
-   * Parse feature flags from transaction input witness data
-   * Header format: 12 bytes where byte 4 contains feature flags
+   * Parse feature flags from transaction witness data
+   * witness[3] is the script that needs to be decompiled
+   * Header format (12 bytes): prefix(1) + flags(3 big-endian) + priorityFee(8)
    */
   private parseFeatureFlagsFromWitness(input: { transactionInWitness?: string[] }): number {
-    if (!input.transactionInWitness || input.transactionInWitness.length === 0) {
-      return 0;
-    }
-
-    // The first witness item should contain the header
-    // Header is 12 bytes: version(4) + flags(4) + reserved(4)
-    const firstWitness = input.transactionInWitness[0];
-    if (!firstWitness || firstWitness.length < 24) { // 12 bytes = 24 hex chars
+    if (!input.transactionInWitness || input.transactionInWitness.length < 4) {
+      logger.debug(`[MLDSA] No witness or too few items: ${input.transactionInWitness?.length || 0}`);
       return 0;
     }
 
     try {
-      // Feature flags are at byte position 4 (little endian)
-      // In hex: bytes 8-15 (4 bytes = 8 hex chars)
-      const flagsHex = firstWitness.substring(8, 16);
-      const flags = parseInt(flagsHex.match(/../g)?.reverse().join('') || '0', 16);
+      // witness[3] is the script (index 0-2 are signatures, 3 is script, 4 is control block)
+      const witnessScript = input.transactionInWitness[3];
+      if (!witnessScript) {
+        logger.debug('[MLDSA] No witness script at index 3');
+        return 0;
+      }
+
+      logger.debug(`[MLDSA] Witness script hex (first 100 chars): ${witnessScript.substring(0, 100)}`);
+
+      // Decompile the script
+      const scriptBuffer = Buffer.from(witnessScript, 'hex');
+      const decompiled = script.decompile(scriptBuffer);
+
+      if (!decompiled || decompiled.length === 0) {
+        logger.debug('[MLDSA] Failed to decompile script or empty result');
+        return 0;
+      }
+
+      logger.debug(`[MLDSA] Decompiled script has ${decompiled.length} items`);
+
+      // First item should be the OPNet header (12 bytes)
+      const headerItem = decompiled[0];
+      if (!Buffer.isBuffer(headerItem)) {
+        logger.debug(`[MLDSA] First decompiled item is not a buffer: ${typeof headerItem}`);
+        return 0;
+      }
+
+      if (headerItem.length < OPNET_HEADER_LENGTH) {
+        logger.debug(`[MLDSA] Header too short: ${headerItem.length} bytes, expected ${OPNET_HEADER_LENGTH}`);
+        return 0;
+      }
+
+      logger.debug(`[MLDSA] Header hex: ${headerItem.toString('hex')}`);
+
+      // Parse header: prefix(1) + flags(3 big-endian) + priorityFee(8)
+      const prefix = headerItem[0];
+      // Flags are bytes 1-3, read as big-endian 24-bit integer
+      const flags = headerItem.readUIntBE(1, 3);
+
+      logger.debug(`[MLDSA] Prefix: 0x${prefix.toString(16)}, Flags: 0x${flags.toString(16)} (${flags})`);
+      logger.debug(`[MLDSA] Flag check - ACCESS_LIST: ${!!(flags & FEATURE_ACCESS_LIST)}, EPOCH: ${!!(flags & FEATURE_EPOCH_SUBMISSION)}, MLDSA: ${!!(flags & FEATURE_MLDSA_LINK)}`);
+
       return flags;
-    } catch {
+    } catch (e) {
+      logger.warn(`[MLDSA] Failed to parse feature flags: ${e}`);
       return 0;
     }
   }
 
   /**
    * Extract MLDSA link info from transaction witness data
-   * The MLDSA data follows the header in the witness
+   * Features are parsed in order from decompiled script after the header
+   * MLDSA data format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
    */
   public extractMLDSAFromWitness(tx: TransactionBase<OPNetTransactionTypes>): MLDSALinkInfo | null {
     if (!tx.inputs || tx.inputs.length === 0) {
+      logger.debug('[MLDSA Extract] No inputs');
       return null;
     }
 
     const input = tx.inputs[0];
-    if (!input.transactionInWitness || input.transactionInWitness.length < 2) {
-      return null;
-    }
-
-    // Check if MLDSA flag is set
-    const flags = this.parseFeatureFlagsFromWitness(input);
-    if (!(flags & FEATURE_MLDSA_LINK)) {
+    if (!input.transactionInWitness || input.transactionInWitness.length < 4) {
+      logger.debug(`[MLDSA Extract] Insufficient witness items: ${input.transactionInWitness?.length || 0}`);
       return null;
     }
 
     try {
-      // MLDSA data is typically in witness items after the header
-      // Look for the hashed public key (32 bytes) and signature data
-      // The exact position depends on which features are enabled
+      // Decompile witness[3] (the script)
+      const witnessScript = input.transactionInWitness[3];
+      if (!witnessScript) {
+        logger.debug('[MLDSA Extract] No witness script at index 3');
+        return null;
+      }
 
-      // Parse the witness stack - look for 32-byte items (potential hashed keys)
-      // and 64-byte items (potential Schnorr signatures)
-      let hashedPublicKey = '';
+      const scriptBuffer = Buffer.from(witnessScript, 'hex');
+      const decompiled = script.decompile(scriptBuffer);
+
+      if (!decompiled || decompiled.length < 2) {
+        logger.debug(`[MLDSA Extract] Decompiled script too short: ${decompiled?.length || 0}`);
+        return null;
+      }
+
+      logger.debug(`[MLDSA Extract] Decompiled script items: ${decompiled.length}`);
+
+      // First item is the header
+      const headerItem = decompiled[0];
+      if (!Buffer.isBuffer(headerItem) || headerItem.length < OPNET_HEADER_LENGTH) {
+        logger.debug('[MLDSA Extract] Invalid header');
+        return null;
+      }
+
+      // Parse flags from header
+      const flags = headerItem.readUIntBE(1, 3);
+      logger.debug(`[MLDSA Extract] Flags from header: 0x${flags.toString(16)}`);
+
+      if (!(flags & FEATURE_MLDSA_LINK)) {
+        logger.debug('[MLDSA Extract] MLDSA flag not set');
+        return null;
+      }
+
+      // Features are in order after header: ACCESS_LIST, EPOCH_SUBMISSION, MLDSA_LINK
+      // Find the correct decompiled item index for MLDSA data
+      let featureIndex = 1; // Start after header
+
+      if (flags & FEATURE_ACCESS_LIST) {
+        logger.debug(`[MLDSA Extract] Skipping ACCESS_LIST at index ${featureIndex}`);
+        featureIndex++;
+      }
+      if (flags & FEATURE_EPOCH_SUBMISSION) {
+        logger.debug(`[MLDSA Extract] Skipping EPOCH_SUBMISSION at index ${featureIndex}`);
+        featureIndex++;
+      }
+
+      if (featureIndex >= decompiled.length) {
+        logger.debug(`[MLDSA Extract] Feature index ${featureIndex} out of bounds (${decompiled.length} items)`);
+        return null;
+      }
+
+      const mldsaItem = decompiled[featureIndex];
+      if (!Buffer.isBuffer(mldsaItem)) {
+        logger.debug(`[MLDSA Extract] MLDSA item at index ${featureIndex} is not a buffer`);
+        return null;
+      }
+
+      logger.debug(`[MLDSA Extract] MLDSA data buffer length: ${mldsaItem.length}`);
+      logger.debug(`[MLDSA Extract] MLDSA data hex: ${mldsaItem.toString('hex').substring(0, 200)}...`);
+
+      // Parse MLDSA link request:
+      // level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
+      let offset = 0;
+
+      // Level (1 byte)
+      if (mldsaItem.length < 1) {
+        logger.debug('[MLDSA Extract] Buffer too short for level');
+        return null;
+      }
+      const levelByte = mldsaItem.readUInt8(offset);
+      offset += 1;
+      logger.debug(`[MLDSA Extract] Level byte: ${levelByte}`);
+
+      // Map level byte to string
+      let level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
+      switch (levelByte) {
+        case 2:
+          level = 'LEVEL2';
+          break;
+        case 3:
+          level = 'LEVEL3';
+          break;
+        case 5:
+          level = 'LEVEL5';
+          break;
+        default:
+          logger.debug(`[MLDSA Extract] Unknown level: ${levelByte}, defaulting to LEVEL3`);
+          level = 'LEVEL3';
+      }
+
+      // Hashed public key (32 bytes)
+      if (mldsaItem.length < offset + 32) {
+        logger.debug(`[MLDSA Extract] Buffer too short for hashedPubKey at offset ${offset}`);
+        return null;
+      }
+      const hashedPublicKey = mldsaItem.subarray(offset, offset + 32).toString('hex');
+      offset += 32;
+      logger.debug(`[MLDSA Extract] Hashed public key: ${hashedPublicKey}`);
+
+      // Verify request (1 byte bool)
+      if (mldsaItem.length < offset + 1) {
+        logger.debug(`[MLDSA Extract] Buffer too short for verifyRequest at offset ${offset}`);
+        return null;
+      }
+      const verifyRequest = mldsaItem.readUInt8(offset) !== 0;
+      offset += 1;
+      logger.debug(`[MLDSA Extract] Verify request: ${verifyRequest}`);
+
+      let fullPublicKey: string | undefined;
+
+      // If verify request, read optional public key and MLDSA signature
+      if (verifyRequest) {
+        // Public key with length prefix (varint)
+        const pubKeyLen = this.readVarIntFromBuffer(mldsaItem, offset);
+        offset += this.varIntSize(pubKeyLen);
+        logger.debug(`[MLDSA Extract] Full public key length: ${pubKeyLen}`);
+
+        if (mldsaItem.length < offset + pubKeyLen) {
+          logger.debug(`[MLDSA Extract] Buffer too short for full public key`);
+          // Continue without full key
+        } else {
+          fullPublicKey = mldsaItem.subarray(offset, offset + pubKeyLen).toString('hex');
+          offset += pubKeyLen;
+          logger.debug(`[MLDSA Extract] Full public key (first 100 chars): ${fullPublicKey.substring(0, 100)}...`);
+
+          // MLDSA signature with length prefix
+          if (mldsaItem.length > offset) {
+            const sigLen = this.readVarIntFromBuffer(mldsaItem, offset);
+            offset += this.varIntSize(sigLen);
+            logger.debug(`[MLDSA Extract] MLDSA signature length: ${sigLen}`);
+            offset += sigLen; // Skip MLDSA signature
+          }
+        }
+      }
+
+      // Legacy signature (64 bytes)
       let legacySignature = '';
-      let level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5' = 'LEVEL3';
-
-      for (const witnessItem of input.transactionInWitness) {
-        const itemLen = witnessItem.length / 2; // hex to bytes
-
-        // 32 bytes could be hashed public key
-        if (itemLen === 32 && !hashedPublicKey) {
-          hashedPublicKey = witnessItem;
-        }
-        // 64 bytes is Schnorr signature
-        else if (itemLen === 64 && !legacySignature) {
-          legacySignature = witnessItem;
-        }
-        // MLDSA public key sizes
-        else if (MLDSA_PUBKEY_SIZES[itemLen]) {
-          level = MLDSA_PUBKEY_SIZES[itemLen];
-        }
+      if (mldsaItem.length >= offset + 64) {
+        legacySignature = mldsaItem.subarray(offset, offset + 64).toString('hex');
+        logger.debug(`[MLDSA Extract] Legacy signature: ${legacySignature}`);
+      } else {
+        logger.debug(`[MLDSA Extract] No legacy signature (remaining: ${mldsaItem.length - offset} bytes)`);
       }
 
-      // If we found a hashed public key, we have MLDSA data
-      if (hashedPublicKey) {
-        return {
-          level,
-          hashedPublicKey,
-          fullPublicKey: undefined,
-          legacySignature,
-          isVerified: true,
-          tweakedKey: undefined,
-          originalKey: undefined,
-        };
-      }
+      logger.info(`[MLDSA Extract] Successfully parsed MLDSA: level=${level}, hashedKey=${hashedPublicKey.substring(0, 16)}...`);
 
-      // Fallback: Even if we couldn't parse exact data,
-      // if the flag is set, return basic info
       return {
-        level: 'LEVEL3',
-        hashedPublicKey: '',
-        fullPublicKey: undefined,
-        legacySignature: '',
-        isVerified: false,
+        level,
+        hashedPublicKey,
+        fullPublicKey,
+        legacySignature,
+        isVerified: true,
         tweakedKey: undefined,
         originalKey: undefined,
       };
     } catch (e) {
-      logger.warn(`Failed to parse MLDSA from witness: ${e}`);
+      logger.warn(`[MLDSA Extract] Failed to parse: ${e}`);
       return null;
     }
+  }
+
+  /**
+   * Read a varint from buffer (Bitcoin-style compact size)
+   */
+  private readVarIntFromBuffer(buffer: Buffer, offset: number): number {
+    const first = buffer.readUInt8(offset);
+    if (first < 0xfd) {
+      return first;
+    } else if (first === 0xfd) {
+      return buffer.readUInt16LE(offset + 1);
+    } else if (first === 0xfe) {
+      return buffer.readUInt32LE(offset + 1);
+    } else {
+      // 0xff - 8 bytes, but we'll just read 4 for practical purposes
+      return buffer.readUInt32LE(offset + 1);
+    }
+  }
+
+  /**
+   * Get size of varint encoding
+   */
+  private varIntSize(value: number): number {
+    if (value < 0xfd) return 1;
+    if (value <= 0xffff) return 3;
+    if (value <= 0xffffffff) return 5;
+    return 9;
   }
 
   /**
