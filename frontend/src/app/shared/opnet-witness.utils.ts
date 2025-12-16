@@ -153,8 +153,8 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
       }
     }
 
-    // Calculate epoch number from block height (2016 blocks per epoch)
-    const epochNumber = blockHeight ? Math.floor(blockHeight / 2016).toString() : '0';
+    // Calculate epoch number from block height (5 blocks per epoch in OPNet)
+    const epochNumber = blockHeight ? Math.floor(blockHeight / 5).toString() : '0';
 
     return {
       epochNumber,
@@ -181,38 +181,57 @@ export function extractEpochSubmissionFromWitness(witness: string[], blockHeight
  * - 2 = LEVEL5 (ML-DSA-87)
  */
 export function extractMLDSAFromWitness(witness: string[]): MLDSALinkInfo | null {
+  console.log('[OPNet] extractMLDSA: starting...');
   if (!witness || witness.length < 4) {
+    console.log('[OPNet] extractMLDSA: witness too short');
     return null;
   }
 
   try {
     const script = witness[3];
     if (!script) {
+      console.log('[OPNet] extractMLDSA: witness[3] is empty');
       return null;
     }
 
     const bytes = hexToBytes(script);
+    console.log('[OPNet] extractMLDSA: script bytes length:', bytes.length);
 
     // Parse the script structure to find features data
     const parsed = parseOPNetScript(bytes);
-    if (!parsed || !parsed.featuresData) {
+    if (!parsed) {
+      console.log('[OPNet] extractMLDSA: parseOPNetScript returned null');
+      return null;
+    }
+    console.log('[OPNet] extractMLDSA: parsed script, flags:', parsed.flags, 'featuresData:', parsed.featuresData?.length);
+
+    if (!parsed.featuresData) {
+      console.log('[OPNet] extractMLDSA: no features data');
       return null;
     }
 
     // Check if MLDSA link flag is set
     if (!(parsed.flags & FEATURE_MLDSA_LINK)) {
+      console.log('[OPNet] extractMLDSA: MLDSA flag not set, flags:', parsed.flags);
       return null;
     }
 
     // Decode features in priority order
     const features = decodeFeaturesData(parsed.flags, parsed.featuresData);
+    console.log('[OPNet] extractMLDSA: decoded features:', features.map(f => ({ type: f.type, len: f.data.length })));
+
     const mldsaFeature = features.find(f => f.type === 'mldsa');
 
     if (!mldsaFeature || !mldsaFeature.data) {
+      console.log('[OPNet] extractMLDSA: no mldsa feature found');
       return null;
     }
 
-    return parseMLDSAData(mldsaFeature.data);
+    console.log('[OPNet] extractMLDSA: mldsa data length:', mldsaFeature.data.length, 'first 50 bytes:', toHex(mldsaFeature.data.slice(0, 50)));
+
+    const result = parseMLDSAData(mldsaFeature.data);
+    console.log('[OPNet] extractMLDSA: result:', result);
+    return result;
   } catch (e) {
     console.warn('[OPNet] Failed to extract MLDSA from witness:', e);
     return null;
