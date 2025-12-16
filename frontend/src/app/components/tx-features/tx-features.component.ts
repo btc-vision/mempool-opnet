@@ -1,11 +1,7 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  Input,
-  OnChanges,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnChanges, Input } from '@angular/core';
 import { calcSegwitFeeGains, isFeatureActive } from '@app/bitcoin.utils';
 import { Transaction } from '@interfaces/electrs.interface';
+import { TransactionFlags } from '@app/shared/filters.utils';
 import { StateService } from '@app/services/state.service';
 
 @Component({
@@ -23,7 +19,7 @@ export class TxFeaturesComponent implements OnChanges {
     potentialSegwitGains: 0,
     potentialP2shSegwitGains: 0,
     potentialTaprootGains: 0,
-    realizedTaprootGains: 0,
+    realizedTaprootGains: 0
   };
   isRbfTransaction: boolean;
   isTaproot: boolean;
@@ -33,9 +29,12 @@ export class TxFeaturesComponent implements OnChanges {
   segwitEnabled: boolean;
   rbfEnabled: boolean;
   taprootEnabled: boolean;
+  smartContractsEnabled: boolean;
   bip360Enabled: boolean;
 
-  constructor(private stateService: StateService) {}
+  constructor(
+    private stateService: StateService,
+  ) { }
 
   ngOnChanges() {
     if (!this.tx) {
@@ -66,21 +65,9 @@ export class TxFeaturesComponent implements OnChanges {
         'rbf'
       );
 
-    this.smartContractsEnabled =
-      !this.tx.status.confirmed ||
-      isFeatureActive(
-        this.stateService.network,
-        this.tx.status.block_height,
-        'smart_contract'
-      );
-
-    this.bip360Enabled =
-      !this.tx.status.confirmed ||
-      isFeatureActive(
-        this.stateService.network,
-        this.tx.status.block_height,
-        'bip360'
-      );
+    // OPNet features are always enabled (no activation height like segwit/taproot)
+    this.smartContractsEnabled = true;
+    this.bip360Enabled = true;
 
     this.segwitGains = calcSegwitFeeGains(this.tx);
     this.isRbfTransaction = this.tx.vin.some((v) => v.sequence < 0xfffffffe);
@@ -91,9 +78,7 @@ export class TxFeaturesComponent implements OnChanges {
     const hasP2opInput = this.tx.vin.some(
       (v) => v.prevout && v.prevout.scriptpubkey_type === 'v16_p2op'
     );
-    const hasP2opOutput = this.tx.vout.some(
-      (v) => v.scriptpubkey_type === 'v16_p2op'
-    );
+    const hasP2opOutput = this.tx.vout.some((v) => v.scriptpubkey_type === 'v16_p2op');
     const hasInteractionFlag = this.tx.flags
       ? (this.tx.flags & TransactionFlags.interaction) !== 0n
       : false;
