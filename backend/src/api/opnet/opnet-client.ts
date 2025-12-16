@@ -419,14 +419,10 @@ class OPNetClient {
   }
 
   /**
-   * Extract epoch submission info from transaction PoW data
-   * The ProofOfWorkChallenge in TransactionBase has: preimage, reward, difficulty, version
-   *
-   * Full epoch submission encoding (from @btc-vision/transaction Features):
-   * - Features.EPOCH_SUBMISSION = 0b010 (bit 1)
-   * - Encoded in witness: publicKey (32 bytes), solution, optional graffiti with length
-   *
-   * For complete data, fetch via getLatestEpoch/getEpochByNumber APIs
+   * Extract basic epoch submission info from transaction PoW data
+   * This provides initial data from the transaction itself.
+   * Full epoch data (miner address, solution, salt, graffiti) is fetched
+   * via getEpochByNumber() in opnet.routes.ts enrichEpochSubmission()
    */
   public extractEpochSubmission(tx: TransactionBase<OPNetTransactionTypes>): EpochSubmissionInfo | null {
     if (!tx.pow) {
@@ -434,16 +430,16 @@ class OPNetClient {
     }
 
     const pow = tx.pow;
-    // ProofOfWorkChallenge contains: preimage (solution), reward, difficulty, version
-    // The preimage IS the SHA-1 collision solution from epoch mining
+    // ProofOfWorkChallenge contains: preimage (target hash), reward, difficulty, version
+    // The actual submission data is fetched from the epoch API
     return {
-      epochNumber: '0', // Compute from block height: epochNumber = blockHeight / 2016
-      minerPublicKey: '', // From tx sender - available in InteractionTransaction.from
+      epochNumber: tx.blockNumber ? (tx.blockNumber / 2016n).toString() : '0',
+      minerPublicKey: '', // Populated by enrichEpochSubmission from epoch API
       solution: pow.preimage ? pow.preimage.toString('hex') : '',
-      salt: '', // Encoded in witness, not directly accessible from TransactionBase
+      salt: '', // Populated by enrichEpochSubmission from epoch API
       graffiti: undefined,
       graffitiHex: undefined,
-      signature: '', // Encoded in witness alongside solution
+      signature: '',
     };
   }
 

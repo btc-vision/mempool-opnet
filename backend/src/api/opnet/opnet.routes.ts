@@ -73,6 +73,15 @@ class OPNetRoutes {
 
       const extension = this.parseOPNetTransaction(rawTx);
 
+      // Fetch full epoch submission data if this tx has epoch submission
+      if (extension.features.hasEpochSubmission && rawTx.blockNumber) {
+        try {
+          await this.enrichEpochSubmission(extension, txId, rawTx.blockNumber);
+        } catch (epochErr) {
+          logger.debug(`Could not fetch epoch data for ${txId}: ${epochErr}`, this.tag);
+        }
+      }
+
       // Fetch MLDSA/BIP360 public key info for relevant addresses
       const addressToCheck = extension.interaction?.from || extension.deployment?.deployerAddress;
       if (addressToCheck) {
@@ -117,6 +126,63 @@ class OPNetRoutes {
     } catch (e) {
       logger.err(`Error fetching OPNet transaction ${txId}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  /**
+   * Enrich epoch submission with full data from epoch API
+   */
+  private async enrichEpochSubmission(
+    extension: OPNetTransactionExtension,
+    txId: string,
+    blockNumber: bigint
+  ): Promise<void> {
+    // Calculate epoch number from block height (2016 blocks per epoch)
+    const blocksPerEpoch = 2016n;
+    const epochNumber = blockNumber / blocksPerEpoch;
+
+    // Fetch the epoch with submissions
+    const epochData = await opnetClient.getEpochByNumber(epochNumber, true);
+    if (!epochData) {
+      logger.debug(`Epoch ${epochNumber} not found`, this.tag);
+      return;
+    }
+
+    // Check if this is EpochWithSubmissions (has submissions array)
+    const epochWithSubs = epochData as import('opnet').EpochWithSubmissions;
+    if (!epochWithSubs.submissions || epochWithSubs.submissions.length === 0) {
+      // No submissions in this epoch, use basic epoch data
+      if (extension.epochSubmission) {
+        extension.epochSubmission.epochNumber = epochNumber.toString();
+      }
+      return;
+    }
+
+    // Find the matching submission by transaction ID
+    const matchingSubmission = epochWithSubs.submissions.find(sub => {
+      const subTxId = sub.submissionTxId.toString('hex');
+      const subTxHash = sub.submissionTxHash.toString('hex');
+      return subTxId === txId || subTxHash === txId;
+    });
+
+    if (matchingSubmission) {
+      // Found the submission - extract full data
+      const miner = matchingSubmission.epochProposed;
+      extension.epochSubmission = {
+        epochNumber: epochNumber.toString(),
+        minerPublicKey: miner.publicKey.p2tr(opnetClient.getNetwork()),
+        solution: miner.solution.toString('hex'),
+        salt: miner.salt.toString('hex'),
+        graffiti: miner.graffiti ? miner.graffiti.toString('utf8') : undefined,
+        graffitiHex: miner.graffiti ? miner.graffiti.toString('hex') : undefined,
+        signature: matchingSubmission.submissionHash.toString('hex'),
+      };
+    } else {
+      // Submission not found in epoch, but tx has PoW data
+      // Use the proposer data from the epoch as fallback info
+      if (extension.epochSubmission) {
+        extension.epochSubmission.epochNumber = epochNumber.toString();
+      }
     }
   }
 
