@@ -523,7 +523,8 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       )
     ).subscribe((opnetData) => {
       if (opnetData && this.tx) {
-        this.tx.opnet = opnetData.opnet;
+        // Create new object reference to trigger OnPush change detection in child components
+        this.tx = { ...this.tx, opnet: opnetData.opnet };
         this.txChanged$.next(true);
         this.cd.detectChanges();
       }
