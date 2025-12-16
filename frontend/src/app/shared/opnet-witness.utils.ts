@@ -347,7 +347,7 @@ interface DecodedFeature {
 function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
   const features: DecodedFeature[] = [];
   let offset = 0;
-  console.log('[OPNet] decodeFeatures: flags:', flags, 'data length:', data.length);
+  console.log('[OPNet] decodeFeatures: flags:', flags, 'data length:', data.length, 'first 20 bytes:', toHex(data.slice(0, 20)));
 
   // Decode in priority order
   const featureOrder: Array<{ flag: number; type: DecodedFeature['type'] }> = [
@@ -358,11 +358,22 @@ function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
 
   for (const { flag, type } of featureOrder) {
     if (flags & flag) {
-      console.log('[OPNet] decodeFeatures: reading', type, 'at offset:', offset);
+      console.log('[OPNet] decodeFeatures: reading', type, 'at offset:', offset, 'byte at offset:', data[offset]?.toString(16));
       // Read length-prefixed data
       const lenResult = readVarInt(data, offset);
       console.log('[OPNet] decodeFeatures:', type, 'varint:', lenResult.value, 'size:', lenResult.size);
-      if (lenResult.value > 0 && offset + lenResult.size + lenResult.value <= data.length) {
+
+      // If varint is 0, it might mean the data has no length prefix
+      // In that case, treat the rest of the data as the feature data
+      if (lenResult.value === 0 && data.length > offset) {
+        console.log('[OPNet] decodeFeatures:', type, 'varint=0, using remaining data as feature');
+        const featureData = data.slice(offset);
+        features.push({
+          type,
+          data: featureData,
+        });
+        break; // No more features after this
+      } else if (lenResult.value > 0 && offset + lenResult.size + lenResult.value <= data.length) {
         offset += lenResult.size;
         const featureData = data.slice(offset, offset + lenResult.value);
         console.log('[OPNet] decodeFeatures:', type, 'data length:', featureData.length);
@@ -372,7 +383,15 @@ function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
         });
         offset += lenResult.value;
       } else {
-        console.log('[OPNet] decodeFeatures:', type, 'invalid length or bounds');
+        console.log('[OPNet] decodeFeatures:', type, 'invalid length or bounds, trying without length prefix');
+        // Try treating remaining data as the feature data without length prefix
+        if (data.length > offset) {
+          const featureData = data.slice(offset);
+          features.push({
+            type,
+            data: featureData,
+          });
+        }
       }
     }
   }
@@ -386,7 +405,9 @@ function decodeFeaturesData(flags: number, data: Uint8Array): DecodedFeature[] {
  * Format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional pubkey+sig] + legacySig(64)
  */
 function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
+  console.log('[OPNet] parseMLDSAData: data length:', data.length);
   if (data.length < 34) { // level(1) + hashedPubKey(32) + verifyRequest(1)
+    console.log('[OPNet] parseMLDSAData: data too short, need at least 34 bytes');
     return null;
   }
 
@@ -394,6 +415,7 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
 
   // Level (1 byte) - OPNet uses 0, 1, 2 for LEVEL2, LEVEL3, LEVEL5
   const levelByte = data[offset++];
+  console.log('[OPNet] parseMLDSAData: levelByte:', levelByte);
   let level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
   switch (levelByte) {
     case 0:
@@ -406,18 +428,23 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
       level = 'LEVEL5'; // ML-DSA-87
       break;
     default:
+      console.log('[OPNet] parseMLDSAData: invalid level byte:', levelByte);
       return null;
   }
+  console.log('[OPNet] parseMLDSAData: level:', level);
 
   // Hashed public key (32 bytes)
   if (data.length < offset + 32) {
+    console.log('[OPNet] parseMLDSAData: not enough bytes for hashedPubKey');
     return null;
   }
   const hashedPublicKey = toHex(data.slice(offset, offset + 32));
   offset += 32;
+  console.log('[OPNet] parseMLDSAData: hashedPublicKey:', hashedPublicKey);
 
   // Verify request (1 byte bool)
   const verifyRequest = data.length > offset ? data[offset++] !== 0 : false;
+  console.log('[OPNet] parseMLDSAData: verifyRequest:', verifyRequest, 'remaining bytes:', data.length - offset);
 
   // Optional: if verifyRequest is true, there's a full public key and signature
   let fullPublicKey: string | undefined;
@@ -425,12 +452,16 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
     // Get public key length based on level
     const pubKeyLen = getMLDSAPublicKeyLength(level);
     const sigLen = getMLDSASignatureLength(level);
+    console.log('[OPNet] parseMLDSAData: expecting pubKey:', pubKeyLen, 'sig:', sigLen);
 
     if (data.length >= offset + pubKeyLen + sigLen) {
       fullPublicKey = toHex(data.slice(offset, offset + pubKeyLen));
+      console.log('[OPNet] parseMLDSAData: fullPublicKey length:', fullPublicKey.length / 2);
       offset += pubKeyLen;
       // Skip MLDSA signature
       offset += sigLen;
+    } else {
+      console.log('[OPNet] parseMLDSAData: not enough data for full pubkey+sig');
     }
   }
 
@@ -438,6 +469,9 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
   let legacySignature = '';
   if (data.length >= offset + 64) {
     legacySignature = toHex(data.slice(offset, offset + 64));
+    console.log('[OPNet] parseMLDSAData: legacySignature:', legacySignature.substring(0, 32) + '...');
+  } else {
+    console.log('[OPNet] parseMLDSAData: no legacy signature, remaining:', data.length - offset);
   }
 
   return {
