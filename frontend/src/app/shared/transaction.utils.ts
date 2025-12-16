@@ -1,8 +1,16 @@
 import { TransactionFlags } from '@app/shared/filters.utils';
-import { getVarIntLength, parseMultisigScript, isPoint, parseTapscriptMultisig, parseTapscriptUnanimousMultisig, ScriptInfo } from '@app/shared/script.utils';
+import {
+  checkIsInteraction,
+  checkIsSmartContract,
+  getVarIntLength,
+  isPoint,
+  parseMultisigScript,
+  parseTapscriptMultisig,
+  parseTapscriptUnanimousMultisig,
+  ScriptInfo,
+} from '@app/shared/script.utils';
 import { Transaction, Vin } from '@interfaces/electrs.interface';
-import { CpfpInfo, RbfInfo, TransactionStripped } from '@interfaces/node-api.interface';
-import { StateService } from '@app/services/state.service';
+import { CpfpInfo, TransactionStripped } from '@interfaces/node-api.interface';
 import { hash, Hash } from '@app/shared/sha256';
 import { AddressType, AddressTypeInfo } from '@app/shared/address-utils';
 import * as secp256k1 from '@noble/secp256k1';
@@ -1850,7 +1858,7 @@ function p2wsh(scriptHash: string, network: string): string {
 
 function p2op(versionPlusHash: string, network: string): string {
   const words = [16].concat(toWords(hexStringToUint8Array(versionPlusHash)));
-  return bech32Encode(hrpOpnet(network), words, 0x2bc830a3);              // Bech32m (v16)
+  return bech32Encode(hrpOpnet(network), words, 'bech32m');              // Bech32m (v16)
 }
 
 function p2tr(pubKey: string, network: string): string {
