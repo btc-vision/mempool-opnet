@@ -8,8 +8,8 @@ import { of, Observable, Subscription } from 'rxjs';
 import { SeoService } from '@app/services/seo.service';
 import { seoDescriptionNetwork } from '@app/shared/common.utils';
 import { WalletAddress } from '@interfaces/node-api.interface';
-import { OpenGraphService } from '../../services/opengraph.service';
-import { WebsocketService } from '../../services/websocket.service';
+import { OpenGraphService } from '@app/services/opengraph.service';
+import { WebsocketService } from '@app/services/websocket.service';
 
 class WalletStats implements ChainStats {
   addresses: string[];
@@ -101,7 +101,8 @@ class WalletStats implements ChainStats {
 @Component({
   selector: 'app-wallet-preview',
   templateUrl: './wallet-preview.component.html',
-  styleUrls: ['./wallet-preview.component.scss']
+  styleUrls: ['./wallet-preview.component.scss'],
+  standalone: false,
 })
 export class WalletPreviewComponent implements OnInit, OnDestroy {
   network = '';

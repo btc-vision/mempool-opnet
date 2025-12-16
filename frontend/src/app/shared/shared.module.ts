@@ -7,7 +7,8 @@ import { faFilter, faAngleDown, faAngleUp, faAngleRight, faAngleLeft, faBolt, fa
   faFileAlt, faRedoAlt, faArrowAltCircleRight, faExternalLinkAlt, faListUl, faDownload, faQrcode, faArrowRightArrowLeft, faArrowsRotate, faCircleLeft,
   faFastForward, faWallet, faUserClock, faWrench, faUserFriends, faQuestionCircle, faHistory, faSignOutAlt, faKey, faSuitcase, faIdCardAlt, faNetworkWired, faUserCheck,
   faCircleCheck, faUserCircle, faCheck, faRocket, faScaleBalanced, faHourglassStart, faHourglassHalf, faHourglassEnd, faWandMagicSparkles, faTimeline,
-  faCircleXmark, faCalendarCheck, faMoneyBillTrendUp, faRobot, faShareNodes, faCreditCard, faMicroscope, faExclamationTriangle, faLockOpen, faPaperclip } from '@fortawesome/free-solid-svg-icons';
+  faCircleXmark, faCalendarCheck, faMoneyBillTrendUp, faRobot, faShareNodes, faCreditCard, faMicroscope, faExclamationTriangle, faLockOpen, faPaperclip, faAddressCard,
+  faMedal, faBug, faFilePdf, faPiggyBank, faLayerGroup, faHeart, faCashRegister, faCodeFork, faCode } from '@fortawesome/free-solid-svg-icons';
 import { InfiniteScrollModule } from 'ngx-infinite-scroll';
 import { MenuComponent } from '@components/menu/menu.component';
 import { PreviewTitleComponent } from '@components/master-page-preview/preview-title.component';
@@ -84,6 +85,7 @@ import { AmountShortenerPipe } from '@app/shared/pipes/amount-shortener.pipe';
 import { DifficultyAdjustmentsTable } from '@components/difficulty-adjustments-table/difficulty-adjustments-table.components';
 import { BlocksList } from '@components/blocks-list/blocks-list.component';
 import { RbfList } from '@components/rbf-list/rbf-list.component';
+import { StaleList } from '@components/stale-list/stale-list.component';
 import { StratumList } from '@components/stratum/stratum-list/stratum-list.component';
 import { RewardStatsComponent } from '@components/reward-stats/reward-stats.component';
 import { DataCyDirective } from '@app/data-cy.directive';
@@ -122,12 +124,14 @@ import { CalculatorComponent } from '@components/calculator/calculator.component
 import { BitcoinsatoshisPipe } from '@app/shared/pipes/bitcoinsatoshis.pipe';
 import { HttpErrorComponent } from '@app/shared/components/http-error/http-error.component';
 import { TwitterWidgetComponent } from '@components/twitter-widget/twitter-widget.component';
+import { SimpleProofWidgetComponent } from '@components/simpleproof-widget/simpleproof-widget.component';
+import { SimpleProofCuboWidgetComponent } from '@components/simpleproof-widget/simpleproof-cubo-widget.component';
 import { FaucetComponent } from '@components/faucet/faucet.component';
 import { TwitterLogin } from '@components/twitter-login/twitter-login.component';
 import { BitcoinInvoiceComponent } from '@components/bitcoin-invoice/bitcoin-invoice.component';
 
 import { OnlyVsizeDirective, OnlyWeightDirective } from '@app/shared/components/weight-directives/weight-directives';
-import { GithubLogin } from '../components/github-login.component/github-login.component';
+import { GithubLogin } from '@components/github-login.component/github-login.component';
 
 @NgModule({
   declarations: [
@@ -206,6 +210,7 @@ import { GithubLogin } from '../components/github-login.component/github-login.c
     DifficultyAdjustmentsTable,
     BlocksList,
     RbfList,
+    StaleList,
     StratumList,
     DataCyDirective,
     RewardStatsComponent,
@@ -245,6 +250,8 @@ import { GithubLogin } from '../components/github-login.component/github-login.c
     OrdDataComponent,
     HttpErrorComponent,
     TwitterWidgetComponent,
+    SimpleProofWidgetComponent,
+    SimpleProofCuboWidgetComponent,
     FaucetComponent,
     TwitterLogin,
     GithubLogin,
@@ -272,6 +279,7 @@ import { GithubLogin } from '../components/github-login.component/github-login.c
     ShortenStringPipe,
     CapAddressPipe,
     AmountShortenerPipe,
+    FeeRoundingPipe,
   ],
   exports: [
     MenuComponent,
@@ -353,6 +361,7 @@ import { GithubLogin } from '../components/github-login.component/github-login.c
     AmountShortenerPipe,
     DifficultyAdjustmentsTable,
     BlocksList,
+    StaleList,
     StratumList,
     DataCyDirective,
     RewardStatsComponent,
@@ -382,6 +391,8 @@ import { GithubLogin } from '../components/github-login.component/github-login.c
     OrdDataComponent,
     HttpErrorComponent,
     TwitterWidgetComponent,
+    SimpleProofWidgetComponent,
+    SimpleProofCuboWidgetComponent,
     TwitterLogin,
     GithubLogin,
     BitcoinInvoiceComponent,
@@ -466,5 +477,15 @@ export class SharedModule {
     library.addIcons(faExclamationTriangle);
     library.addIcons(faLockOpen);
     library.addIcons(faPaperclip);
+    library.addIcons(faMedal);
+    library.addIcons(faAddressCard);
+    library.addIcons(faBug);
+    library.addIcons(faFilePdf);
+    library.addIcons(faPiggyBank);
+    library.addIcons(faLayerGroup);
+    library.addIcons(faHeart);
+    library.addIcons(faCashRegister);
+    library.addIcons(faCodeFork);
+    library.addIcons(faCode);
   }
 }

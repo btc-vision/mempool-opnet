@@ -35,11 +35,17 @@
         "props": {
           "wallet": "ONBTC",
           "period": "1m",
-          "label": "bitcoin.gob.sv"
+          "label": "bitcoin.gob.sv",
+          "image": "/resources/elsalvador-flag.svg"
         }
       },
       {
-        "component": "blocks"
+        "component": "simpleproof_cubo",
+        "mobileOrder": 6,
+        "props": {
+          "label": "CUBO+ Certificates",
+          "key": "cubo_certificates"
+        }
       },
       {
         "component": "walletTransactions",

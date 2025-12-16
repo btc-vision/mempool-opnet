@@ -1,10 +1,10 @@
 import { Component, OnInit, ChangeDetectionStrategy, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { StateService } from '../../../services/state.service';
-import { WebsocketService } from '../../../services/websocket.service';
+import { StateService } from '@app/services/state.service';
+import { WebsocketService } from '@app/services/websocket.service';
 import { map, Observable } from 'rxjs';
-import { StratumJob } from '../../../interfaces/websocket.interface';
-import { MiningService } from '../../../services/mining.service';
-import { SinglePoolStats } from '../../../interfaces/node-api.interface';
+import { StratumJob } from '@interfaces/websocket.interface';
+import { MiningService } from '@app/services/mining.service';
+import { SinglePoolStats } from '@interfaces/node-api.interface';
 
 type MerkleCellType = ' ' | '┬' | '├' | '└' | '│' | '─' | 'leaf';
 
@@ -66,6 +66,7 @@ function getMerkleBranchIds(merkleBranches: string[], numBranches: number, poolI
   selector: 'app-stratum-list',
   templateUrl: './stratum-list.component.html',
   styleUrls: ['./stratum-list.component.scss'],
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StratumList implements OnInit, OnDestroy {

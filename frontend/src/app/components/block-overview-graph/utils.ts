@@ -65,7 +65,7 @@ const defaultColors: { [key: string]: ColorPalette } = {
     base: defaultMempoolFeeColors.map(hexToColor),
     audit: [],
     marginal: [],
-    baseLevel: (tx: TxView, rate: number) => feeLevels.findIndex((feeLvl) => Math.max(1, rate) < feeLvl) - 1
+    baseLevel: (tx: TxView, rate: number) => feeLevels.findIndex((feeLvl) => Math.max(0, rate) < feeLvl) - 1
   },
 }
 for (const key in defaultColors) {
@@ -96,7 +96,7 @@ const contrastColors: { [key: string]: ColorPalette } = {
     base: contrastMempoolFeeColors.map(hexToColor),
     audit: [],
     marginal: [],
-    baseLevel: (tx: TxView, rate: number) => feeLevels.findIndex((feeLvl) => Math.max(1, rate) < feeLvl) - 1
+    baseLevel: (tx: TxView, rate: number) => feeLevels.findIndex((feeLvl) => Math.max(0, rate) < feeLvl) - 1
   },
 }
 for (const key in contrastColors) {
@@ -170,6 +170,12 @@ export function defaultColorFunction(
         return colors.audit[levelIndex] || colors.audit[defaultMempoolFeeColors.length - 1];
       } else {
         return levelColor;
+      }
+    case 'unmatched':
+      if (tx.context === 'stale') {
+        return auditColors.censored;
+      } else {
+        return auditColors.added;
       }
     default:
       if (tx.acc) {

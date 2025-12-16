@@ -54,7 +54,8 @@ type CheckoutStep = 'quote' | 'summary' | 'checkout' | 'cashapp' | 'applepay' | 
 @Component({
   selector: 'app-accelerate-checkout',
   templateUrl: './accelerate-checkout.component.html',
-  styleUrls: ['./accelerate-checkout.component.scss']
+  styleUrls: ['./accelerate-checkout.component.scss'],
+  standalone: false,
 })
 export class AccelerateCheckout implements OnInit, OnDestroy {
   @Input() tx: Transaction;
@@ -72,6 +73,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
   @Output() completed = new EventEmitter<boolean>();
   @Output() hasDetails = new EventEmitter<boolean>();
   @Output() changeMode = new EventEmitter<boolean>();
+  @Output() paymentReceipt = new EventEmitter<string>();
 
   calculating = true;
   processing = false;
@@ -139,7 +141,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     private authService: AuthServiceMempool,
     private enterpriseService: EnterpriseService,
   ) {
-    this.isProdDomain = this.stateService.env.PROD_DOMAINS.indexOf(document.location.hostname) > -1;
+    this.isProdDomain = this.stateService.isProdDomain;
 
     // Check if Apple Pay available
     // https://developer.apple.com/documentation/apple_pay_on_the_web/apple_pay_js_api/checking_for_apple_pay_availability#overview
@@ -214,8 +216,9 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     }
     if (this._step === 'checkout' && this.canPayWithBitcoin) {
       this.btcpayInvoiceFailed = false;
-      this.invoice = null;
+      this.invoice = undefined;
       this.requestBTCPayInvoice();
+      this.scrollToElementWithTimeout('acceleratePreviewAnchor', 'start', 100);
     } else if (this._step === 'cashapp') {
       this.loadingCashapp = true;
       this.setupSquare();
@@ -473,19 +476,14 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     if (this.processing) {
       return;
     }
-    if (this.conversionsSubscription) {
-      this.conversionsSubscription.unsubscribe();
-    }
 
     this.processing = true;
-    this.conversionsSubscription = this.stateService.conversions$.subscribe(
-      async (conversions) => {
-        this.conversions = conversions;
+
         if (this.applePay) {
           this.applePay.destroy();
         }
 
-        const costUSD = this.cost / 100_000_000 * conversions.USD;
+        const costUSD = this.cost / 100_000_000 * this.conversions.USD;
         const paymentRequest = this.payments.paymentRequest({
           countryCode: 'US',
           currencyCode: 'USD',
@@ -543,6 +541,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
                     if (this.applePay) {
                       this.applePay.destroy();
                     }
+                    this.paymentReceipt.emit(this.accelerationResponse?.receiptUrl);
                     setTimeout(() => {
                       this.isTokenizing--;
                       this.isCheckoutLocked--;
@@ -583,8 +582,6 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
           this.processing = false;
           console.error(e);
         }
-      }
-    );
   }
 
   /**
@@ -594,19 +591,14 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     if (this.processing) {
       return;
     }
-    if (this.conversionsSubscription) {
-      this.conversionsSubscription.unsubscribe();
-    }
     
     this.processing = true;
-    this.conversionsSubscription = this.stateService.conversions$.subscribe(
-      async (conversions) => {
-        this.conversions = conversions;
+
         if (this.googlePay) {
           this.googlePay.destroy();
         }
 
-        const costUSD = this.cost / 100_000_000 * conversions.USD;
+        const costUSD = this.cost / 100_000_000 * this.conversions.USD;
         const paymentRequest = this.payments.paymentRequest({
           countryCode: 'US',
           currencyCode: 'USD',
@@ -671,6 +663,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
                   if (this.googlePay) {
                     this.googlePay.destroy();
                   }
+                  this.paymentReceipt.emit(this.accelerationResponse?.receiptUrl);
                   setTimeout(() => {
                     this.isTokenizing--;
                     this.isCheckoutLocked--;
@@ -707,8 +700,6 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
             this.isCheckoutLocked--;
           }
         });
-      }
-    );
   }
 
   /**
@@ -718,16 +709,10 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     if (this.processing) {
       return;
     }
-    if (this.conversionsSubscription) {
-      this.conversionsSubscription.unsubscribe();
-    }
     
     this.processing = true;
-    this.conversionsSubscription = this.stateService.conversions$.subscribe(
-      async (conversions) => {
-        this.conversions = conversions;
 
-        const costUSD = this.cost / 100_000_000 * conversions.USD;
+        const costUSD = this.cost / 100_000_000 * this.conversions.USD;
         if (this.isCheckoutLocked > 0) {
           return;
         }
@@ -778,6 +763,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
               this.processing = false;
               this.apiService.logAccelerationRequest$(this.tx.txid).subscribe();
               this.audioService.playSound('ascend-chime-cartoon');
+              this.paymentReceipt.emit(this.accelerationResponse?.receiptUrl);
               setTimeout(() => {
                 this.isCheckoutLocked--;
                 this.isTokenizing--;
@@ -811,8 +797,6 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
           this.isCheckoutLocked--;
           this.isTokenizing--;
         }
-      }
-    );
   }
 
   /**
@@ -822,20 +806,15 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
     if (this.processing) {
       return;
     }
-    if (this.conversionsSubscription) {
-      this.conversionsSubscription.unsubscribe();
-    }
 
     this.processing = true;
-    this.conversionsSubscription = this.stateService.conversions$.subscribe(
-      async (conversions) => {
-        this.conversions = conversions;
+
         if (this.cashAppPay) {
           this.cashAppPay.destroy();
         }
 
         const redirectHostname = document.location.hostname === 'localhost' ? `http://localhost:4200`: `https://${document.location.hostname}`;
-        const costUSD = this.cost / 100_000_000 * conversions.USD;
+        const costUSD = this.cost / 100_000_000 * this.conversions.USD;
         const paymentRequest = this.payments.paymentRequest({
           countryCode: 'US',
           currencyCode: 'USD',
@@ -875,6 +854,7 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
                 if (this.cashAppPay) {
                   this.cashAppPay.destroy();
                 }
+                this.paymentReceipt.emit(this.accelerationResponse?.receiptUrl);
                 setTimeout(() => {
                   this.moveToStep('paid', true);
                   if (window.history.replaceState) {
@@ -897,8 +877,6 @@ export class AccelerateCheckout implements OnInit, OnDestroy {
             });
           }
         });
-      }
-    );
   }
 
   /**

@@ -25,6 +25,7 @@ import { EnterpriseService } from '@app/services/enterprise.service';
   selector: 'app-global-footer',
   templateUrl: './global-footer.component.html',
   styleUrls: ['./global-footer.component.scss'],
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GlobalFooterComponent implements OnInit, OnDestroy, OnChanges {

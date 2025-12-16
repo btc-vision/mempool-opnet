@@ -5,6 +5,7 @@ import { SigInfo, SighashLabels } from '@app/shared/transaction.utils';
   selector: 'app-asm',
   templateUrl: './asm.component.html',
   styleUrls: ['./asm.component.scss'],
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AsmComponent {
@@ -12,10 +13,12 @@ export class AsmComponent {
   @Input() crop: number = 0;
   @Input() annotations: {
     signatures: Record<string, { sig: SigInfo, vindex: number }>,
-    selectedSig: SigInfo | null
+    selectedSig: SigInfo | null,
+    p2sh: boolean
   } = {
     signatures: {},
-    selectedSig: null
+    selectedSig: null,
+    p2sh: false
   };
   @Output() showSigInfo = new EventEmitter<SigInfo>();
   @Output() hideSigInfo = new EventEmitter<void>();
@@ -28,7 +31,7 @@ export class AsmComponent {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['asm']) {
+    if (changes['asm'] || changes['crop']) {
       this.parseASM();
     }
   }
@@ -36,14 +39,35 @@ export class AsmComponent {
   parseASM(): void {
     let instructions = this.asm.split('OP_');
     // trim instructions to a whole number of instructions with at most `crop` characters total
-    if (this.crop) {
+    if (this.crop && this.asm.length > this.crop) {
       let chars = 0;
       for (let i = 0; i < instructions.length; i++) {
-        chars += instructions[i].length + 3;
-        if (chars > this.crop) {
+        if (chars + instructions[i].length + 3 > this.crop) {
+          let croppedInstruction = instructions[i];
           instructions = instructions.slice(0, i);
+          // add cropped instruction
+          let remainingChars = this.crop - chars;
+          let parts = croppedInstruction.split(' ');
+          // only render this instruction if there is space for the instruction name and a few args
+          if (remainingChars > parts[0].length + 10) {
+            remainingChars -= parts[0].length + 1;
+            for (let j = 1; j < parts.length; j++) {
+              const arg = parts[j];
+              if (remainingChars >= arg.length) {
+                remainingChars -= arg.length + 1;
+              } else {
+                // crop this argument
+                parts[j] = arg.slice(0, remainingChars);
+                // and remove all following arguments
+                parts = parts.slice(0, j + 1);
+                break;
+              }
+            }
+            instructions.push(`${parts.join(' ')}`);
+          }
           break;
         }
+        chars += instructions[i].length + 3;
       }
     }
     this.instructions = instructions.filter(instruction => instruction.trim() !== '').map(instruction => {
@@ -82,6 +106,7 @@ export class AsmComponent {
     ['ELSE', 'control'],
     ['ENDIF', 'control'],
     ['VERIFY', 'control'],
+    ['RETURN', 'control'],
     ...Array.from({length: 70}, (_, i) => [`RETURN_${i + 186}`, 'control']),
 
     // Stack

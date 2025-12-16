@@ -6,12 +6,13 @@ import { StateService } from '@app/services/state.service';
 import { catchError, map, scan, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { WalletStats } from '@app/shared/wallet-stats';
 import { Router } from '@angular/router';
-import { chartColors } from '@app/app.constants';
+import { originalChartColors as chartColors } from '@app/app.constants';
 import { Treasury } from '@interfaces/node-api.interface';
 @Component({
   selector: 'app-treasuries',
   templateUrl: './treasuries.component.html',
-  styleUrls: ['./treasuries.component.scss']
+  styleUrls: ['./treasuries.component.scss'],
+  standalone: false,
 })
 export class TreasuriesComponent implements OnInit, OnDestroy {
   treasuries: Treasury[] = [];
@@ -21,6 +22,7 @@ export class TreasuriesComponent implements OnInit, OnDestroy {
   error: any;
   walletSubscriptions: Subscription[] = [];
   currentSortedTreasuries: Treasury[] = [];
+  priceGraphHeight = 335;
 
   // Individual wallet data
   walletObservables: Record<string, Observable<Record<string, any>>> = {};

@@ -6,7 +6,7 @@ import { download } from '@app/shared/graphs.utils';
 import { isMobile } from '@app/shared/common.utils';
 import { WalletStats } from '@app/shared/wallet-stats';
 import { AddressTxSummary } from '@interfaces/electrs.interface';
-import { chartColors } from '@app/app.constants';
+import { originalChartColors as chartColors } from '@app/app.constants';
 import { formatNumber } from '@angular/common';
 import { Treasury } from '@interfaces/node-api.interface';
 
@@ -14,6 +14,7 @@ import { Treasury } from '@interfaces/node-api.interface';
   selector: 'app-treasuries-pie',
   templateUrl: './treasuries-pie.component.html',
   styleUrls: ['./treasuries-pie.component.scss'],
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TreasuriesPieComponent implements OnChanges {
@@ -88,9 +89,9 @@ export class TreasuriesPieComponent implements OnChanges {
   }
 
   generateChartSeriesData(): PieSeriesOption[] {
-    let sliceThreshold = 1;
+    let sliceThreshold = 0.5;
     if (isMobile()) {
-      sliceThreshold = 2;
+      sliceThreshold = 1;
     }
 
     const data: object[] = [];
@@ -115,7 +116,7 @@ export class TreasuriesPieComponent implements OnChanges {
     }[] = this.treasuries.map((treasury, index) => ({
       treasury,
       id: treasury.wallet,
-      label: treasury.enterprise || treasury.name,
+      label: treasury.name || treasury.enterprise || treasury.wallet,
       balance: this.walletBalance[treasury.wallet],
       share: (this.walletBalance[treasury.wallet] / total) * 100,
       color: chartColors[index % chartColors.length],
@@ -128,8 +129,6 @@ export class TreasuriesPieComponent implements OnChanges {
         share: ((total - treasuriesTotal) / total) * 100,
         color: 'orange'
       });
-
-      console.log('ALL! ', entries);
     }
 
     const otherEntry = { id: 'other', label: 'Other', balance: 0, share: 0 };
@@ -197,8 +196,8 @@ export class TreasuriesPieComponent implements OnChanges {
           },
           borderColor: '#000',
           formatter: () => {
-            return `<b style="color: white">${otherEntry.id} (${otherEntry.share}%)</b><br>
-            ${formatNumber(otherEntry.balance, this.locale, '1.3-3')}<br>`;
+            return `<b style="color: white">${otherEntry.label} (${otherEntry.share.toFixed(2)}%)</b><br>
+            ${formatNumber(otherEntry.balance / 100_000_000, this.locale, '1.3-3')} BTC<br>`;
           }
         },
       } as PieSeriesOption);
