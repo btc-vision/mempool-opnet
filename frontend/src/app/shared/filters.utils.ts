@@ -121,7 +121,7 @@ export const TransactionFilters: { [key: string]: Filter } = {
     /* opnet */
     smart_contract: { key: 'smart_contract', label: 'Smart Contract', flag: TransactionFlags.smart_contract, important: true, tooltip: true, txPage: true, },
     interaction: { key: 'interaction', label: 'Interaction', flag: TransactionFlags.interaction, important: true, tooltip: true, txPage: true, },
-    bip360: { key: 'bip360', label: 'BIP360', flag: TransactionFlags.bip360, important: true, tooltip: true, txPage: true, },
+    bip360: { key: 'bip360', label: 'BIP360 (Pre-Quantum)', flag: TransactionFlags.bip360, important: true, tooltip: true, txPage: true, },
 };
 
 export const FilterGroups: { label: string, filters: Filter[]}[] = [

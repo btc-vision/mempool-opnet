@@ -65,8 +65,9 @@ export class TxFeaturesComponent implements OnChanges {
         'rbf'
       );
 
-    // OPNet features are always enabled (no activation height like segwit/taproot)
+    // OPNet smart contracts are enabled
     this.smartContractsEnabled = true;
+    // BIP360 is enabled (pre-quantum phase - OPNet supports MLDSA linking)
     this.bip360Enabled = true;
 
     this.segwitGains = calcSegwitFeeGains(this.tx);
