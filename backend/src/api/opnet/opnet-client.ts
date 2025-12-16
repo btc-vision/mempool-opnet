@@ -391,7 +391,12 @@ class OPNetClient {
    * Extract MLDSA link info from Address object
    */
   public extractMLDSALinkInfo(addr: Address): MLDSALinkInfo | null {
+    // Debug: Log what's in the address object
+    logger.debug(`extractMLDSALinkInfo: addr type=${typeof addr}, isAddress=${addr instanceof Address}`, 'OPNetClient');
+    logger.debug(`extractMLDSALinkInfo: mldsaPublicKey=${addr.mldsaPublicKey ? 'present' : 'missing'}, mldsaLevel=${addr.mldsaLevel}`, 'OPNetClient');
+
     if (!addr.mldsaPublicKey) {
+      logger.debug('extractMLDSALinkInfo: No mldsaPublicKey found, returning null', 'OPNetClient');
       return null;
     }
 
@@ -399,6 +404,8 @@ class OPNetClient {
     const fullPublicKey = addr.mldsaPublicKey
       ? Buffer.from(addr.mldsaPublicKey).toString('hex')
       : '';
+
+    logger.debug(`extractMLDSALinkInfo: Found MLDSA! level=${level}, keyLen=${fullPublicKey.length}`, 'OPNetClient');
 
     // Hash the MLDSA public key to get the hashed public key (SHA256)
     // For now, we'll use the first 32 bytes of the key as a simplified hash
