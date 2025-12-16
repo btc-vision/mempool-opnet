@@ -236,7 +236,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     }
     const outputCount = voutWithFee.length;
 
-    let truncatedInputs = this.tx.vin.map((v, i) => {
+    let truncatedInputs: Xput[] = this.tx.vin.map((v, i) => {
       return {
         type: 'input',
         value: (v?.is_coinbase && !totalValue ? 0 : this.getInputValue(v)),
@@ -253,6 +253,35 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
         asset: v?.prevout?.asset,
       } as Xput;
     });
+
+    // Add virtual input strands for OPNet features (MLDSA linking, Epoch submission)
+    // These appear as additional colored strands feeding into the transaction
+    if (this.hasBIP360) {
+      const opnet = (this.tx as any)?.opnet;
+      truncatedInputs.push({
+        type: 'mldsa',
+        value: totalValue * 0.02, // Thin line (2% of total for visibility)
+        displayValue: 0,
+        index: -1, // Virtual input, not a real vin
+        address: 'BIP360 MLDSA Key Link',
+        opnetFeature: 'mldsa',
+        mldsaLevel: opnet?.mldsaLink?.level || 'LEVEL3',
+        isQuantumSafe: true,
+      } as Xput);
+    }
+
+    if (this.hasEpochSubmission) {
+      const opnet = (this.tx as any)?.opnet;
+      truncatedInputs.push({
+        type: 'epoch',
+        value: totalValue * 0.02, // Thin line (2% of total for visibility)
+        displayValue: 0,
+        index: -2, // Virtual input, not a real vin
+        address: 'Epoch Submission',
+        opnetFeature: 'epoch',
+        epochNumber: opnet?.epochSubmission?.epochNumber || '0',
+      } as Xput);
+    }
 
     if (truncatedInputs.length > this.lineLimit) {
       const valueOfRest = truncatedInputs.slice(this.lineLimit).reduce((r, v) => {
@@ -573,6 +602,10 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
   onClick(event, side, index): void {
     if (side.startsWith('input')) {
+      // Virtual inputs (MLDSA, Epoch) have negative index - don't navigate
+      if (index < 0) {
+        return;
+      }
       const input = this.tx.vin[index];
       if (side === 'input-connector' && input && !input.is_coinbase && !input.is_pegin && input.txid && input.vout != null) {
         this.router.navigate([this.relativeUrlPipe.transform('/tx'), input.txid], {
@@ -582,7 +615,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
             vout: input.vout.toString(),
           })).toString(),
         });
-      } else if (index != null) {
+      } else if (index != null && index >= 0) {
         this.router.navigate([this.relativeUrlPipe.transform('/tx'), this.tx.txid], {
           queryParamsHandling: 'merge',
           fragment: (new URLSearchParams({

@@ -18,4 +18,65 @@
     width: 100%;
     max-width: 100%;
   }
+
+  // OPNet tooltip styles
+  .opnet-tooltip-header {
+    font-weight: bold;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    &.mldsa {
+      color: #b388ff;
+    }
+    &.epoch {
+      color: #f48fb1;
+    }
+    &.contract {
+      color: #ce93d8;
+    }
+  }
+
+  .opnet-tooltip-detail {
+    font-size: 0.9em;
+    color: #e0e0e0;
+
+    .algorithm {
+      color: #9e9e9e;
+      font-size: 0.85em;
+    }
+  }
+
+  .opnet-tooltip-info {
+    font-size: 0.85em;
+    color: #9e9e9e;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .badge-mldsa {
+    background: linear-gradient(135deg, #7c4dff 0%, #9339f4 100%);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    border: 1px solid #ffd700;
+  }
+
+  .badge-epoch {
+    background: linear-gradient(135deg, #c2185b 0%, #e91e8c 100%);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+  }
+
+  .badge-contract {
+    background: linear-gradient(135deg, #6225b2 0%, #9339f4 100%);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+  }
 }

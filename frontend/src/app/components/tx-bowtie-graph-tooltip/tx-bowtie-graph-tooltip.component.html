@@ -37,6 +37,44 @@
   </ng-template>
 
   <ng-template #normal>
+      <!-- OPNet MLDSA/BIP360 Tooltip -->
+      <ng-container *ngIf="line.type === 'mldsa'">
+        <p class="opnet-tooltip-header mldsa">
+          <span class="badge-mldsa">BIP360</span> Quantum-Safe Key Link
+        </p>
+        <p class="opnet-tooltip-detail">
+          Security: <strong>{{ line.mldsaLevel }}</strong>
+          <span class="algorithm">
+            (ML-DSA-{{ line.mldsaLevel === 'LEVEL2' ? '44' : line.mldsaLevel === 'LEVEL3' ? '65' : '87' }})
+          </span>
+        </p>
+        <p class="opnet-tooltip-info">Post-quantum signature linked</p>
+      </ng-container>
+
+      <!-- OPNet Epoch Submission Tooltip -->
+      <ng-container *ngIf="line.type === 'epoch'">
+        <p class="opnet-tooltip-header epoch">
+          <span class="badge-epoch">EPOCH</span> Mining Submission
+        </p>
+        <p class="opnet-tooltip-detail">Epoch #{{ line.epochNumber }}</p>
+        <p class="opnet-tooltip-info">SHA-1 collision PoW contribution</p>
+      </ng-container>
+
+      <!-- OPNet Contract Output Tooltip -->
+      <ng-container *ngIf="line.type === 'contract'">
+        <p class="opnet-tooltip-header contract">
+          <span class="badge-contract">P2OP</span> Smart Contract
+        </p>
+        <p *ngIf="line.contractAddress" class="address">
+          <app-truncate [text]="line.contractAddress"></app-truncate>
+        </p>
+        <p *ngIf="line.displayValue != null">
+          <app-amount [satoshis]="line.displayValue"></app-amount>
+        </p>
+      </ng-container>
+
+      <!-- Standard Input/Output/Fee Tooltip -->
+      <ng-container *ngIf="line.type !== 'mldsa' && line.type !== 'epoch' && line.type !== 'contract'">
       <p *ngIf="!isConnector">
         <ng-container [ngSwitch]="line.type">
           <span *ngSwitchCase="'input'" i18n="transaction.input">Input</span>
@@ -112,6 +150,7 @@
       <p *ngIf="line.type !== 'fee' && line.address" class="address">
         <app-truncate [text]="line.address"></app-truncate>
       </p>
+      </ng-container>
   </ng-template>
 </div>
 

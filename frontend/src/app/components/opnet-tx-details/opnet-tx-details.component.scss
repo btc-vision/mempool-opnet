@@ -1,225 +1,368 @@
-.opnet-tx-details {
-  background: var(--box-bg);
+:host {
+  display: block;
+}
+
+.opnet-details-container {
+  background: #1e1e2f;
+  border: 1px solid #2d2d44;
   border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 16px;
+  margin-top: 16px;
 }
 
-.tx-type-row {
+// Header
+.opnet-header {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
-  margin-bottom: 1rem;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #2d2d44;
 }
 
-.tx-type-badge {
-  padding: 4px 12px;
+.opnet-type {
+  padding: 6px 16px;
   border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 
   &.generic {
-    background: var(--secondary);
-    color: white;
+    background: #4a4a5a;
+    color: #e0e0e0;
   }
 
   &.deployment {
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
     color: white;
   }
 
   &.interaction {
-    background: linear-gradient(135deg, #9339f4 0%, #6225b2 100%);
+    background: linear-gradient(135deg, #6225b2 0%, #9339f4 100%);
     color: white;
   }
 }
 
-.badge-bip360 {
-  background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
-  color: white;
-  padding: 4px 10px;
+.opnet-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.opnet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
   border-radius: 4px;
   font-size: 11px;
-  font-weight: bold;
-  border: 1px solid #ffd700;
+  font-weight: 700;
 
-  &::before {
-    content: 'Q';
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    background: #ffd700;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 14px;
-    margin-right: 4px;
-    font-size: 10px;
-    color: #1a1a2e;
+  &.bip360 {
+    background: linear-gradient(135deg, #651fff 0%, #7c4dff 100%);
+    color: white;
+    border: 1px solid #ffd700;
+
+    .badge-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      background: #ffd700;
+      border-radius: 50%;
+      color: #1a1a2e;
+      font-size: 10px;
+      font-weight: 800;
+    }
+  }
+
+  &.epoch {
+    background: linear-gradient(135deg, #c2185b 0%, #e91e8c 100%);
+    color: white;
   }
 }
 
-.badge-epoch {
-  background: linear-gradient(135deg, #e91e8c 0%, #c2185b 100%);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: bold;
+// Sections
+.opnet-section {
+  margin-top: 16px;
+  background: #252538;
+  border-radius: 6px;
+  overflow: hidden;
+
+  &.mldsa {
+    border-left: 3px solid #7c4dff;
+  }
+
+  &.epoch {
+    border-left: 3px solid #e91e8c;
+  }
+
+  &.contract {
+    border-left: 3px solid #9339f4;
+  }
+
+  &.deployment {
+    border-left: 3px solid #2196f3;
+  }
+
+  &.gas {
+    border-left: 3px solid #78909c;
+  }
 }
 
-h4 {
+.section-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 1rem 0 0.5rem;
-  font-size: 14px;
-  color: var(--fg);
-  border-bottom: 1px solid var(--box-border);
-  padding-bottom: 0.5rem;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #1a1a2a;
 }
 
 .section-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 700;
   color: white;
+  flex-shrink: 0;
 
-  &.quantum-icon {
-    background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+  &.quantum {
+    background: linear-gradient(135deg, #651fff 0%, #7c4dff 100%);
     border: 2px solid #ffd700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
   }
 
-  &.epoch-icon {
-    background: linear-gradient(135deg, #e91e8c 0%, #c2185b 100%);
+  &.epoch {
+    background: linear-gradient(135deg, #c2185b 0%, #e91e8c 100%);
   }
 
-  &.contract-icon {
-    background: linear-gradient(135deg, #9339f4 0%, #6225b2 100%);
+  &.contract {
+    background: linear-gradient(135deg, #6225b2 0%, #9339f4 100%);
   }
 
-  &.deploy-icon {
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  &.deployment {
+    background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
   }
 
-  &.gas-icon {
-    background: var(--secondary);
-  }
-}
-
-.table {
-  margin-bottom: 0;
-
-  td {
-    padding: 0.25rem 0.5rem;
-    border: none;
-    vertical-align: middle;
-
-    &.label {
-      color: var(--fg-muted);
-      font-size: 12px;
-      width: 120px;
-    }
+  &.gas {
+    background: #546e7a;
   }
 }
 
-.monospace {
-  font-family: monospace;
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.section-content {
+  padding: 12px 16px;
+}
+
+// Info rows
+.info-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #2d2d44;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.info-label {
+  flex: 0 0 140px;
   font-size: 12px;
-  word-break: break-all;
+  color: #888;
+  font-weight: 500;
 }
 
-.btn-copy {
-  background: transparent;
-  border: none;
-  color: var(--fg-muted);
-  cursor: pointer;
-  padding: 2px 4px;
-  margin-left: 4px;
-  opacity: 0.6;
+.info-value {
+  flex: 1;
+  font-size: 13px;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 
-  &:hover {
-    opacity: 1;
-    color: var(--primary);
+  &.mono {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+    font-size: 12px;
+    color: #b0bec5;
+  }
+
+  &.highlight {
+    color: #ffd700;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  &.graffiti {
+    font-style: italic;
+    color: #aaa;
   }
 }
 
-.badge {
-  padding: 2px 8px;
+// Badges
+.level-badge {
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  &.level2 {
+    background: #388e3c;
+    color: white;
+  }
+
+  &.level3 {
+    background: #1976d2;
+    color: white;
+  }
+
+  &.level5 {
+    background: #7b1fa2;
+    color: white;
+  }
+}
+
+.algo-name {
+  color: #888;
+  font-size: 12px;
+}
+
+.status-badge {
+  padding: 3px 10px;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
 
-  &.level-level2 {
-    background: #4caf50;
+  &.verified {
+    background: #2e7d32;
     color: white;
   }
 
-  &.level-level3 {
-    background: #2196f3;
-    color: white;
-  }
-
-  &.level-level5 {
-    background: #9c27b0;
-    color: white;
-  }
-
-  &.badge-success {
-    background: #4caf50;
-    color: white;
-  }
-
-  &.badge-warning {
-    background: #ff9800;
+  &.pending {
+    background: #f57c00;
     color: white;
   }
 }
 
-.algorithm {
-  color: var(--fg-muted);
-  font-size: 11px;
-  margin-left: 4px;
+// Buttons
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 3px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #3a3a4a;
+    color: #9339f4;
+  }
 }
 
-.key-display {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: var(--bg);
+.show-key-btn {
+  background: #3a3a4a;
+  border: 1px solid #4a4a5a;
+  color: #b0bec5;
+  padding: 4px 12px;
   border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #4a4a5a;
+    color: white;
+  }
+}
+
+.full-key-display {
+  margin-top: 8px;
+  padding: 12px;
+  background: #1a1a2a;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
   font-size: 10px;
+  color: #78909c;
   word-break: break-all;
-  white-space: pre-wrap;
-  max-height: 200px;
+  line-height: 1.6;
+  max-height: 150px;
   overflow-y: auto;
 }
 
+// Links
 .contract-link,
 .address-link {
-  color: #9339f4;
+  color: #b388ff;
   text-decoration: none;
+  transition: color 0.2s;
 
   &:hover {
+    color: #9339f4;
     text-decoration: underline;
   }
 }
 
-.graffiti {
-  font-style: italic;
-  color: var(--fg-muted);
+// Gas section
+.gas-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
-// Sections
-.mldsa-section,
-.epoch-section,
-.interaction-section,
-.deployment-section,
-.gas-section {
-  margin-top: 0.5rem;
+.gas-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gas-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gas-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #78909c;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+// Responsive
+@media (max-width: 600px) {
+  .opnet-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .info-label {
+    flex: none;
+  }
+
+  .gas-stats {
+    flex-direction: column;
+    gap: 16px;
+  }
 }
