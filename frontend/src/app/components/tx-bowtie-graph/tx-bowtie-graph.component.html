@@ -121,8 +121,105 @@
         <stop offset="20%" stop-color="#9339f4" />
         <stop offset="100%" stop-color="transparent" />
       </linearGradient>
+      <!-- MLDSA/BIP360 gradients (deep purple) -->
+      <marker id="mldsa-arrow" viewBox="-5 -5 10 10"
+          refX="0" refY="0"
+          markerUnits="strokeWidth"
+          markerWidth="1.5" markerHeight="1"
+          orient="auto">
+        <path d="M -5 -5 L 0 0 L -5 5 L 1 5 L 1 -5 Z" stroke-width="0" fill="#7c4dff"/>
+      </marker>
+      <linearGradient id="mldsa-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#651fff" />
+        <stop offset="100%" stop-color="#7c4dff" />
+      </linearGradient>
+      <linearGradient id="mldsa-hover-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#651fff" />
+        <stop offset="30%" stop-color="white" />
+        <stop offset="100%" stop-color="#7c4dff" />
+      </linearGradient>
+      <linearGradient id="mldsa-highlight-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#651fff" />
+        <stop offset="30%" stop-color="var(--info)" />
+        <stop offset="100%" stop-color="#7c4dff" />
+      </linearGradient>
+      <linearGradient id="mldsa-connector-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="transparent" />
+        <stop offset="80%" stop-color="#7c4dff" />
+      </linearGradient>
+      <!-- Epoch Submission gradients (pink) -->
+      <marker id="epoch-arrow" viewBox="-5 -5 10 10"
+          refX="0" refY="0"
+          markerUnits="strokeWidth"
+          markerWidth="1.5" markerHeight="1"
+          orient="auto">
+        <path d="M -5 -5 L 0 0 L -5 5 L 1 5 L 1 -5 Z" stroke-width="0" fill="#e91e8c"/>
+      </marker>
+      <linearGradient id="epoch-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c2185b" />
+        <stop offset="100%" stop-color="#e91e8c" />
+      </linearGradient>
+      <linearGradient id="epoch-hover-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c2185b" />
+        <stop offset="30%" stop-color="white" />
+        <stop offset="100%" stop-color="#e91e8c" />
+      </linearGradient>
+      <linearGradient id="epoch-highlight-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c2185b" />
+        <stop offset="30%" stop-color="var(--info)" />
+        <stop offset="100%" stop-color="#e91e8c" />
+      </linearGradient>
+      <linearGradient id="epoch-connector-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="transparent" />
+        <stop offset="80%" stop-color="#e91e8c" />
+      </linearGradient>
     </defs>
     <path *ngIf="hasLine" [attr.d]="middle.path" class="line middle" [style]="middle.style"/>
+
+    <!-- Smart Contract Interaction Center Box (only for Interaction transactions) -->
+    <g *ngIf="isSmartContractTx" class="contract-interaction-box">
+      <rect
+        [attr.x]="(width / 2) - 80"
+        [attr.y]="(height / 2) - 35"
+        width="160"
+        height="70"
+        rx="8"
+        ry="8"
+        fill="#1a1a2e"
+        stroke="#9339f4"
+        stroke-width="2"
+      />
+      <text
+        [attr.x]="width / 2"
+        [attr.y]="(height / 2) - 12"
+        text-anchor="middle"
+        fill="#9339f4"
+        font-weight="bold"
+        font-size="11"
+      >SMART CONTRACT</text>
+      <text
+        [attr.x]="width / 2"
+        [attr.y]="(height / 2) + 3"
+        text-anchor="middle"
+        fill="#9339f4"
+        font-size="10"
+      >INTERACTION</text>
+      <text
+        *ngIf="contractAddress"
+        [attr.x]="width / 2"
+        [attr.y]="(height / 2) + 20"
+        text-anchor="middle"
+        fill="#b388ff"
+        font-size="9"
+        font-family="monospace"
+      >{{ contractAddress | slice:0:10 }}...{{ contractAddress | slice:-6 }}</text>
+      <!-- BIP360/Quantum Badge (golden circle with Q) -->
+      <g *ngIf="hasBIP360" [attr.transform]="'translate(' + ((width / 2) + 68) + ', ' + ((height / 2) - 23) + ')'">
+        <circle r="12" fill="#ffd700" stroke="#ffb300" stroke-width="1"/>
+        <text y="4" text-anchor="middle" fill="#1a1a2e" font-size="10" font-weight="bold">Q</text>
+      </g>
+    </g>
+
     <ng-container *ngFor="let input of inputs; let i = index">
       <path *ngIf="connectors && !inputData[i].coinbase && !inputData[i].pegin"
         [attr.d]="input.connectorPath"

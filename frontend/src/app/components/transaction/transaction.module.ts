@@ -13,6 +13,7 @@ import { TransactionRawComponent } from '@components/transaction/transaction-raw
 import { CpfpInfoComponent } from '@components/transaction/cpfp-info.component';
 // OPNet Smart Contract Components
 import { ContractEventsComponent } from '@components/contract-events/contract-events.component';
+import { OPNetTxDetailsComponent } from '@components/opnet-tx-details/opnet-tx-details.component';
 
 const routes: Routes = [
   {
@@ -61,6 +62,7 @@ export class TransactionRoutingModule { }
     CpfpInfoComponent,
     // OPNet Smart Contract Components
     ContractEventsComponent,
+    OPNetTxDetailsComponent,
   ],
   exports: [
     TransactionComponent,
@@ -70,6 +72,7 @@ export class TransactionRoutingModule { }
     CpfpInfoComponent,
     // OPNet Smart Contract Components
     ContractEventsComponent,
+    OPNetTxDetailsComponent,
   ]
 })
 export class TransactionModule { }

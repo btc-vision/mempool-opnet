@@ -32,7 +32,7 @@ interface SvgLine {
 }
 
 interface Xput {
-  type: 'input' | 'output' | 'fee' | 'contract';
+  type: 'input' | 'output' | 'fee' | 'contract' | 'mldsa' | 'epoch';
   value?: number;
   displayValue?: number;
   index?: number;
@@ -50,6 +50,11 @@ interface Xput {
   asset?: string;
   isContract?: boolean;
   contractAddress?: string;
+  // OPNet feature fields
+  opnetFeature?: 'mldsa' | 'epoch' | 'contract';
+  mldsaLevel?: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
+  epochNumber?: string;
+  isQuantumSafe?: boolean;
 }
 
 @Component({
@@ -94,6 +99,14 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
   hasLine: boolean;
   assetsMinimal: any;
   nativeAssetId = this.stateService.network === 'liquidtestnet' ? environment.nativeTestAssetId : environment.nativeAssetId;
+
+  // OPNet-specific properties
+  isOPNetTx: boolean = false;
+  isSmartContractTx: boolean = false;
+  hasBIP360: boolean = false;
+  hasEpochSubmission: boolean = false;
+  contractAddress: string = '';
+  mldsaLevel: string = '';
 
   outspendsSubscription: Subscription;
   refreshOutspends$: ReplaySubject<string> = new ReplaySubject();
@@ -183,6 +196,14 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     this.combinedWeight = Math.min(this.maxCombinedWeight, Math.floor((this.txWidth - (2 * this.midWidth)) / 6));
     this.connectorWidth = (this.width - this.txWidth) / 2;
     this.zeroValueWidth = Math.max(20, Math.min((this.txWidth / 2) - this.midWidth - 110, 60));
+
+    // Detect OPNet features
+    this.isOPNetTx = !!(this.tx as any)?.opnet;
+    this.isSmartContractTx = (this.tx as any)?.opnet?.opnetType === 'Interaction';
+    this.hasBIP360 = !!(this.tx as any)?.opnet?.mldsaLink || !!(this.tx as any)?.opnet?.features?.hasMLDSALink;
+    this.hasEpochSubmission = !!(this.tx as any)?.opnet?.epochSubmission || !!(this.tx as any)?.opnet?.features?.hasEpochSubmission;
+    this.contractAddress = (this.tx as any)?.opnet?.interaction?.contractAddress || '';
+    this.mldsaLevel = (this.tx as any)?.opnet?.mldsaLink?.level || '';
 
     const totalValue = this.calcTotalValue(this.tx);
     let voutWithFee = this.tx.vout.map((v, i) => {

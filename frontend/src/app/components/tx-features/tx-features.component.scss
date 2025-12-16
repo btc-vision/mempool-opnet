@@ -1,4 +1,19 @@
 .badge-quantum {
-  background-color: #00b4d8;
+  background: linear-gradient(135deg, #7c4dff 0%, #9339f4 100%);
   color: white;
+  border: 1px solid #ffd700;
+  position: relative;
+  padding-left: 18px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #ffd700;
+    border-radius: 50%;
+  }
 }

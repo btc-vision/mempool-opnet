@@ -97,8 +97,11 @@ export class TxFeaturesComponent implements OnChanges {
     this.isSmartContract = hasP2opInput || hasP2opOutput || hasInteractionFlag;
 
     // Detect BIP360 (post-quantum / MLDSA linking)
-    this.isBIP360Ready = this.tx.flags
+    // Check both flags and opnet data
+    const hasBip360Flag = this.tx.flags
       ? (this.tx.flags & TransactionFlags.bip360) !== 0n
       : false;
+    const hasOPNetMLDSA = (this.tx as any)?.opnet?.mldsaLink || (this.tx as any)?.opnet?.features?.hasMLDSALink;
+    this.isBIP360Ready = hasBip360Flag || !!hasOPNetMLDSA;
   }
 }

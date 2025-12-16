@@ -18,6 +18,12 @@
     &.contract {
       stroke: url(#contract-gradient);
     }
+    &.mldsa {
+      stroke: url(#mldsa-gradient);
+    }
+    &.epoch {
+      stroke: url(#epoch-gradient);
+    }
     &.zerovalue {
       stroke: url(#gradient0);
       stroke-linecap: round;
@@ -34,6 +40,12 @@
       }
       &.contract {
         stroke: url(#contract-highlight-gradient);
+      }
+      &.mldsa {
+        stroke: url(#mldsa-highlight-gradient);
+      }
+      &.epoch {
+        stroke: url(#epoch-highlight-gradient);
       }
       &.zerovalue {
         stroke: var(--info);
@@ -56,6 +68,12 @@
     &.contract {
       stroke: url(#contract-hover-gradient);
     }
+    &.mldsa {
+      stroke: url(#mldsa-hover-gradient);
+    }
+    &.epoch {
+      stroke: url(#epoch-hover-gradient);
+    }
     &.zerovalue {
       stroke: white;
     }
@@ -74,6 +92,12 @@
     &.contract {
       fill: url(#contract-connector-gradient);
     }
+    &.mldsa {
+      fill: url(#mldsa-connector-gradient);
+    }
+    &.epoch {
+      fill: url(#epoch-connector-gradient);
+    }
   }
 
   .connector:hover {
@@ -85,6 +109,12 @@
     }
     &.contract {
       fill: url(#contract-hover-gradient);
+    }
+    &.mldsa {
+      fill: url(#mldsa-hover-gradient);
+    }
+    &.epoch {
+      fill: url(#epoch-hover-gradient);
     }
   }
 

@@ -6,7 +6,7 @@ import { ApiService } from '@app/services/api.service';
 import { environment } from '@environments/environment';
 
 interface Xput {
-  type: 'input' | 'output' | 'fee' | 'contract';
+  type: 'input' | 'output' | 'fee' | 'contract' | 'mldsa' | 'epoch';
   value?: number;
   displayValue?: number;
   index?: number;
@@ -26,6 +26,11 @@ interface Xput {
   asset?: string;
   isContract?: boolean;
   contractAddress?: string;
+  // OPNet feature fields
+  opnetFeature?: 'mldsa' | 'epoch' | 'contract';
+  mldsaLevel?: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
+  epochNumber?: string;
+  isQuantumSafe?: boolean;
 }
 
 @Component({

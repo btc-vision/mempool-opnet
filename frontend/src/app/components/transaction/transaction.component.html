@@ -172,6 +172,21 @@
 
     <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true"></app-transactions-list>
 
+    <!-- OPNet Transaction Details (BIP360, Epoch, Contract Info) -->
+    <ng-container *ngIf="tx?.opnet">
+      <div class="subtitle-block mt-3">
+        <div class="title">
+          <h3 class="d-flex align-items-center" style="cursor: pointer;" (click)="showOPNetDetails = !showOPNetDetails">
+            <fa-icon [icon]="['fas', showOPNetDetails ? 'angle-down' : 'angle-right']" [fixedWidth]="true" class="mr-2"></fa-icon>
+            <span>OPNet Details</span>
+          </h3>
+        </div>
+      </div>
+      <div *ngIf="showOPNetDetails">
+        <app-opnet-tx-details [opnet]="tx.opnet"></app-opnet-tx-details>
+      </div>
+    </ng-container>
+
     <!-- OPNet Contract Events (collapsible) -->
     <ng-container *ngIf="tx?.opnet?.events?.length">
       <div class="subtitle-block mt-3">

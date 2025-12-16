@@ -182,6 +182,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   auditEnabled: boolean = this.stateService.env.AUDIT && this.stateService.env.BASE_MODULE === 'mempool' && this.stateService.env.MINING_DASHBOARD === true;
   isMempoolSpaceBuild = this.stateService.isMempoolSpaceBuild;
   showContractEvents: boolean = false;
+  showOPNetDetails: boolean = true; // Default open for OPNet details
 
   @ViewChild('graphContainer')
   graphContainer: ElementRef;
