@@ -1,0 +1,66 @@
+.contract-flow-graph {
+  margin: 1.5rem 0;
+
+  .section-title {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--fg);
+  }
+
+  svg {
+    display: block;
+    background: var(--box-bg);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .flow-line {
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .contract-node {
+    .node-bg {
+      fill: var(--secondary);
+      stroke: var(--info);
+      stroke-width: 2;
+      transition: all 0.2s ease;
+
+      &.deployment {
+        stroke: #28a745;
+        fill: rgba(40, 167, 69, 0.1);
+      }
+
+      &.interaction {
+        stroke: #9339f4;
+        fill: rgba(147, 57, 244, 0.1);
+      }
+    }
+
+    .node-label {
+      fill: var(--fg);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .node-address {
+      fill: var(--tooltip-grey);
+      font-size: 10px;
+      font-family: monospace;
+    }
+  }
+
+  .label-text {
+    fill: var(--tooltip-grey);
+    font-size: 12px;
+  }
+
+  .input-labels,
+  .output-labels {
+    font-weight: 500;
+  }
+}

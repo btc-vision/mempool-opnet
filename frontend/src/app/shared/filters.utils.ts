@@ -52,11 +52,23 @@ export const TransactionFlags = {
   consolidation:           0b00000010_00000000_00000000_00000000_00000000n,
   batch_payout:            0b00000100_00000000_00000000_00000000_00000000n,
   // sighash
+<<<<<<< Updated upstream
   sighash_all:    0b00000001_00000000_00000000_00000000_00000000_00000000n,
   sighash_none:   0b00000010_00000000_00000000_00000000_00000000_00000000n,
   sighash_single: 0b00000100_00000000_00000000_00000000_00000000_00000000n,
   sighash_default:0b00001000_00000000_00000000_00000000_00000000_00000000n,
   sighash_acp:    0b00010000_00000000_00000000_00000000_00000000_00000000n,
+=======
+  sighash_all:                 0b00000001_00000000_00000000_00000000_00000000_00000000n,
+  sighash_none:                0b00000010_00000000_00000000_00000000_00000000_00000000n,
+  sighash_single:              0b00000100_00000000_00000000_00000000_00000000_00000000n,
+  sighash_default:             0b00001000_00000000_00000000_00000000_00000000_00000000n,
+  sighash_acp:                 0b00010000_00000000_00000000_00000000_00000000_00000000n,
+  // opnet
+  smart_contract:     0b00000001_00000000_00000000_00000000_00000000_00000000_00000000n,
+  interaction:        0b00000010_00000000_00000000_00000000_00000000_00000000_00000000n,
+  bip360:             0b00000100_00000000_00000000_00000000_00000000_00000000_00000000n,
+>>>>>>> Stashed changes
 };
 
 export function toFlags(filters: string[]): bigint {
@@ -114,6 +126,13 @@ export const TransactionFilters: { [key: string]: Filter } = {
     sighash_single: { key: 'sighash_single', label: 'sighash_single', flag: TransactionFlags.sighash_single, tooltip: true },
     sighash_default: { key: 'sighash_default', label: 'sighash_default', flag: TransactionFlags.sighash_default },
     sighash_acp: { key: 'sighash_acp', label: 'sighash_anyonecanpay', flag: TransactionFlags.sighash_acp, tooltip: true },
+<<<<<<< Updated upstream
+=======
+    /* opnet */
+    smart_contract: { key: 'smart_contract', label: 'Smart Contract', flag: TransactionFlags.smart_contract, important: true, tooltip: true, txPage: true, },
+    interaction: { key: 'interaction', label: 'Interaction', flag: TransactionFlags.interaction, important: true, tooltip: true, txPage: true, },
+    bip360: { key: 'bip360', label: 'BIP360', flag: TransactionFlags.bip360, important: true, tooltip: true, txPage: true, },
+>>>>>>> Stashed changes
 };
 
 export const FilterGroups: { label: string, filters: Filter[]}[] = [
@@ -123,4 +142,9 @@ export const FilterGroups: { label: string, filters: Filter[]}[] = [
   { label: $localize`Data`, filters: ['op_return', 'fake_pubkey', 'fake_scripthash', 'inscription', 'annex'] },
   { label: $localize`Heuristics`, filters: ['coinjoin', 'consolidation', 'batch_payout'] },
   { label: $localize`Sighash Flags`, filters: ['sighash_all', 'sighash_none', 'sighash_single', 'sighash_default', 'sighash_acp'] },
+<<<<<<< Updated upstream
 ].map(group => ({ label: group.label, filters: group.filters.map(filter => TransactionFilters[filter] || null).filter(f => f != null) }));
+=======
+  { label: $localize`Contract`, filters: ['smart_contract', 'interaction', 'bip360'] },
+].map(group => ({ label: group.label, filters: group.filters.map(filter => TransactionFilters[filter] || null).filter(f => f != null) }));
+>>>>>>> Stashed changes

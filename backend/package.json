@@ -41,9 +41,11 @@
     "prettier": "./node_modules/.bin/prettier --write \"src/**/*.{js,ts}\""
   },
   "dependencies": {
+    "@btc-vision/transaction": "^1.7.19",
     "@mempool/electrum-client": "1.1.9",
     "@types/node": "^18.15.3",
     "axios": "1.12.2",
+    "opnet": "^1.7.20",
     "bitcoinjs-lib": "~6.1.3",
     "crypto-js": "~4.2.0",
     "express": "~4.21.1",

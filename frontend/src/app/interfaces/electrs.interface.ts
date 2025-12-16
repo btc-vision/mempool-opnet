@@ -35,6 +35,66 @@ export interface Transaction {
   flags?: bigint;
   largeInput?: boolean;
   largeOutput?: boolean;
+  // OPNet extension
+  opnet?: OPNetTransactionExtension;
+}
+
+// OPNet Smart Contract Types
+export type MLDSASecurityLevel = 'ML-DSA-44' | 'ML-DSA-65' | 'ML-DSA-87';
+export type OPNetTransactionType = 'Generic' | 'Deployment' | 'Interaction';
+
+export interface PostQuantumInfo {
+  mldsaPublicKey: string;
+  tweakedKey: string;
+  legacySignatureType: 'schnorr' | 'ecdsa';
+  securityLevel: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
+  algorithm: MLDSASecurityLevel;
+}
+
+export interface ContractEvent {
+  contractAddress: string;
+  type: string;
+  data?: string;
+  decodedProperties?: Record<string, unknown>;
+}
+
+export interface GasInfo {
+  estimatedGas: number;
+  gasUsed: number;
+  specialGasUsed: number;
+  refundedGas: number;
+}
+
+export interface AccessList {
+  [contractAddress: string]: {
+    [storageKey: string]: string;
+  };
+}
+
+export interface OPNetDeploymentData {
+  contractAddress: string;
+  bytecode: string;
+  bytecodeLength: number;
+  deployerPubKey: string;
+  deployerAddress: string;
+  contractSeed?: string;
+}
+
+export interface OPNetInteractionData {
+  calldata?: string;
+  calldataLength?: number;
+  contractAddress: string;
+  from: string;
+}
+
+export interface OPNetTransactionExtension {
+  opnetType: OPNetTransactionType;
+  deployment?: OPNetDeploymentData;
+  interaction?: OPNetInteractionData;
+  gasInfo?: GasInfo;
+  pqInfo?: PostQuantumInfo;
+  events?: ContractEvent[];
+  accessList?: AccessList;
 }
 
 export interface TransactionChannels {

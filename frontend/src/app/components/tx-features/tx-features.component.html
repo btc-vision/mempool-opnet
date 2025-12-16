@@ -28,3 +28,14 @@
 <span *ngIf="isRbfTransaction; else rbfDisabled" class="badge badge-success" i18n-ngbTooltip="RBF tooltip" ngbTooltip="This transaction supports Replace-By-Fee (RBF) allowing fee bumping" placement="bottom" i18n="tx-features.tag.rbf|RBF">RBF</span>
 <ng-template #rbfDisabled><span class="badge badge-danger mr-1" i18n-ngbTooltip="RBF disabled tooltip" ngbTooltip="This transaction does NOT support Replace-By-Fee (RBF) and cannot be fee bumped using this method" placement="bottom"><del i18n="tx-features.tag.rbf|RBF">RBF</del></span></ng-template>
 </ng-template>
+
+<ng-template [ngIf]="bip360Enabled">
+  <span *ngIf="isBIP360Ready"
+        class="badge badge-quantum mr-1"
+        i18n-ngbTooltip="BIP360 tooltip"
+        ngbTooltip="This transaction uses post-quantum cryptography (ML-DSA/Dilithium) for quantum-resistant security"
+        placement="bottom"
+        i18n="tx-features.tag.bip360|BIP360">
+    BIP360
+  </span>
+</ng-template>

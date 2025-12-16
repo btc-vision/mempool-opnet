@@ -170,6 +170,11 @@ interface IConfig {
   STRATUM: {
     ENABLED: boolean;
     API: string;
+  },
+  OPNET: {
+    ENABLED: boolean;
+    RPC_URL: string;
+    TIMEOUT: number;
   }
 }
 
@@ -341,6 +346,11 @@ const defaults: IConfig = {
   'STRATUM': {
     'ENABLED': false,
     'API': 'http://localhost:1234',
+  },
+  'OPNET': {
+    'ENABLED': false,
+    'RPC_URL': 'http://127.0.0.1:9001/api/v1/json-rpc',
+    'TIMEOUT': 20000,
   }
 };
 
@@ -365,6 +375,7 @@ class Config implements IConfig {
   FIAT_PRICE: IConfig['FIAT_PRICE'];
   WALLETS: IConfig['WALLETS'];
   STRATUM: IConfig['STRATUM'];
+  OPNET: IConfig['OPNET'];
 
   constructor() {
     const configs = this.merge(configFromFile, defaults);
@@ -388,6 +399,7 @@ class Config implements IConfig {
     this.FIAT_PRICE = configs.FIAT_PRICE;
     this.WALLETS = configs.WALLETS;
     this.STRATUM = configs.STRATUM;
+    this.OPNET = configs.OPNET;
   }
 
   merge = (...objects: object[]): IConfig => {

@@ -1,0 +1,60 @@
+<div class="contract-events" *ngIf="events?.length">
+  <div class="header-row">
+    <h3 class="section-title">
+      Contract Events
+      <span class="badge badge-primary ml-2">{{ events.length }}</span>
+    </h3>
+    <button type="button"
+            class="btn btn-outline-info btn-sm"
+            (click)="isCollapsed = !isCollapsed">
+      {{ isCollapsed ? 'Show' : 'Hide' }}
+    </button>
+  </div>
+
+  <div class="box" [ngbCollapse]="isCollapsed">
+    <div class="event-list">
+      <div class="event-item" *ngFor="let event of events; let i = index">
+        <!-- Event header -->
+        <div class="event-header" (click)="toggleEvent(i)">
+          <span class="event-type badge badge-info">{{ event.type }}</span>
+          <span class="event-address">
+            {{ truncateAddress(event.contractAddress) }}
+            <button class="btn btn-sm copy-btn"
+                    (click)="copyToClipboard(event.contractAddress); $event.stopPropagation()"
+                    title="Copy address">
+              <fa-icon [icon]="['fas', 'copy']" size="xs"></fa-icon>
+            </button>
+          </span>
+          <fa-icon [icon]="['fas', isEventExpanded(i) ? 'angle-up' : 'angle-down']"
+                   class="expand-icon"></fa-icon>
+        </div>
+
+        <!-- Event body (expandable) -->
+        <div class="event-body" [ngbCollapse]="!isEventExpanded(i)">
+          <!-- Decoded properties -->
+          <table class="table table-sm" *ngIf="event.decodedProperties">
+            <tbody>
+              <tr *ngFor="let prop of getPropertyEntries(event.decodedProperties)">
+                <td class="prop-key">{{ prop[0] }}</td>
+                <td class="prop-value">
+                  <code>{{ formatValue(prop[1]) }}</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Raw data -->
+          <div class="raw-data" *ngIf="event.data && !event.decodedProperties">
+            <span class="raw-label">Raw Data:</span>
+            <code class="raw-value">{{ event.data }}</code>
+          </div>
+
+          <!-- No data message -->
+          <div class="no-data" *ngIf="!event.data && !event.decodedProperties">
+            <span class="text-muted">No event data available</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

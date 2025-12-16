@@ -1,0 +1,59 @@
+<div class="post-quantum-section" *ngIf="pqInfo">
+  <h3 class="section-title">
+    <span class="quantum-icon"></span>
+    Post-Quantum Cryptography
+  </h3>
+
+  <div class="box">
+    <table class="table table-borderless table-striped">
+      <tbody>
+        <tr>
+          <td class="label-col">Security Level</td>
+          <td>
+            <span class="badge" [ngClass]="getSecurityBadgeClass()">
+              {{ pqInfo.securityLevel }}
+            </span>
+            <span class="ml-2 algorithm-name">{{ pqInfo.algorithm }}</span>
+            <small class="text-muted d-block mt-1">{{ getSecurityDescription() }}</small>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="label-col">ML-DSA Public Key</td>
+          <td class="key-display">
+            <code class="key-value" [title]="pqInfo.mldsaPublicKey">
+              {{ truncateKey(pqInfo.mldsaPublicKey, 48) }}
+            </code>
+            <button class="btn btn-sm btn-outline-secondary copy-btn"
+                    (click)="copyToClipboard(pqInfo.mldsaPublicKey)"
+                    title="Copy full public key">
+              <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+            </button>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="label-col">Tweaked Key (32 bytes)</td>
+          <td class="key-display">
+            <code class="key-value tweaked-key">{{ pqInfo.tweakedKey }}</code>
+            <button class="btn btn-sm btn-outline-secondary copy-btn"
+                    (click)="copyToClipboard(pqInfo.tweakedKey)"
+                    title="Copy tweaked key">
+              <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+            </button>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="label-col">Legacy Signature</td>
+          <td>
+            <span class="badge badge-secondary legacy-sig">
+              {{ pqInfo.legacySignatureType | titlecase }}
+            </span>
+            <small class="text-muted ml-2">(Classical signature for backward compatibility)</small>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

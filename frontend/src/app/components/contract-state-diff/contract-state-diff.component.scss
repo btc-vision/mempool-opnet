@@ -1,0 +1,141 @@
+.contract-state-diff {
+  margin: 1.5rem 0;
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    color: var(--fg);
+
+    .badge {
+      font-size: 0.75em;
+    }
+  }
+
+  .box {
+    background: var(--box-bg);
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .contract-group {
+    margin-bottom: 1rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .contract-header {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--secondary);
+    border-bottom: 1px solid var(--hover-bg);
+
+    .contract-icon {
+      margin-right: 0.5rem;
+      color: var(--info);
+    }
+
+    .contract-address {
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .copy-btn {
+      padding: 0 0.25rem;
+      border: none;
+      background: transparent;
+      color: var(--tooltip-grey);
+      opacity: 0.6;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    .access-count {
+      font-size: 0.8em;
+    }
+  }
+
+  .storage-table {
+    margin: 0;
+
+    th {
+      background: var(--hover-bg);
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.5rem 1rem;
+      border: none;
+      color: var(--tooltip-grey);
+    }
+
+    td {
+      padding: 0.5rem 1rem;
+      vertical-align: middle;
+      border: none;
+      border-bottom: 1px solid var(--secondary);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .key-cell,
+    .value-cell {
+      font-family: monospace;
+      font-size: 0.9em;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      code {
+        background: var(--secondary);
+        padding: 2px 6px;
+        border-radius: 3px;
+      }
+
+      .copy-btn {
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--tooltip-grey);
+        opacity: 0.4;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+
+    .access-read {
+      background: rgba(0, 123, 255, 0.05);
+    }
+
+    .access-write {
+      background: rgba(255, 193, 7, 0.05);
+    }
+  }
+
+  .badge-read {
+    background-color: #007cfa;
+    color: white;
+  }
+
+  .badge-write {
+    background-color: #ffc107;
+    color: #000;
+  }
+}
