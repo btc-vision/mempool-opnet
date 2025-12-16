@@ -7,6 +7,7 @@ import {
 import { calcSegwitFeeGains, isFeatureActive } from '@app/bitcoin.utils';
 import { Transaction } from '@interfaces/electrs.interface';
 import { StateService } from '@app/services/state.service';
+import { TransactionFlags } from '@app/shared/filters.utils';
 
 @Component({
   selector: 'app-tx-features',
@@ -79,9 +80,14 @@ export class TxFeaturesComponent implements OnChanges {
       (v) => v.prevout && v.prevout.scriptpubkey_type === 'v1_p2tr'
     );
     
-    this.isSmartContract =
-      this.tx.vin.some(
-        (v) => v.prevout && v.prevout.scriptpubkey_type === 'v16_p2op'
-      ) || this.tx.vout.some((v) => v.scriptpubkey_type === 'v16_p2op');
+    const hasP2opInput = this.tx.vin.some(
+      (v) => v.prevout && v.prevout.scriptpubkey_type === 'v16_p2op'
+    );
+    const hasP2opOutput = this.tx.vout.some((v) => v.scriptpubkey_type === 'v16_p2op');
+    const hasInteractionFlag = this.tx.flags
+      ? (this.tx.flags & TransactionFlags.interaction) !== 0n
+      : false;
+
+    this.isSmartContract = hasP2opInput || hasP2opOutput || hasInteractionFlag;
   }
 }
