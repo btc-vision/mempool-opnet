@@ -1,52 +1,101 @@
-<div class="opnet-compact" *ngIf="opnet">
-  <!-- Type + Badges Row -->
-  <div class="opnet-row header-row">
-    <span class="type-badge" [ngClass]="opnet.opnetType?.toLowerCase()">{{ opnet.opnetType }}</span>
-    <span class="feature-badge bip360" *ngIf="opnet.mldsaLink || opnet.features?.hasMLDSALink"><span class="q">Q</span>BIP360</span>
-    <span class="feature-badge epoch" *ngIf="opnet.epochSubmission || opnet.features?.hasEpochSubmission">EPOCH</span>
+<div class="opnet-details" *ngIf="opnet">
+  <!-- Header with transaction type -->
+  <div class="opnet-header">
+    <div class="opnet-title">
+      <span class="opnet-label">OPNet</span>
+      <span class="opnet-type" [ngClass]="opnet.opnetType?.toLowerCase()">{{ opnet.opnetType }}</span>
+    </div>
+    <div class="opnet-badges">
+      <span class="badge badge-bip360" *ngIf="opnet.mldsaLink || opnet.features?.hasMLDSALink">
+        <span class="q-icon">Q</span> BIP360
+      </span>
+      <span class="badge badge-epoch" *ngIf="opnet.epochSubmission || opnet.features?.hasEpochSubmission">
+        EPOCH
+      </span>
+    </div>
   </div>
 
-  <!-- MLDSA Info -->
-  <div class="opnet-row" *ngIf="opnet.mldsaLink">
-    <span class="row-icon mldsa">Q</span>
-    <span class="row-label">ML-DSA</span>
-    <span class="level-badge" [ngClass]="opnet.mldsaLink.level?.toLowerCase()">{{ opnet.mldsaLink.level }}</span>
-    <span class="row-value mono">{{ truncateKey(opnet.mldsaLink.hashedPublicKey, 12) }}</span>
-    <button class="cp" (click)="copyToClipboard(opnet.mldsaLink.hashedPublicKey)"><fa-icon [icon]="['fas', 'copy']"></fa-icon></button>
+  <!-- Contract Info -->
+  <div class="opnet-section" *ngIf="opnet.interaction">
+    <div class="section-label">Contract</div>
+    <div class="section-content">
+      <a [routerLink]="['/address', opnet.interaction.contractAddress]" class="address-link">
+        {{ opnet.interaction.contractAddress }}
+      </a>
+      <button class="copy-btn" (click)="copyToClipboard(opnet.interaction.contractAddress)" title="Copy address">
+        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+      </button>
+    </div>
+    <div class="section-meta" *ngIf="opnet.interaction.calldataLength">
+      <span class="meta-item">Calldata: {{ opnet.interaction.calldataLength | number }} bytes</span>
+    </div>
   </div>
 
-  <!-- Epoch Info -->
-  <div class="opnet-row" *ngIf="opnet.epochSubmission">
-    <span class="row-icon epoch">E</span>
-    <span class="row-label">Epoch</span>
-    <span class="row-value highlight">#{{ opnet.epochSubmission.epochNumber }}</span>
-    <span class="row-value mono" *ngIf="opnet.epochSubmission.minerPublicKey">{{ truncateKey(opnet.epochSubmission.minerPublicKey, 10) }}</span>
-    <button class="cp" *ngIf="opnet.epochSubmission.minerPublicKey" (click)="copyToClipboard(opnet.epochSubmission.minerPublicKey)"><fa-icon [icon]="['fas', 'copy']"></fa-icon></button>
+  <!-- Deployment Info -->
+  <div class="opnet-section" *ngIf="opnet.deployment">
+    <div class="section-label">Deployed Contract</div>
+    <div class="section-content">
+      <a [routerLink]="['/address', opnet.deployment.contractAddress]" class="address-link">
+        {{ opnet.deployment.contractAddress }}
+      </a>
+      <button class="copy-btn" (click)="copyToClipboard(opnet.deployment.contractAddress)" title="Copy address">
+        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+      </button>
+    </div>
+    <div class="section-meta">
+      <span class="meta-item">Bytecode: {{ opnet.deployment.bytecodeLength | number }} bytes</span>
+      <span class="meta-item" *ngIf="opnet.deployment.wasCompressed">Compressed</span>
+    </div>
   </div>
 
-  <!-- Contract Interaction -->
-  <div class="opnet-row" *ngIf="opnet.interaction">
-    <span class="row-icon contract">C</span>
-    <span class="row-label">Contract</span>
-    <a [routerLink]="['/address', opnet.interaction.contractAddress]" class="row-value mono link">{{ truncateKey(opnet.interaction.contractAddress, 10) }}</a>
-    <button class="cp" (click)="copyToClipboard(opnet.interaction.contractAddress)"><fa-icon [icon]="['fas', 'copy']"></fa-icon></button>
-    <span class="row-extra">{{ opnet.interaction.calldataLength }}B</span>
+  <!-- Epoch Submission -->
+  <div class="opnet-section epoch-section" *ngIf="opnet.epochSubmission">
+    <div class="section-label">Epoch Submission</div>
+    <div class="section-content">
+      <span class="epoch-number">#{{ opnet.epochSubmission.epochNumber }}</span>
+    </div>
+    <div class="section-meta" *ngIf="opnet.epochSubmission.minerPublicKey">
+      <span class="meta-label">Miner:</span>
+      <span class="meta-value mono">{{ truncateKey(opnet.epochSubmission.minerPublicKey, 16) }}</span>
+      <button class="copy-btn small" (click)="copyToClipboard(opnet.epochSubmission.minerPublicKey)" title="Copy miner address">
+        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+      </button>
+    </div>
+    <div class="section-meta" *ngIf="opnet.epochSubmission.graffiti">
+      <span class="meta-label">Graffiti:</span>
+      <span class="meta-value">{{ opnet.epochSubmission.graffiti }}</span>
+    </div>
   </div>
 
-  <!-- Deployment -->
-  <div class="opnet-row" *ngIf="opnet.deployment">
-    <span class="row-icon deploy">D</span>
-    <span class="row-label">Deploy</span>
-    <a [routerLink]="['/address', opnet.deployment.contractAddress]" class="row-value mono link">{{ truncateKey(opnet.deployment.contractAddress, 10) }}</a>
-    <button class="cp" (click)="copyToClipboard(opnet.deployment.contractAddress)"><fa-icon [icon]="['fas', 'copy']"></fa-icon></button>
-    <span class="row-extra">{{ opnet.deployment.bytecodeLength | number }}B</span>
+  <!-- MLDSA/BIP360 Info -->
+  <div class="opnet-section mldsa-section" *ngIf="opnet.mldsaLink">
+    <div class="section-label">
+      <span class="q-icon small">Q</span> Quantum-Safe Key
+    </div>
+    <div class="section-content">
+      <span class="level-badge" [ngClass]="opnet.mldsaLink.level?.toLowerCase()">{{ opnet.mldsaLink.level }}</span>
+      <span class="algo-text">{{ mldsaAlgorithm }}</span>
+    </div>
+    <div class="section-meta">
+      <span class="meta-label">Key Hash:</span>
+      <span class="meta-value mono">{{ truncateKey(opnet.mldsaLink.hashedPublicKey, 16) }}</span>
+      <button class="copy-btn small" (click)="copyToClipboard(opnet.mldsaLink.hashedPublicKey)" title="Copy key hash">
+        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
+      </button>
+    </div>
+    <div class="section-meta" *ngIf="opnet.mldsaLink.isVerified">
+      <span class="verified-badge">Verified</span>
+    </div>
   </div>
 
-  <!-- Gas -->
-  <div class="opnet-row" *ngIf="opnet.gasInfo && (opnet.gasInfo.gasUsed !== '0' || opnet.gasInfo.specialGasUsed !== '0')">
-    <span class="row-icon gas">G</span>
-    <span class="row-label">Gas</span>
-    <span class="row-value" *ngIf="opnet.gasInfo.gasUsed !== '0'">{{ opnet.gasInfo.gasUsed | number }}</span>
-    <span class="row-value muted" *ngIf="opnet.gasInfo.specialGasUsed !== '0'">+{{ opnet.gasInfo.specialGasUsed | number }} special</span>
+  <!-- Gas Usage -->
+  <div class="opnet-section gas-section" *ngIf="opnet.gasInfo && (opnet.gasInfo.gasUsed !== '0' || opnet.gasInfo.specialGasUsed !== '0')">
+    <div class="section-label">Gas Usage</div>
+    <div class="section-content gas-display">
+      <span class="gas-value" *ngIf="opnet.gasInfo.gasUsed !== '0'">{{ opnet.gasInfo.gasUsed | number }}</span>
+      <span class="gas-special" *ngIf="opnet.gasInfo.specialGasUsed !== '0'">
+        + {{ opnet.gasInfo.specialGasUsed | number }} <span class="special-label">special</span>
+      </span>
+    </div>
   </div>
 </div>

@@ -1,149 +1,272 @@
-:host { display: block; }
-
-.opnet-compact {
-  background: #1a1a2a;
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  padding: 8px 12px;
+:host {
+  display: block;
 }
 
-.opnet-row {
+.opnet-details {
+  background: var(--box-bg);
+  border-radius: 4px;
+  padding: 15px;
+  font-size: 13px;
+}
+
+// Header
+.opnet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--stat-box-bg);
+}
+
+.opnet-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opnet-label {
+  color: var(--tooltip-grey);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.opnet-type {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.generic {
+    background: var(--stat-box-bg);
+    color: var(--tooltip-grey);
+  }
+
+  &.deployment {
+    background: linear-gradient(135deg, #1976d2, #2196f3);
+    color: #fff;
+  }
+
+  &.interaction {
+    background: linear-gradient(135deg, #6225b2, #9339f4);
+    color: #fff;
+  }
+}
+
+// Badges
+.opnet-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-bip360 {
+  background: linear-gradient(135deg, #651fff, #7c4dff);
+  color: #fff;
+  border: 1px solid #ffd700;
+
+  .q-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: #ffd700;
+    border-radius: 50%;
+    color: #1a1a2e;
+    font-size: 10px;
+    font-weight: 700;
+  }
+}
+
+.badge-epoch {
+  background: linear-gradient(135deg, #c2185b, #e91e8c);
+  color: #fff;
+}
+
+// Sections
+.opnet-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--stat-box-bg);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.section-label {
+  color: var(--tooltip-grey);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .q-icon.small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    background: #ffd700;
+    border-radius: 50%;
+    color: #1a1a2e;
+    font-size: 9px;
+    font-weight: 700;
+  }
+}
+
+.section-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.section-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid #252535;
-  flex-wrap: wrap;
-
-  &:last-child { border-bottom: none; }
-
-  &.header-row {
-    padding-bottom: 8px;
-    margin-bottom: 4px;
-  }
-}
-
-// Type badge
-.type-badge {
-  padding: 3px 10px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-
-  &.generic { background: #3a3a4a; color: #aaa; }
-  &.deployment { background: linear-gradient(135deg, #1976d2, #2196f3); color: #fff; }
-  &.interaction { background: linear-gradient(135deg, #6225b2, #9339f4); color: #fff; }
-}
-
-// Feature badges
-.feature-badge {
-  padding: 3px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 700;
-
-  &.bip360 {
-    background: linear-gradient(135deg, #651fff, #7c4dff);
-    color: #fff;
-    border: 1px solid #ffd700;
-    .q {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      background: #ffd700;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 14px;
-      color: #1a1a2e;
-      font-size: 9px;
-      margin-right: 3px;
-    }
-  }
-
-  &.epoch {
-    background: linear-gradient(135deg, #c2185b, #e91e8c);
-    color: #fff;
-  }
-}
-
-// Row icons
-.row-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-
-  &.mldsa { background: linear-gradient(135deg, #651fff, #7c4dff); border: 1px solid #ffd700; }
-  &.epoch { background: linear-gradient(135deg, #c2185b, #e91e8c); }
-  &.contract { background: linear-gradient(135deg, #6225b2, #9339f4); }
-  &.deploy { background: linear-gradient(135deg, #1976d2, #2196f3); }
-  &.gas { background: #546e7a; }
-}
-
-.row-label {
-  font-size: 11px;
-  color: #888;
-  min-width: 55px;
-}
-
-.row-value {
+  margin-top: 6px;
   font-size: 12px;
-  color: #e0e0e0;
+  color: var(--tooltip-grey);
+  flex-wrap: wrap;
+}
+
+.meta-label {
+  color: var(--tooltip-grey);
+}
+
+.meta-value {
+  color: var(--fg);
 
   &.mono {
-    font-family: 'SF Mono', Monaco, monospace;
-    color: #b0bec5;
-  }
-
-  &.highlight {
-    color: #ffd700;
-    font-weight: 600;
-  }
-
-  &.muted {
-    color: #666;
+    font-family: 'Roboto Mono', monospace;
     font-size: 11px;
   }
+}
 
-  &.link {
-    color: #b388ff;
-    text-decoration: none;
-    &:hover { text-decoration: underline; }
+.meta-item {
+  padding: 2px 8px;
+  background: var(--stat-box-bg);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+// Address link
+.address-link {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: none;
+  word-break: break-all;
+
+  &:hover {
+    text-decoration: underline;
   }
-}
-
-.row-extra {
-  font-size: 10px;
-  color: #666;
-  margin-left: auto;
-}
-
-// Level badges
-.level-badge {
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-size: 9px;
-  font-weight: 700;
-
-  &.level2 { background: #388e3c; color: #fff; }
-  &.level3 { background: #1976d2; color: #fff; }
-  &.level5 { background: #7b1fa2; color: #fff; }
 }
 
 // Copy button
-.cp {
-  background: none;
+.copy-btn {
+  background: transparent;
   border: none;
-  color: #555;
+  color: var(--tooltip-grey);
   cursor: pointer;
-  padding: 2px 4px;
-  font-size: 10px;
-  &:hover { color: #9339f4; }
+  padding: 4px 6px;
+  border-radius: 3px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--stat-box-bg);
+    color: var(--primary);
+  }
+
+  &.small {
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+}
+
+// Epoch specific
+.epoch-section {
+  .epoch-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e91e8c;
+  }
+}
+
+// MLDSA specific
+.mldsa-section {
+  .level-badge {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+
+    &.level2 { background: #388e3c; }
+    &.level3 { background: #1976d2; }
+    &.level5 { background: #7b1fa2; }
+  }
+
+  .algo-text {
+    color: var(--tooltip-grey);
+    font-size: 12px;
+  }
+
+  .verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: #388e3c;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+
+    &::before {
+      content: '\2713';
+    }
+  }
+}
+
+// Gas specific
+.gas-section {
+  .gas-display {
+    font-size: 14px;
+  }
+
+  .gas-value {
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .gas-special {
+    color: var(--tooltip-grey);
+
+    .special-label {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+  }
+}
+
+.mono {
+  font-family: 'Roboto Mono', monospace;
 }

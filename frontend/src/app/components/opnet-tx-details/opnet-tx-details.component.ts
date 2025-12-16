@@ -44,6 +44,7 @@ export interface OPNetTransactionExtension {
   deployment?: {
     contractAddress: string;
     bytecodeLength: number;
+    wasCompressed?: boolean;
   };
   gasInfo?: {
     gasUsed: string | number;
