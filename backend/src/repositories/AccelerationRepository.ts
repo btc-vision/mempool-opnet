@@ -220,11 +220,15 @@ class AccelerationRepository {
 
   // modifies block transactions
   public async $indexAccelerationsForBlock(block: BlockExtended, accelerations: Acceleration[], transactions: MempoolTransactionExtended[]): Promise<void> {
+    const poolId = block.extras?.pool?.id;
+    if (poolId === undefined) {
+      return; // No pool info, skip acceleration indexing
+    }
     const blockTxs: { [txid: string]: MempoolTransactionExtended } = {};
     for (const tx of transactions) {
       blockTxs[tx.txid] = tx;
     }
-    const successfulAccelerations = accelerations.filter(acc => acc.pools.includes(block.extras.pool.id));
+    const successfulAccelerations = accelerations.filter(acc => acc.pools.includes(poolId));
     let boostRate: number | null = null;
     for (const acc of successfulAccelerations) {
       if (boostRate === null) {
@@ -237,7 +241,7 @@ class AccelerationRepository {
         const tx = blockTxs[acc.txid];
         const accelerationInfo = accelerationCosts.getAccelerationInfo(tx, boostRate, transactions);
         accelerationInfo.cost = Math.max(0, Math.min(acc.feeDelta, accelerationInfo.cost));
-        this.$saveAcceleration(accelerationInfo, block, block.extras.pool.id, successfulAccelerations);
+        this.$saveAcceleration(accelerationInfo, block, poolId, successfulAccelerations);
       }
     }
     let anyConfirmed = false;
@@ -343,16 +347,21 @@ class AccelerationRepository {
           const feeStats = Common.calcEffectiveFeeStatistics(template);
           boostRate = feeStats.medianFee;
         }
+        const poolId = block.extras?.pool?.id;
+        if (poolId === undefined) {
+          logger.debug(`Skipping accelerations for block ${height} - no pool info`);
+          continue;
+        }
         const accelerationSummaries = accelerations.map(acc => ({
           ...acc,
           pools: acc.pools,
         }))
         for (const acc of accelerations) {
-          if (blockTxs[acc.txid] && acc.pools.includes(block.extras.pool.id)) {
+          if (blockTxs[acc.txid] && acc.pools.includes(poolId)) {
             const tx = blockTxs[acc.txid];
             const accelerationInfo = accelerationCosts.getAccelerationInfo(tx, boostRate, transactions);
             accelerationInfo.cost = Math.max(0, Math.min(acc.feeDelta, accelerationInfo.cost));
-            await this.$saveAcceleration(accelerationInfo, block, block.extras.pool.id, accelerationSummaries);
+            await this.$saveAcceleration(accelerationInfo, block, poolId, accelerationSummaries);
           }
         }
         await this.$setLastSyncedHeight(height);

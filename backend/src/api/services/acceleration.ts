@@ -169,9 +169,13 @@ class AccelerationApi {
   }
 
   public isAcceleratedBlock(block: BlockExtended, accelerations: Acceleration[]): boolean {
+    const poolId = block.extras?.pool?.id;
+    if (poolId === undefined) {
+      return false;
+    }
     let anyAccelerated = false;
     for (let i = 0; i < accelerations.length && !anyAccelerated; i++) {
-      anyAccelerated = anyAccelerated || accelerations[i].pools?.includes(block.extras.pool.id);
+      anyAccelerated = anyAccelerated || accelerations[i].pools?.includes(poolId);
     }
     return anyAccelerated;
   }

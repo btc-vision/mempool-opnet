@@ -1033,13 +1033,14 @@ class WebsocketHandler {
       let projectedBlocks;
       const auditMempool = _memPool;
       const isAccelerated = accelerationApi.isAcceleratedBlock(block, Object.values(mempool.getAccelerations()));
+      const poolId = block.extras?.pool?.id ?? 0;
 
       if (config.MEMPOOL.RUST_GBT) {
         const added = memPool.limitGBT ? (candidates?.added || []) : [];
         const removed = memPool.limitGBT ? (candidates?.removed || []) : [];
-        projectedBlocks = await mempoolBlocks.$rustUpdateBlockTemplates(transactionIds, auditMempool, added, removed, candidates, isAccelerated, block.extras.pool.id);
+        projectedBlocks = await mempoolBlocks.$rustUpdateBlockTemplates(transactionIds, auditMempool, added, removed, candidates, isAccelerated, poolId);
       } else {
-        projectedBlocks = await mempoolBlocks.$makeBlockTemplates(transactionIds, auditMempool, candidates, false, isAccelerated, block.extras.pool.id);
+        projectedBlocks = await mempoolBlocks.$makeBlockTemplates(transactionIds, auditMempool, candidates, false, isAccelerated, poolId);
       }
 
       if (Common.indexingEnabled()) {
