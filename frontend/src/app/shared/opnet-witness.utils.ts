@@ -53,6 +53,119 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
 }
 
 /**
+ * Extract Epoch Submission info from witness data
+ * The epoch data is in the script after the header when FEATURE_EPOCH_SUBMISSION is set
+ * Format: epochNumber(8 bytes LE) + solution(32) + salt(32) + graffitiLen(varint) + graffiti(variable)
+ */
+export function extractEpochSubmissionFromWitness(witness: string[]): EpochSubmissionInfo | null {
+  if (!witness || witness.length < 4) {
+    return null;
+  }
+
+  try {
+    const script = witness[3];
+    if (!script) {
+      return null;
+    }
+
+    // Get all push data items from the script
+    const pushDataItems = parseAllPushData(script);
+    if (pushDataItems.length < 2) {
+      return null;
+    }
+
+    // First item is the header
+    const header = pushDataItems[0];
+    if (!header || header.length < OPNET_HEADER_LENGTH) {
+      return null;
+    }
+
+    // Parse flags
+    const flags = (header[1] << 16) | (header[2] << 8) | header[3];
+    if (!(flags & FEATURE_EPOCH_SUBMISSION)) {
+      return null;
+    }
+
+    // Epoch submission data comes after header
+    // It's typically in pushDataItems[1] if no access list, or later if access list present
+    let dataIndex = 1;
+    if (flags & FEATURE_ACCESS_LIST) {
+      dataIndex++; // Skip access list data
+    }
+
+    // Look for epoch submission data - should be at least 72 bytes (8 + 32 + 32)
+    for (let i = dataIndex; i < pushDataItems.length; i++) {
+      const item = pushDataItems[i];
+      if (item.length >= 72) {
+        const parsed = parseEpochSubmissionData(item);
+        if (parsed) {
+          return parsed;
+        }
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.warn('[OPNet] Failed to extract epoch submission from witness:', e);
+    return null;
+  }
+}
+
+/**
+ * Parse epoch submission data buffer
+ * Format: epochNumber(8 bytes LE) + solution(32) + salt(32) + graffitiLen(varint) + graffiti(variable)
+ */
+function parseEpochSubmissionData(data: Uint8Array): EpochSubmissionInfo | null {
+  if (data.length < 72) { // 8 + 32 + 32 minimum
+    return null;
+  }
+
+  let offset = 0;
+
+  // Epoch number (8 bytes, little-endian)
+  const epochLow = data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+  const epochHigh = data[offset + 4] | (data[offset + 5] << 8) | (data[offset + 6] << 16) | (data[offset + 7] << 24);
+  // Combine as BigInt for large epoch numbers
+  const epochNumber = BigInt(epochLow) + (BigInt(epochHigh) << 32n);
+  offset += 8;
+
+  // Solution hash (32 bytes)
+  const solution = toHex(data.slice(offset, offset + 32));
+  offset += 32;
+
+  // Salt (32 bytes)
+  const salt = toHex(data.slice(offset, offset + 32));
+  offset += 32;
+
+  // Graffiti (variable length with varint prefix)
+  let graffiti: string | undefined;
+  let graffitiHex: string | undefined;
+  if (data.length > offset) {
+    const graffitiLen = readVarInt(data, offset);
+    offset += varIntSize(graffitiLen);
+    if (graffitiLen > 0 && data.length >= offset + graffitiLen) {
+      const graffitiBytes = data.slice(offset, offset + graffitiLen);
+      graffitiHex = toHex(graffitiBytes);
+      try {
+        graffiti = new TextDecoder().decode(graffitiBytes);
+      } catch {
+        graffiti = undefined;
+      }
+    }
+  }
+
+  return {
+    epochNumber: epochNumber.toString(),
+    minerPublicKey: '', // Will be populated from transaction sender
+    solution,
+    salt,
+    graffiti,
+    graffitiHex,
+    signature: '',
+  };
+}
+
+/**
  * Extract MLDSA/BIP360 link info from witness data
  * The MLDSA data is in the script after the header, following other features
  * Format: level(u8) + hashedPubKey(32) + verifyRequest(bool) + [optional] + legacySig(64)
@@ -129,18 +242,18 @@ function parseMLDSAData(data: Uint8Array): MLDSALinkInfo | null {
 
   let offset = 0;
 
-  // Level (1 byte)
+  // Level (1 byte) - OPNet uses 0, 1, 2 for LEVEL2, LEVEL3, LEVEL5
   const levelByte = data[offset++];
   let level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
   switch (levelByte) {
+    case 0:
+      level = 'LEVEL2'; // ML-DSA-44
+      break;
+    case 1:
+      level = 'LEVEL3'; // ML-DSA-65
+      break;
     case 2:
-      level = 'LEVEL2';
-      break;
-    case 3:
-      level = 'LEVEL3';
-      break;
-    case 5:
-      level = 'LEVEL5';
+      level = 'LEVEL5'; // ML-DSA-87
       break;
     default:
       return null;

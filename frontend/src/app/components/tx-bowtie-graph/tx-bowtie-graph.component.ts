@@ -256,8 +256,9 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
     // Add virtual input strands for OPNet features (MLDSA linking, Epoch submission)
     // These appear as additional colored strands feeding into the transaction
-    if (this.hasBIP360) {
-      const opnet = (this.tx as any)?.opnet;
+    const opnet = (this.tx as any)?.opnet;
+
+    if (this.hasBIP360 && opnet?.mldsaLink) {
       truncatedInputs.push({
         type: 'mldsa',
         value: totalValue * 0.02, // Thin line (2% of total for visibility)
@@ -265,21 +266,20 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
         index: -1, // Virtual input, not a real vin
         address: 'BIP360 MLDSA Key Link',
         opnetFeature: 'mldsa',
-        mldsaLevel: opnet?.mldsaLink?.level || 'LEVEL3',
+        mldsaLevel: opnet.mldsaLink.level,
         isQuantumSafe: true,
       } as Xput);
     }
 
-    if (this.hasEpochSubmission) {
-      const opnet = (this.tx as any)?.opnet;
+    if (this.hasEpochSubmission && opnet?.epochSubmission) {
       truncatedInputs.push({
         type: 'epoch',
         value: totalValue * 0.02, // Thin line (2% of total for visibility)
         displayValue: 0,
         index: -2, // Virtual input, not a real vin
-        address: 'Epoch Submission',
+        address: `Epoch #${opnet.epochSubmission.epochNumber}`,
         opnetFeature: 'epoch',
-        epochNumber: opnet?.epochSubmission?.epochNumber || '0',
+        epochNumber: opnet.epochSubmission.epochNumber,
       } as Xput);
     }
 

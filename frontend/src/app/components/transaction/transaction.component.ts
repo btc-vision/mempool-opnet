@@ -60,7 +60,7 @@ import { EnterpriseService } from '@app/services/enterprise.service';
 import { ZONE_SERVICE } from '@app/injection-tokens';
 import { MiningService, MiningStats } from '@app/services/mining.service';
 import { ETA, EtaService } from '@app/services/eta.service';
-import { parseOPNetFeaturesFromWitness, extractMLDSAFromWitness } from '@app/shared/opnet-witness.utils';
+import { parseOPNetFeaturesFromWitness, extractMLDSAFromWitness, extractEpochSubmissionFromWitness } from '@app/shared/opnet-witness.utils';
 
 export interface Pool {
   id: number;
@@ -1107,18 +1107,16 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // Add epoch submission placeholder if present (full data comes from API)
-    if (witnessFeatures.hasEpochSubmission && !opnet.epochSubmission) {
-      opnet = {
-        ...opnet,
-        epochSubmission: {
-          epochNumber: '0', // Will be populated by API
-          minerPublicKey: '',
-          solution: '',
-          salt: '',
-          signature: '',
-        },
-      };
+    // Extract epoch submission data if present
+    if (witnessFeatures.hasEpochSubmission) {
+      const epochSubmission = extractEpochSubmissionFromWitness(witness);
+      if (epochSubmission) {
+        // Try to get miner address from first input's prevout
+        if (this.tx.vin?.[0]?.prevout?.scriptpubkey_address) {
+          epochSubmission.minerPublicKey = this.tx.vin[0].prevout.scriptpubkey_address;
+        }
+        opnet = { ...opnet, epochSubmission };
+      }
     }
 
     // Update tx with opnet data - create new reference to trigger change detection
