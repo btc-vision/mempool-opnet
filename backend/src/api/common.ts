@@ -779,6 +779,8 @@ export class Common {
           }
           case 'v16_p2op': {
             flags |= TransactionFlags.p2op;
+            // P2OP addresses support BIP360 pre-quantum features (MLDSA linking)
+            flags |= TransactionFlags.bip360;
             break;
           }
         }
@@ -838,7 +840,11 @@ export class Common {
         case 'v0_p2wpkh': flags |= TransactionFlags.p2wpkh; break;
         case 'v0_p2wsh': flags |= TransactionFlags.p2wsh; break;
         case 'v1_p2tr': flags |= TransactionFlags.p2tr; break;
-        case 'v16_p2op': flags |= TransactionFlags.p2op; break;
+        case 'v16_p2op': {
+          flags |= TransactionFlags.p2op;
+          // P2OP addresses support BIP360 pre-quantum features (MLDSA linking)
+          flags |= TransactionFlags.bip360;
+        } break;
         case 'op_return': flags |= TransactionFlags.op_return; break;
       }
 

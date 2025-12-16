@@ -15,6 +15,8 @@ import {
   OPNetGasInfo,
   OPNetEvent,
   OPNetStatusResponse,
+  PostQuantumInfo,
+  MLDSASecurityLevel,
 } from './opnet.interfaces';
 
 class OPNetRoutes {
@@ -69,6 +71,33 @@ class OPNetRoutes {
       }
 
       const extension = this.parseOPNetTransaction(rawTx);
+
+      // Fetch MLDSA/BIP360 public key info for relevant addresses
+      const addressToCheck = extension.interaction?.from || extension.deployment?.deployerAddress;
+      if (addressToCheck) {
+        try {
+          const pubKeyInfo = await opnetClient.getPublicKeyInfo([addressToCheck]);
+          if (pubKeyInfo && pubKeyInfo[addressToCheck]) {
+            const addrInfo = pubKeyInfo[addressToCheck];
+            // Check if MLDSA public key is linked
+            if (addrInfo.mldsaPublicKey) {
+              const serialized = opnetClient.serializeAddress(addrInfo);
+              const mldsaLevel = (serialized.mldsaLevel as MLDSASecurityLevel) || MLDSASecurityLevel.LEVEL3;
+              extension.pqInfo = {
+                mldsaPublicKey: serialized.mldsaPublicKey as string,
+                tweakedKey: serialized.tweakedPublicKey as string || '',
+                legacySignatureType: 'schnorr',
+                securityLevel: this.mapMLDSALevel(mldsaLevel),
+                algorithm: mldsaLevel,
+              };
+            }
+          }
+        } catch (pubKeyErr) {
+          // Non-fatal: just don't include pqInfo
+          logger.debug(`Could not fetch public key info for ${addressToCheck}: ${pubKeyErr}`, this.tag);
+        }
+      }
+
       res.status(200).json({
         txid: txId,
         opnet: extension,
@@ -76,6 +105,18 @@ class OPNetRoutes {
     } catch (e) {
       logger.err(`Error fetching OPNet transaction ${txId}: ${e}`, this.tag);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  /**
+   * Map MLDSA level to security level
+   */
+  private mapMLDSALevel(level: MLDSASecurityLevel): 'LEVEL2' | 'LEVEL3' | 'LEVEL5' {
+    switch (level) {
+      case MLDSASecurityLevel.LEVEL2: return 'LEVEL2';
+      case MLDSASecurityLevel.LEVEL3: return 'LEVEL3';
+      case MLDSASecurityLevel.LEVEL5: return 'LEVEL5';
+      default: return 'LEVEL3';
     }
   }
 
