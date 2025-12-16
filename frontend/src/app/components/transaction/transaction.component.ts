@@ -730,6 +730,11 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           this.tx = tx;
           this.setFeatures();
           this.isCached = false;
+
+          // Always check for OPNet witness features (MLDSA/Epoch)
+          // These can be present even without smart contract flags
+          this.parseWitnessFeatures();
+
           // Fetch OPNet data if transaction has smart contract or interaction flags
           if (this.tx.flags && (
             (this.tx.flags & TransactionFlags.smart_contract) ||
@@ -1047,6 +1052,78 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.smartContractsEnabled = false;
     }
     this.featuresEnabled = this.segwitEnabled || this.taprootEnabled || this.rbfEnabled || this.smartContractsEnabled;
+  }
+
+  /**
+   * Parse OPNet features from witness data (MLDSA/Epoch)
+   * This is called when the transaction is loaded to detect features
+   * even before the OPNet API response arrives
+   */
+  parseWitnessFeatures(): void {
+    if (!this.tx?.vin?.[0]?.witness) {
+      return;
+    }
+
+    const witness = this.tx.vin[0].witness;
+
+    // Parse features from witness header
+    const witnessFeatures = parseOPNetFeaturesFromWitness(witness);
+    if (!witnessFeatures) {
+      return;
+    }
+
+    // Check if any OPNet features are present
+    const hasAnyFeature = witnessFeatures.hasAccessList ||
+                          witnessFeatures.hasEpochSubmission ||
+                          witnessFeatures.hasMLDSALink;
+
+    if (!hasAnyFeature) {
+      return;
+    }
+
+    // Create or update opnet extension
+    let opnet = this.tx.opnet || {
+      opnetType: 'Generic' as const,
+      features: witnessFeatures,
+    };
+
+    // Merge features
+    opnet = {
+      ...opnet,
+      features: {
+        ...opnet.features,
+        hasAccessList: witnessFeatures.hasAccessList || opnet.features?.hasAccessList || false,
+        hasMLDSALink: witnessFeatures.hasMLDSALink || opnet.features?.hasMLDSALink || false,
+        hasEpochSubmission: witnessFeatures.hasEpochSubmission || opnet.features?.hasEpochSubmission || false,
+        featureFlags: witnessFeatures.featureFlags || opnet.features?.featureFlags || 0,
+      },
+    };
+
+    // Extract MLDSA link data if present
+    if (witnessFeatures.hasMLDSALink) {
+      const mldsaLink = extractMLDSAFromWitness(witness);
+      if (mldsaLink) {
+        opnet = { ...opnet, mldsaLink };
+      }
+    }
+
+    // Add epoch submission placeholder if present (full data comes from API)
+    if (witnessFeatures.hasEpochSubmission && !opnet.epochSubmission) {
+      opnet = {
+        ...opnet,
+        epochSubmission: {
+          epochNumber: '0', // Will be populated by API
+          minerPublicKey: '',
+          solution: '',
+          salt: '',
+          signature: '',
+        },
+      };
+    }
+
+    // Update tx with opnet data - create new reference to trigger change detection
+    this.tx = { ...this.tx, opnet };
+    this.cd.detectChanges();
   }
 
   checkAccelerationEligibility() {
