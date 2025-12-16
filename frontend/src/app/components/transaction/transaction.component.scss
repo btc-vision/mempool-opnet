@@ -310,3 +310,103 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+// OPNet badge styles
+.badge-opnet {
+  background: linear-gradient(135deg, #6225b2, #9339f4);
+  color: #fff;
+}
+
+.badge-quantum {
+  background: linear-gradient(135deg, #651fff, #7c4dff);
+  color: #fff;
+  border: 1px solid #ffd700;
+}
+
+.badge-epoch {
+  background: linear-gradient(135deg, #c2185b, #e91e8c);
+  color: #fff;
+}
+
+// OPNet Modal styles
+.opnet-modal-body {
+  padding: 1.5rem;
+}
+
+.opnet-modal-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--stat-box-bg);
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.opnet-modal-label {
+  color: var(--tooltip-grey);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.opnet-modal-value {
+  font-size: 1rem;
+  color: var(--fg);
+
+  .mono {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+  }
+
+  a.mono {
+    color: var(--primary);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.opnet-modal-meta {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--tooltip-grey);
+
+  .mono {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+  }
+}
+
+// Modal header/footer styling
+::ng-deep .modal-header {
+  border-bottom-color: var(--stat-box-bg);
+}
+
+::ng-deep .modal-footer {
+  border-top-color: var(--stat-box-bg);
+}
+
+::ng-deep .modal-content {
+  background-color: var(--box-bg);
+  color: var(--fg);
+}
+
+::ng-deep .close {
+  color: var(--fg);
+  text-shadow: none;
+  opacity: 0.7;
+
+  &:hover {
+    color: var(--fg);
+    opacity: 1;
+  }
+}

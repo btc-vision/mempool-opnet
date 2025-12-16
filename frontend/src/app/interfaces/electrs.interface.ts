@@ -59,10 +59,10 @@ export interface ContractEvent {
 }
 
 export interface GasInfo {
-  estimatedGas: number;
-  gasUsed: number;
-  specialGasUsed: number;
-  refundedGas: number;
+  estimatedGas?: string | number;
+  gasUsed: string | number;
+  specialGasUsed: string | number;
+  refundedGas?: string | number;
 }
 
 export interface AccessList {
@@ -78,6 +78,7 @@ export interface OPNetDeploymentData {
   deployerPubKey: string;
   deployerAddress: string;
   contractSeed?: string;
+  wasCompressed?: boolean;
 }
 
 export interface OPNetInteractionData {
@@ -85,12 +86,43 @@ export interface OPNetInteractionData {
   calldataLength?: number;
   contractAddress: string;
   from: string;
+  wasCompressed?: boolean;
+}
+
+export interface OPNetFeatures {
+  hasAccessList: boolean;
+  hasEpochSubmission: boolean;
+  hasMLDSALink: boolean;
+  featureFlags: number;
+}
+
+export interface MLDSALinkInfo {
+  level: 'LEVEL2' | 'LEVEL3' | 'LEVEL5';
+  hashedPublicKey: string;
+  fullPublicKey?: string;
+  legacySignature: string;
+  isVerified: boolean;
+  tweakedKey?: string;
+  originalKey?: string;
+}
+
+export interface EpochSubmissionInfo {
+  epochNumber: string;
+  minerPublicKey: string;
+  solution: string;
+  salt: string;
+  graffiti?: string;
+  graffitiHex?: string;
+  signature: string;
 }
 
 export interface OPNetTransactionExtension {
   opnetType: OPNetTransactionType;
+  features?: OPNetFeatures;
   deployment?: OPNetDeploymentData;
   interaction?: OPNetInteractionData;
+  mldsaLink?: MLDSALinkInfo;
+  epochSubmission?: EpochSubmissionInfo;
   gasInfo?: GasInfo;
   pqInfo?: PostQuantumInfo;
   events?: ContractEvent[];

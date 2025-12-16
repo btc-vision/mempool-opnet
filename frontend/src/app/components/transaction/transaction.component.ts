@@ -7,8 +7,10 @@ import {
   Inject,
   OnDestroy,
   OnInit,
+  TemplateRef,
   ViewChild,
 } from '@angular/core';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import {
@@ -187,6 +189,9 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('graphContainer')
   graphContainer: ElementRef;
 
+  @ViewChild('opnetModal')
+  opnetModal: TemplateRef<any>;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -205,6 +210,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     private miningService: MiningService,
     private etaService: EtaService,
     private cd: ChangeDetectorRef,
+    private modalService: NgbModal,
     @Inject(ZONE_SERVICE) private zoneService: any,
   ) {}
 
@@ -1187,6 +1193,12 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     this.accelerationFlowCompleted = false;
     this.hideAccelerationSummary = false;
     this.storageService.setValue('hide-accelerator-pref', 'false');
+  }
+
+  openOPNetModal(): void {
+    if (this.opnetModal) {
+      this.modalService.open(this.opnetModal, { centered: true, size: 'lg' });
+    }
   }
 
   get showAccelerationSummary(): boolean {
