@@ -5,7 +5,7 @@
  * Uses @btc-vision/bitcoin script.decompile() to properly parse witness scripts
  * matching the OPNet node implementation.
  */
-
+import { Buffer } from 'buffer';
 import { script, opcodes } from '@btc-vision/bitcoin';
 import { BinaryReader } from '@btc-vision/transaction';
 
