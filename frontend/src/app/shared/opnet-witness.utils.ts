@@ -36,14 +36,18 @@ const OP_TOALTSTACK = 0x6b;
  */
 export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures | null {
   if (!witness || witness.length < 4) {
+    console.log('[OPNet] parseFeatures: witness too short, length:', witness?.length);
     return null;
   }
 
   try {
     const script = witness[3];
     if (!script) {
+      console.log('[OPNet] parseFeatures: witness[3] is empty');
       return null;
     }
+
+    console.log('[OPNet] parseFeatures: script length:', script.length, 'first 100 chars:', script.substring(0, 100));
 
     const bytes = hexToBytes(script);
     let offset = 0;
@@ -51,20 +55,27 @@ export function parseOPNetFeaturesFromWitness(witness: string[]): OPNetFeatures 
     // Parse header push data
     const headerResult = readPushData(bytes, offset);
     if (!headerResult || headerResult.data.length !== OPNET_HEADER_LENGTH) {
+      console.log('[OPNet] parseFeatures: header invalid, length:', headerResult?.data?.length, 'expected:', OPNET_HEADER_LENGTH);
       return null;
     }
     offset = headerResult.newOffset;
 
     const header = headerResult.data;
+    console.log('[OPNet] parseFeatures: header bytes:', toHex(header));
 
     // Parse header: prefix(1) + flags(3 big-endian) + priorityFee(8)
     const prefix = header[0];
     if (prefix !== 0x02 && prefix !== 0x03) {
+      console.log('[OPNet] parseFeatures: invalid prefix:', prefix.toString(16));
       return null; // Invalid public key prefix
     }
 
     // Flags are bytes 1-3, read as big-endian 24-bit integer
     const flags = (header[1] << 16) | (header[2] << 8) | header[3];
+    console.log('[OPNet] parseFeatures: flags=', flags, 'binary:', flags.toString(2).padStart(24, '0'));
+    console.log('[OPNet] parseFeatures: hasAccessList:', (flags & FEATURE_ACCESS_LIST) !== 0);
+    console.log('[OPNet] parseFeatures: hasEpochSubmission:', (flags & FEATURE_EPOCH_SUBMISSION) !== 0);
+    console.log('[OPNet] parseFeatures: hasMLDSALink:', (flags & FEATURE_MLDSA_LINK) !== 0);
 
     return {
       hasAccessList: (flags & FEATURE_ACCESS_LIST) !== 0,
