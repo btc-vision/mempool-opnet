@@ -1,6 +1,4 @@
-import { Vin } from "../interfaces/electrs.interface";
-import { AddressType, detectAddressType } from "./address-utils";
-import { ParsedTaproot } from "./transaction.utils";
+import { ParsedTaproot } from './transaction.utils';
 
 const opcodes = {
   OP_FALSE: 0,
@@ -239,68 +237,67 @@ export function checkIsInteraction(script: string): boolean {
     return false;
   }
 
-  // New OPNet format: sender pubkey verified via HASH256, single HASH160 for contract secret
+  // New OPNet format: header + challenge pubkey + challenge solution to altstack,
+  // then sender pubkey verified via HASH256, contract salt CHECKSIGVERIFY, contract secret HASH160
   const newFormatSequence = [
-    'OP_PUSHBYTES_33', // xSenderPubKey (compressed)
+    'OP_TOALTSTACK', // header
+    'OP_TOALTSTACK', // challenge pubkey
+    'OP_TOALTSTACK', // challenge solution
     'OP_DUP',
     'OP_HASH256',
-    'OP_PUSHBYTES_32', // hash256(xSenderPubKey)
     'OP_EQUALVERIFY',
     'OP_CHECKSIGVERIFY',
-    'OP_PUSHBYTES_33', // contractSaltPubKey
     'OP_CHECKSIGVERIFY',
     'OP_HASH160',
-    'OP_PUSHBYTES_20', // hash160(contractSecret)
     'OP_EQUALVERIFY',
     'OP_DEPTH',
     'OP_PUSHNUM_1',
     'OP_NUMEQUAL',
     'OP_IF',
-    'OP_PUSHBYTES_3', // MAGIC
   ];
 
-  const hasToAltstack = opCodes.includes('OP_TOALTSTACK');
-
-  if (hasToAltstack && opCodes.length >= newFormatSequence.length) {
-    for (let i = 0; i <= opCodes.length - newFormatSequence.length; i++) {
-      let matches = true;
-      for (let j = 0; j < newFormatSequence.length; j++) {
-        if (opCodes[i + j] !== newFormatSequence[j]) {
-          matches = false;
-          break;
-        }
+  if (opCodes.length >= newFormatSequence.length) {
+    let seqIndex = 0;
+    for (
+      let i = 0;
+      i < opCodes.length && seqIndex < newFormatSequence.length;
+      i++
+    ) {
+      if (opCodes[i] === newFormatSequence[seqIndex]) {
+        seqIndex++;
       }
-      if (matches) {
-        return true;
-      }
+    }
+    if (seqIndex === newFormatSequence.length) {
+      return true;
     }
   }
 
   // Legacy OPNet format for backwards compatibility
   const legacySequence = [
-    'OP_PUSHBYTES_32',
     'OP_CHECKSIGVERIFY',
-    'OP_PUSHBYTES_32',
     'OP_CHECKSIGVERIFY',
     'OP_HASH160',
-    'OP_PUSHBYTES_20',
     'OP_EQUALVERIFY',
     'OP_HASH160',
-    'OP_PUSHBYTES_20',
     'OP_EQUALVERIFY',
     'OP_DEPTH',
     'OP_PUSHNUM_1',
     'OP_NUMEQUAL',
     'OP_IF',
-    'OP_PUSHBYTES_3',
   ];
 
-  if (opCodes.length >= legacySequence.length) {
-    for (let i = 0; i < legacySequence.length; i++) {
-      if (opCodes[i] !== legacySequence[i]) {
-        return false;
-      }
+  let legacySeqIndex = 0;
+  for (
+    let i = 0;
+    i < opCodes.length && legacySeqIndex < legacySequence.length;
+    i++
+  ) {
+    if (opCodes[i] === legacySequence[legacySeqIndex]) {
+      legacySeqIndex++;
     }
+  }
+
+  if (legacySeqIndex === legacySequence.length) {
     return true;
   }
 
