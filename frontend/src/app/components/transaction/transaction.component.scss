@@ -483,7 +483,10 @@
 }
 
 ::ng-deep .modal-dialog {
-  max-width: 560px;
+  max-width: 800px;
+  width: 90%;
+  z-index: 1060;
+  position: relative;
 }
 
 ::ng-deep .modal-content {
