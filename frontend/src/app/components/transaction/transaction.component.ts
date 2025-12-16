@@ -1109,7 +1109,9 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Extract epoch submission data if present
     if (witnessFeatures.hasEpochSubmission) {
-      const epochSubmission = extractEpochSubmissionFromWitness(witness);
+      // Get block height for epoch calculation (confirmed tx uses block height, unconfirmed uses latest+1)
+      const blockHeight = this.tx.status?.block_height || (this.stateService.latestBlockHeight >= 0 ? this.stateService.latestBlockHeight + 1 : undefined);
+      const epochSubmission = extractEpochSubmissionFromWitness(witness, blockHeight);
       if (epochSubmission) {
         // Try to get miner address from first input's prevout
         if (this.tx.vin?.[0]?.prevout?.scriptpubkey_address) {
