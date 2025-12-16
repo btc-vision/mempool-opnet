@@ -185,7 +185,14 @@ export class ScriptInfo {
   vinId?: string;
   template: ScriptTemplate;
 
-  constructor(type: ScriptType, hex?: string, asm?: string, witness?: string[], taprootInfo?: ParsedTaproot, vinId?: string) {
+  constructor(
+    type: ScriptType,
+    hex?: string,
+    asm?: string,
+    witness?: string[],
+    taprootInfo?: ParsedTaproot,
+    vinId?: string
+  ) {
     this.type = type;
     this.hex = hex;
     this.asm = asm;
@@ -201,7 +208,14 @@ export class ScriptInfo {
   }
 
   public clone(): ScriptInfo {
-    const cloned = new ScriptInfo(this.type, this.hex, this.asm, undefined, this.taprootInfo, this.vinId);
+    const cloned = new ScriptInfo(
+      this.type,
+      this.hex,
+      this.asm,
+      undefined,
+      this.taprootInfo,
+      this.vinId
+    );
     if (this.template) {
       cloned.template = this.template;
     }
@@ -219,29 +233,78 @@ export function checkIsInteraction(script: string): boolean {
   }
 
   const ops = script.split(' ');
+  const opCodes = ops.filter((op) => op.startsWith('OP_'));
 
-  // Check the script structure
-  const requiredSequence = [
-    'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY', 'OP_PUSHBYTES_32', 'OP_CHECKSIGVERIFY',
-    'OP_HASH160', 'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_HASH160',
-    'OP_PUSHBYTES_20', 'OP_EQUALVERIFY', 'OP_DEPTH', 'OP_PUSHNUM_1',
-    'OP_NUMEQUAL', 'OP_IF', 'OP_PUSHBYTES_3'
+  if (opCodes.length === 0) {
+    return false;
+  }
+
+  // New OPNet format: sender pubkey verified via HASH256, single HASH160 for contract secret
+  const newFormatSequence = [
+    'OP_PUSHBYTES_33', // xSenderPubKey (compressed)
+    'OP_DUP',
+    'OP_HASH256',
+    'OP_PUSHBYTES_32', // hash256(xSenderPubKey)
+    'OP_EQUALVERIFY',
+    'OP_CHECKSIGVERIFY',
+    'OP_PUSHBYTES_33', // contractSaltPubKey
+    'OP_CHECKSIGVERIFY',
+    'OP_HASH160',
+    'OP_PUSHBYTES_20', // hash160(contractSecret)
+    'OP_EQUALVERIFY',
+    'OP_DEPTH',
+    'OP_PUSHNUM_1',
+    'OP_NUMEQUAL',
+    'OP_IF',
+    'OP_PUSHBYTES_3', // MAGIC
   ];
 
-  // Extracting the necessary part of the script for comparison
-  const firstPart = ops.filter((op) => {
-    return op.startsWith('OP_');
-  });
+  const hasToAltstack = opCodes.includes('OP_TOALTSTACK');
 
-  // Check the structure matches the required sequence
-  for (let i = 0; i < requiredSequence.length; i++) {
-    if (firstPart[i] !== requiredSequence[i]) {
-      return false;
+  if (hasToAltstack && opCodes.length >= newFormatSequence.length) {
+    for (let i = 0; i <= opCodes.length - newFormatSequence.length; i++) {
+      let matches = true;
+      for (let j = 0; j < newFormatSequence.length; j++) {
+        if (opCodes[i + j] !== newFormatSequence[j]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        return true;
+      }
     }
   }
 
-  // Legacy OP_NET interaction
-  return true;
+  // Legacy OPNet format for backwards compatibility
+  const legacySequence = [
+    'OP_PUSHBYTES_32',
+    'OP_CHECKSIGVERIFY',
+    'OP_PUSHBYTES_32',
+    'OP_CHECKSIGVERIFY',
+    'OP_HASH160',
+    'OP_PUSHBYTES_20',
+    'OP_EQUALVERIFY',
+    'OP_HASH160',
+    'OP_PUSHBYTES_20',
+    'OP_EQUALVERIFY',
+    'OP_DEPTH',
+    'OP_PUSHNUM_1',
+    'OP_NUMEQUAL',
+    'OP_IF',
+    'OP_PUSHBYTES_3',
+  ];
+
+  if (opCodes.length >= legacySequence.length) {
+    for (let i = 0; i < legacySequence.length; i++) {
+      if (opCodes[i] !== legacySequence[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
 }
 
 export function checkIsSmartContract(script: string): boolean {
