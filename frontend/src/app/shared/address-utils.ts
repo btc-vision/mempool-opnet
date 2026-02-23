@@ -78,13 +78,6 @@ const ADDRESS_PREFIXES = {
     bech32: 'tb1',
     bech32Opnet: 'opt1',
   },
-  regtest: {
-    base58: {
-      pubkey: ['m', 'n'],
-      script: '2',
-    },
-    bech32: 'bcrt1',
-  },
   liquid: {
     base58: {
       pubkey: ['P','Q'],

@@ -136,20 +136,6 @@ const ADDRESS_CHARS: {
         + `{6,100}`
       + `)`,
   },
-  regtest: {
-    base58: `[mn2]` // Same as testnet
-      + BASE58_CHARS
-      + `{33,34}`,
-    bech32: `(?:`
-        + `bcrt1` // Starts with bcrt1
-        + BECH32_CHARS_LW
-        + `{6,100}`
-      + `|`
-        + `BCRT1` // All upper case version
-        + BECH32_CHARS_UP
-        + `{6,100}`
-      + `)`,
-  },
   liquid: {
     base58: `[GHPQ]` // PQ is P2PKH, GH is P2SH
         + BASE58_CHARS

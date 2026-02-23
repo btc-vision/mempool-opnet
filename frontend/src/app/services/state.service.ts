@@ -76,7 +76,6 @@ export type SignaturesMode = 'all' | 'interesting' | 'none' | null;
 export interface Env {
   MAINNET_ENABLED: boolean;
   TESTNET_ENABLED: boolean;
-  REGTEST_ENABLED: boolean;
   TESTNET4_ENABLED: boolean;
   SIGNET_ENABLED: boolean;
   REGTEST_ENABLED: boolean;
@@ -126,7 +125,6 @@ const defaultEnv: Env = {
   'MAINNET_ENABLED': true,
   'TESTNET_ENABLED': false,
   'TESTNET4_ENABLED': false,
-  'REGTEST_ENABLED': false,
   'SIGNET_ENABLED': false,
   'REGTEST_ENABLED': false,
   'LIQUID_ENABLED': false,

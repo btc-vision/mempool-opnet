@@ -44,7 +44,6 @@ export class ClockComponent implements OnInit {
     'liquidtestnet': ['var(--liquidtestnet)', 'var(--liquidtestnet-alt)'],
     testnet: ['var(--testnet)', 'var(--testnet-alt)'],
     testnet4: ['var(--testnet)', 'var(--testnet-alt)'],
-    regtest: ['var(--testnet)', 'var(--testnet-alt)'],
     signet: ['var(--signet)', 'var(--signet-alt)'],
     regtest: ['var(--regtest)', 'var(--regtest-alt)'],
   };
