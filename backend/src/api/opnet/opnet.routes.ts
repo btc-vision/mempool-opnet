@@ -124,8 +124,8 @@ class OPNetRoutes {
 
     // Find the matching submission by transaction ID
     const matchingSubmission = epochWithSubs.submissions.find(sub => {
-      const subTxId = sub.submissionTxId.toString('hex');
-      const subTxHash = sub.submissionTxHash.toString('hex');
+      const subTxId = Buffer.from(sub.submissionTxId).toString('hex');
+      const subTxHash = Buffer.from(sub.submissionTxHash).toString('hex');
       return subTxId === txId || subTxHash === txId;
     });
 
@@ -135,11 +135,11 @@ class OPNetRoutes {
       extension.epochSubmission = {
         epochNumber: epochNumber.toString(),
         minerPublicKey: miner.publicKey.p2tr(opnetClient.getNetwork()),
-        solution: miner.solution.toString('hex'),
-        salt: miner.salt.toString('hex'),
-        graffiti: miner.graffiti ? miner.graffiti.toString('utf8') : undefined,
-        graffitiHex: miner.graffiti ? miner.graffiti.toString('hex') : undefined,
-        signature: matchingSubmission.submissionHash.toString('hex'),
+        solution: Buffer.from(miner.solution).toString('hex'),
+        salt: Buffer.from(miner.salt).toString('hex'),
+        graffiti: miner.graffiti ? Buffer.from(miner.graffiti).toString('utf8') : undefined,
+        graffitiHex: miner.graffiti ? Buffer.from(miner.graffiti).toString('hex') : undefined,
+        signature: Buffer.from(matchingSubmission.submissionHash).toString('hex'),
       };
     } else {
       // Submission not found in epoch, but tx has PoW data
@@ -170,7 +170,7 @@ class OPNetRoutes {
 
       // Serialize the receipt for JSON response
       res.status(200).json({
-        receipt: receipt.receipt?.toString('hex'),
+        receipt: receipt.receipt ? Buffer.from(receipt.receipt).toString('hex') : undefined,
         receiptProofs: receipt.receiptProofs,
         events: opnetClient.serializeEvents(receipt.events),
         revert: receipt.revert,
@@ -302,13 +302,13 @@ class OPNetRoutes {
       // Serialize ContractData for JSON response
       res.status(200).json({
         contractAddress: code.contractAddress,
-        bytecode: code.bytecode.toString('hex'),
+        bytecode: Buffer.from(code.bytecode).toString('hex'),
         wasCompressed: code.wasCompressed,
         deployedTransactionId: code.deployedTransactionId,
         deployedTransactionHash: code.deployedTransactionHash,
-        deployerPubKey: code.deployerPubKey.toString('hex'),
-        contractSeed: code.contractSeed.toString('hex'),
-        contractSaltHash: code.contractSaltHash.toString('hex'),
+        deployerPubKey: Buffer.from(code.deployerPubKey).toString('hex'),
+        contractSeed: Buffer.from(code.contractSeed).toString('hex'),
+        contractSaltHash: Buffer.from(code.contractSaltHash).toString('hex'),
       });
     } catch (e) {
       logger.err(`Error fetching contract code for ${address}: ${e}`, this.tag);
@@ -422,12 +422,12 @@ class OPNetRoutes {
       const deployment: OPNetDeploymentData = {
         contractAddress: deployTx.contractAddress || '',
         contractPublicKey: deployTx.contractPublicKey?.toHex(),
-        bytecode: deployTx.bytecode?.toString('hex') || '',
+        bytecode: deployTx.bytecode ? Buffer.from(deployTx.bytecode).toString('hex') : '',
         bytecodeLength: deployTx.bytecode?.length || 0,
-        deployerPubKey: deployTx.deployerPubKey?.toString('hex') || '',
+        deployerPubKey: deployTx.deployerPubKey ? Buffer.from(deployTx.deployerPubKey).toString('hex') : '',
         deployerAddress: deployTx.deployerAddress?.p2tr(opnetClient.getNetwork()) || '',
-        contractSeed: deployTx.contractSeed?.toString('hex'),
-        contractSaltHash: deployTx.contractSaltHash?.toString('hex'),
+        contractSeed: deployTx.contractSeed ? Buffer.from(deployTx.contractSeed).toString('hex') : undefined,
+        contractSaltHash: deployTx.contractSaltHash ? Buffer.from(deployTx.contractSaltHash).toString('hex') : undefined,
         wasCompressed: deployTx.wasCompressed,
       };
       extension.deployment = deployment;
@@ -437,11 +437,11 @@ class OPNetRoutes {
     if (rawTx.OPNetType === OPNetTransactionTypes.Interaction) {
       const interTx = rawTx as InteractionTransaction;
       const interaction: OPNetInteractionData = {
-        calldata: interTx.calldata?.toString('hex'),
+        calldata: interTx.calldata ? Buffer.from(interTx.calldata).toString('hex') : undefined,
         calldataLength: interTx.calldata?.length,
-        senderPubKeyHash: interTx.senderPubKeyHash?.toString('hex'),
-        contractSecret: interTx.contractSecret?.toString('hex'),
-        interactionPubKey: interTx.interactionPubKey?.toString('hex'),
+        senderPubKeyHash: interTx.senderPubKeyHash ? Buffer.from(interTx.senderPubKeyHash).toString('hex') : undefined,
+        contractSecret: interTx.contractSecret ? Buffer.from(interTx.contractSecret).toString('hex') : undefined,
+        interactionPubKey: interTx.interactionPubKey ? Buffer.from(interTx.interactionPubKey).toString('hex') : undefined,
         contractAddress: interTx.contractAddress || '',
         from: interTx.from?.p2tr(opnetClient.getNetwork()) || '',
         wasCompressed: interTx.wasCompressed,
@@ -460,7 +460,7 @@ class OPNetRoutes {
     // Parse receipt (TransactionBase extends TransactionReceipt)
     if (rawTx.receipt || rawTx.receiptProofs) {
       extension.receipt = {
-        receipt: rawTx.receipt?.toString('hex'),
+        receipt: rawTx.receipt ? Buffer.from(rawTx.receipt).toString('hex') : undefined,
         receiptProofs: rawTx.receiptProofs,
         events: opnetClient.serializeEvents(rawTx.events),
         revert: rawTx.revert,

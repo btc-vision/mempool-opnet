@@ -60,11 +60,11 @@ class OPNetClient {
 
   private initProvider(): void {
     try {
-      this.provider = new JSONRpcProvider(
-        config.OPNET.RPC_URL,
-        this.network,
-        config.OPNET.TIMEOUT
-      );
+      this.provider = new JSONRpcProvider({
+        url: config.OPNET.RPC_URL,
+        network: this.network,
+        timeout: config.OPNET.TIMEOUT,
+      });
       logger.info(`OPNet provider initialized, connecting to ${config.OPNET.RPC_URL}`);
       this.checkConnection();
     } catch (e) {
@@ -249,15 +249,15 @@ class OPNetClient {
 
     try {
       const code = await this.provider.getCode(address, false);
-      if (!code || Buffer.isBuffer(code)) {
-        // If onlyBytecode was true, it returns Buffer; we want ContractData
+      if (!code || !('contractAddress' in code)) {
+        // If onlyBytecode was true, it returns Uint8Array; we want ContractData
         return null;
       }
 
       this.connected = true;
       this.lastError = null;
 
-      return code;
+      return code as ContractData;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
       logger.warn(`OPNet getCode failed for ${address}: ${this.lastError}`);
@@ -401,7 +401,7 @@ class OPNetClient {
     return {
       epochNumber: tx.blockNumber ? (tx.blockNumber / 2016n).toString() : '0',
       minerPublicKey: '', // Populated by enrichEpochSubmission from epoch API
-      solution: pow.preimage ? pow.preimage.toString('hex') : '',
+      solution: pow.preimage ? Buffer.from(pow.preimage).toString('hex') : '',
       salt: '', // Populated by enrichEpochSubmission from epoch API
       graffiti: undefined,
       graffitiHex: undefined,
@@ -415,7 +415,7 @@ class OPNetClient {
   public serializeAddress(addr: Address): Record<string, unknown> {
     return {
       originalPublicKey: addr.originalPublicKey ? Buffer.from(addr.originalPublicKey).toString('hex') : undefined,
-      tweakedPublicKey: addr.tweakedPublicKeyToBuffer().toString('hex'),
+      tweakedPublicKey: Buffer.from(addr.tweakedPublicKeyToBuffer()).toString('hex'),
       p2tr: addr.p2tr(this.network),
       p2op: addr.p2op(this.network),
       p2pkh: addr.p2pkh(this.network),

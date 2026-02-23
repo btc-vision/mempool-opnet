@@ -193,7 +193,7 @@ class PoolsUpdater {
             socksOptions.username = `circuit${retry}`;
           }
 
-          axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions);
+          axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions) as unknown as https.Agent;
         }
 
         const data: AxiosResponse = await axios.get(path, axiosOptions);

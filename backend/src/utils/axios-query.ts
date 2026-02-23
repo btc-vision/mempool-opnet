@@ -43,7 +43,7 @@ export async function query(path, throwOnFail: boolean = false): Promise<object 
          socksOptions.username = `circuit${retry}`;
        }
 
-       axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions);
+       axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions) as unknown as https.Agent;
      }
 
      const data: AxiosResponse = await axios.get(path, axiosOptions);

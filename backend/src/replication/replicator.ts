@@ -61,7 +61,7 @@ export async function query(path): Promise<object> {
       password: config.SOCKS5PROXY.PASSWORD,
     };
 
-    axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions);
+    axiosOptions.httpsAgent = new SocksProxyAgent(socksOptions) as unknown as https.Agent;
   }
 
   const data: AxiosResponse = await axios.get(path, axiosOptions);
