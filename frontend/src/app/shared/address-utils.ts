@@ -129,9 +129,15 @@ export function detectAddressType(address: string, network: string): AddressType
     } else if (p2opRegex.test(suffix)) {
       return 'v16_p2op';
     }
-  } else if (address.startsWith('op')) {
-    const suffix = address.slice(2);
-    if (p2opRegex.test(suffix)) {
+  } else if (ADDRESS_PREFIXES[network].bech32Opnet && address.startsWith(ADDRESS_PREFIXES[network].bech32Opnet)) {
+    const suffix = address.slice(ADDRESS_PREFIXES[network].bech32Opnet.length);
+    if (p2wpkhRegex.test(suffix)) {
+      return 'v0_p2wpkh';
+    } else if (p2wshRegex.test(suffix)) {
+      return 'v0_p2wsh';
+    } else if (p2trRegex.test(suffix)) {
+      return 'v1_p2tr';
+    } else if (p2opRegex.test(suffix)) {
       return 'v16_p2op';
     }
   }

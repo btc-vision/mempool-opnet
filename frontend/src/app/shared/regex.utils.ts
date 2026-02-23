@@ -127,13 +127,21 @@ const ADDRESS_CHARS: {
       + BASE58_CHARS
       + `{33,34}`,
     bech32: `(?:`
-        + `tb1` // Starts with tb1
-        + BECH32_CHARS_LW
-        + `{6,100}`
+      + `(?:`
+      + `opt1`
       + `|`
-        + `TB1` // All upper case version
-        + BECH32_CHARS_UP
-        + `{6,100}`
+      + `tb1`
+      + `)`
+      + BECH32_CHARS_LW
+      + `{6,100}`
+      + `|`
+      + `(?:`
+      + `OPT1`
+      + `|`
+      + `TB1`
+      + `)`
+      + BECH32_CHARS_UP
+      + `{6,100}`
       + `)`,
   },
   liquid: {
@@ -210,8 +218,6 @@ function isNetworkAvailable(network: Network, env: Env): boolean {
       return env.TESTNET4_ENABLED === true;
     case 'signet':
       return env.SIGNET_ENABLED === true;
-    case 'regtest':
-      return env.REGTEST_ENABLED === true;
     case 'liquid':
       return env.LIQUID_ENABLED === true;
     case 'liquidtestnet':
@@ -269,9 +275,6 @@ export function getRegex(type: RegexType, network?: Network): RegExp {
       }
       let leadingZeroes: number;
       switch (network) {
-        case 'regtest':
-          leadingZeroes = 8; // Assumes at least 32 bits of difficulty
-          break;
         case `mainnet`:
           leadingZeroes = 8; // Assumes at least 32 bits of difficulty
           break;
@@ -358,15 +361,6 @@ export function getRegex(type: RegexType, network?: Network): RegExp {
           regex += ADDRESS_CHARS.signet.base58;
           regex += `|`; // OR
           regex += ADDRESS_CHARS.signet.bech32;
-          regex += `|`; // OR
-          regex += `04${HEX_CHARS}{128}`; // Uncompressed pubkey
-          regex += `|`; // OR
-          regex += `(?:02|03)${HEX_CHARS}{64}`; // Compressed pubkey
-          break;
-        case `regtest`:
-          regex += ADDRESS_CHARS.regtest.base58;
-          regex += `|`; // OR
-          regex += ADDRESS_CHARS.regtest.bech32;
           regex += `|`; // OR
           regex += `04${HEX_CHARS}{128}`; // Uncompressed pubkey
           regex += `|`; // OR
