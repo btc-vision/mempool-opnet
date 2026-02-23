@@ -39,6 +39,7 @@ import { RelativeUrlPipe } from '@app/shared/pipes/relative-url/relative-url.pip
 import { ApiService } from '@app/services/api.service';
 import { SearchResultsComponent } from '@components/search-form/search-results/search-results.component';
 import {
+  ADDRESS_REGEXES,
   findOtherNetworks,
   getRegex,
   getTargetUrl,
@@ -230,7 +231,7 @@ export class SearchFormComponent implements OnInit {
           const matchesUnixTimestamp = this.regexUnixTimestamp.test(searchText) && parseInt(searchText) <= Math.floor(Date.now() / 1000) && isNetworkBitcoin;
           const matchesTxId = this.regexTransaction.test(searchText) && !this.regexBlockhash.test(searchText);
           const matchesBlockHash = this.regexBlockhash.test(searchText);
-          const matchesAddress = !matchesTxId && this.regexAddress.test(searchText);
+          const matchesAddress = !matchesTxId && (this.regexAddress.test(searchText) || ADDRESS_REGEXES.some(([regex]) => regex.test(searchText)));
           const publicKey = matchesAddress && searchText.startsWith('0');
           const otherNetworks = findOtherNetworks(searchText, this.network as any || 'mainnet', this.env);
           const liquidAsset = this.assets ? (this.assets[searchText] || []) : [];
@@ -301,8 +302,14 @@ export class SearchFormComponent implements OnInit {
     if (searchText) {
       this.isSearching = true;
 
+      const crossNetworkMatch = !this.regexAddress.test(searchText)
+        ? ADDRESS_REGEXES.find(([regex]) => regex.test(searchText))
+        : null;
+
       if (!this.regexTransaction.test(searchText) && this.regexAddress.test(searchText)) {
         this.navigate('/address/', searchText);
+      } else if (!this.regexTransaction.test(searchText) && crossNetworkMatch) {
+        this.navigate('/address/', searchText, undefined, crossNetworkMatch[1]);
       } else if (this.regexBlockhash.test(searchText)) {
         this.navigate('/block/', searchText);
       } else if (this.regexBlockheight.test(searchText)) {
