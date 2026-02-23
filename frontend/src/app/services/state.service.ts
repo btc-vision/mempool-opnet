@@ -60,6 +60,7 @@ export interface Customization {
     header_img?: string;
     footer_img?: string;
     rounded_corner: boolean;
+    cobranded?: boolean;
   },
   dashboard: {
     widgets: {
@@ -78,6 +79,7 @@ export interface Env {
   REGTEST_ENABLED: boolean;
   TESTNET4_ENABLED: boolean;
   SIGNET_ENABLED: boolean;
+  REGTEST_ENABLED: boolean;
   LIQUID_ENABLED: boolean;
   LIQUID_TESTNET_ENABLED: boolean;
   ITEMS_PER_PAGE: number;
@@ -101,10 +103,12 @@ export interface Env {
   TESTNET_BLOCK_AUDIT_START_HEIGHT: number;
   TESTNET4_BLOCK_AUDIT_START_HEIGHT: number;
   SIGNET_BLOCK_AUDIT_START_HEIGHT: number;
+  REGTEST_BLOCK_AUDIT_START_HEIGHT: number;
   MAINNET_TX_FIRST_SEEN_START_HEIGHT: number;
   TESTNET_TX_FIRST_SEEN_START_HEIGHT: number;
   TESTNET4_TX_FIRST_SEEN_START_HEIGHT: number;
   SIGNET_TX_FIRST_SEEN_START_HEIGHT: number;
+  REGTEST_TX_FIRST_SEEN_START_HEIGHT: number;
   HISTORICAL_PRICE: boolean;
   ACCELERATOR: boolean;
   ACCELERATOR_BUTTON: boolean;
@@ -124,6 +128,7 @@ const defaultEnv: Env = {
   'TESTNET4_ENABLED': false,
   'REGTEST_ENABLED': false,
   'SIGNET_ENABLED': false,
+  'REGTEST_ENABLED': false,
   'LIQUID_ENABLED': false,
   'LIQUID_TESTNET_ENABLED': false,
   'BASE_MODULE': 'mempool',
@@ -147,10 +152,12 @@ const defaultEnv: Env = {
   'TESTNET_BLOCK_AUDIT_START_HEIGHT': 0,
   'TESTNET4_BLOCK_AUDIT_START_HEIGHT': 0,
   'SIGNET_BLOCK_AUDIT_START_HEIGHT': 0,
+  'REGTEST_BLOCK_AUDIT_START_HEIGHT': 0,
   'MAINNET_TX_FIRST_SEEN_START_HEIGHT': 0,
   'TESTNET_TX_FIRST_SEEN_START_HEIGHT': 0,
   'TESTNET4_TX_FIRST_SEEN_START_HEIGHT': 0,
   'SIGNET_TX_FIRST_SEEN_START_HEIGHT': 0,
+  'REGTEST_TX_FIRST_SEEN_START_HEIGHT': 0,
   'HISTORICAL_PRICE': true,
   'ACCELERATOR': false,
   'ACCELERATOR_BUTTON': true,
@@ -520,7 +527,7 @@ export class StateService {
   }
 
   isAnyTestnet(): boolean {
-    return ['testnet', 'testnet4', 'signet', 'liquidtestnet', 'regtest'].includes(this.network);
+    return ['testnet', 'testnet4', 'signet', 'regtest', 'liquidtestnet'].includes(this.network);
   }
 
   resetChainTip() {

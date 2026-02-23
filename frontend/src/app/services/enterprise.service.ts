@@ -49,6 +49,7 @@ export class EnterpriseService {
     this.stateService.env.LIQUID_ENABLED = false;
     this.stateService.env.LIQUID_TESTNET_ENABLED = false;
     this.stateService.env.SIGNET_ENABLED = false;
+    this.stateService.env.REGTEST_ENABLED = false;
   }
 
   fetchSubdomainInfo(): void {
@@ -56,13 +57,13 @@ export class EnterpriseService {
       const info = this.stateService.env.customize?.branding;
       this.insertMatomo(info.site_id);
       this.seoService.setEnterpriseTitle(info.title, true);
-      this.info$.next(info);
+      this.info$.next(this.processEnterpriseInfo(info));
     } else {
       this.apiService.getEnterpriseInfo$(this.subdomain).subscribe(
         (info) => {
           this.insertMatomo(info.site_id);
           this.seoService.setEnterpriseTitle(info.title);
-          this.info$.next(info);
+          this.info$.next(this.processEnterpriseInfo(info));
         },
         (error) => {
           if (error.status === 404) {
@@ -72,6 +73,17 @@ export class EnterpriseService {
         }
       );
     }
+  }
+
+  private processEnterpriseInfo(info: any): any {
+    const isCustomDashboard = this.stateService.env.customize?.dashboard?.widgets?.length > 0;
+    const dualLogo = !isCustomDashboard || info.cobranded;
+    const logoUrl = info.header_img ?? info.img ?? `/api/v1/services/enterprise/images/${this.subdomain}/logo`;
+    return {
+      ...info,
+      dualLogo,
+      logoUrl,
+    };
   }
 
   insertMatomo(siteId?: number): void {

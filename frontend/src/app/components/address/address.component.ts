@@ -120,6 +120,7 @@ export class AddressComponent implements OnInit, OnDestroy {
 
   isMobile: boolean;
   showQR: boolean = false;
+  officialMempoolSpace = this.stateService.env.OFFICIAL_MEMPOOL_SPACE;
 
   address: Address;
   addressString: string;
@@ -134,6 +135,7 @@ export class AddressComponent implements OnInit, OnDestroy {
   mempoolRemovedTxSubscription: Subscription;
   blockTxSubscription: Subscription;
   fragmentSubscription: Subscription;
+  networkChangeSubscription: Subscription;
   taprootFragment: URLSearchParams;
   addressLoadingStatus$: Observable<number>;
   addressInfo: null | AddressInformation = null;
@@ -142,6 +144,8 @@ export class AddressComponent implements OnInit, OnDestroy {
   taprootPsbtExpanded: boolean = false;
   psbtForm: UntypedFormGroup;
   psbtError?: string;
+  accelerationsSubscription: Subscription;
+  acceleratedTxids: Set<string> | null = null;
 
   fullyLoaded = false;
   chainStats: AddressStats;
@@ -168,7 +172,11 @@ export class AddressComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    this.stateService.networkChanged$.subscribe((network) => this.network = network);
+    this.network = this.stateService.network;
+    this.networkChangeSubscription = this.stateService.networkChanged$.subscribe((network) => {
+      this.network = network;
+      this.updateAccelerationSubscription();
+    });
     this.websocketService.want(['blocks']);
     this.psbtForm = this.formBuilder.group({ psbt: [''], tapleaf: [''], taptree: [''], ikey: [''] });
 
@@ -187,6 +195,8 @@ export class AddressComponent implements OnInit, OnDestroy {
         switchMap(() => this.stateService.loadingIndicators$),
         map((indicators) => indicators['address-' + this.addressString] !== undefined ? indicators['address-' + this.addressString] : 0)
       );
+
+    this.updateAccelerationSubscription();
 
     this.mainSubscription = this.route.paramMap
       .pipe(
@@ -632,6 +642,34 @@ export class AddressComponent implements OnInit, OnDestroy {
     this.isMobile = window.innerWidth < 768;
   }
 
+  private updateAccelerationSubscription(): void {
+    if (this.stateService.env.ACCELERATOR_BUTTON && this.network === '') {
+      if (!this.accelerationsSubscription) {
+        this.websocketService.ensureTrackAccelerations();
+        this.acceleratedTxids = new Set();
+        this.accelerationsSubscription = this.stateService.accelerations$.subscribe((delta) => {
+          if (!this.acceleratedTxids) {
+            this.acceleratedTxids = new Set();
+          }
+          if (delta.reset) {
+            this.acceleratedTxids.clear();
+          } else {
+            for (const txid of delta.removed) {
+              this.acceleratedTxids.delete(txid);
+            }
+          }
+          for (const acceleration of delta.added) {
+            this.acceleratedTxids.add(acceleration.txid);
+          }
+        });
+      }
+    } else {
+      this.accelerationsSubscription?.unsubscribe();
+      this.accelerationsSubscription = null;
+      this.acceleratedTxids = null;
+    }
+  }
+
   ngOnDestroy(): void {
     this.mainSubscription.unsubscribe();
     this.mempoolTxSubscription.unsubscribe();
@@ -639,5 +677,8 @@ export class AddressComponent implements OnInit, OnDestroy {
     this.blockTxSubscription.unsubscribe();
     this.websocketService.stopTrackingAddress();
     this.fragmentSubscription?.unsubscribe();
+    this.networkChangeSubscription?.unsubscribe();
+    this.accelerationsSubscription?.unsubscribe();
+    this.websocketService.stopTrackAccelerations();
   }
 }

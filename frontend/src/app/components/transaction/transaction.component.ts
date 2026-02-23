@@ -13,6 +13,7 @@ import {
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { TransactionsListComponent } from '@components/transactions-list/transactions-list.component';
 import {
   catchError,
   delay,
@@ -26,6 +27,8 @@ import {
   switchMap,
   take,
   tap,
+  debounceTime,
+  distinctUntilChanged
 } from 'rxjs/operators';
 import { Transaction } from '@interfaces/electrs.interface';
 import { of, merge, Subscription, Observable, Subject, from, throwError, combineLatest, BehaviorSubject, timer } from 'rxjs';
@@ -80,6 +83,12 @@ export interface TxAuditStatus {
   coinbase?: boolean;
   firstSeen?: number;
 }
+
+// Known duplicate transaction IDs from early Bitcoin history (pre-BIP-30)
+const DUPLICATE_TX_BLOCKS: Record<string, [number, number]> = {
+  'e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468': [91722, 91880],
+  'd5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599': [91812, 91842],
+};
 
 @Component({
   selector: 'app-transaction',
@@ -161,12 +170,14 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   hideFlow: boolean = this.stateService.hideFlow.value;
   overrideFlowPreference: boolean = null;
   flowEnabled: boolean;
+  isDetailsOpen: boolean = false;
   tooltipPosition: { x: number, y: number };
   isMobile: boolean;
   firstLoad = true;
   waitingForAccelerationInfo: boolean = false;
   isLoadingFirstSeen = false;
   notAcceleratedOnLoad: boolean = null;
+  duplicateTxBlocks: [number, number] | undefined;
 
   featuresEnabled: boolean;
   segwitEnabled: boolean;
@@ -187,8 +198,33 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   showContractEvents: boolean = false;
   showOPNetDetails: boolean = true; // Default open for OPNet details
 
-  @ViewChild('graphContainer')
+  referralCode: string | undefined;
+
   graphContainer: ElementRef;
+  private txList: TransactionsListComponent;
+
+  @ViewChild('txList')
+  set txListSetter(component: TransactionsListComponent | undefined) {
+    if (component) {
+      this.txList = component;
+      this.txList.setDetailsOpen(this.isDetailsOpen);
+    }
+  }
+
+  @ViewChild('graphContainer')
+  set flowAnchor(element: ElementRef | null | undefined) {
+    if (element) {
+      this.graphContainer = element;
+      setTimeout(() => { this.applyFragment(); }, 0);
+    }
+  }
+
+  @ViewChild('accelerate')
+  set accelerateAnchor(element: ElementRef | null | undefined) {
+    if (element) {
+      setTimeout(() => { this.applyFragment(); }, 0);
+    }
+  }
 
   @ViewChild('opnetModal')
   opnetModal: TemplateRef<any>;
@@ -217,9 +253,19 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit() {
     this.enterpriseService.page();
+    this.isDetailsOpen = this.route.snapshot.queryParams['showDetails'] === 'true';
 
     const urlParams = new URLSearchParams(window.location.search);
     this.forceAccelerationSummary = !!urlParams.get('cash_request_id');
+
+    // Accelerator referral code
+    const fragmentsParams = new URLSearchParams(window.location.hash.slice(1));
+    this.referralCode = fragmentsParams.get('referralCode') ?? this.storageService.getValue('referralCode') ?? undefined;
+    if (this.referralCode) {
+      this.storageService.setValue('referralCode', this.referralCode);
+      // Cleanup referralCode from url after storing it in localStorage to avoid re-use upon page reload
+      window.location.hash = window.location.hash.replace(`&referralCode=${this.referralCode}`, '').replace(`#referralCode=${this.referralCode}`, '');
+    }
 
     this.hideAccelerationSummary = this.stateService.isMempoolSpaceBuild ? this.storageService.getValue('hide-accelerator-pref') == 'true' : true;
 
@@ -252,11 +298,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     this.urlFragmentSubscription = this.route.fragment.subscribe((fragment) => {
-      this.fragmentParams = new URLSearchParams(fragment || '');
-      const vin = parseInt(this.fragmentParams.get('vin'), 10);
-      const vout = parseInt(this.fragmentParams.get('vout'), 10);
-      this.inputIndex = (!isNaN(vin) && vin >= 0) ? vin : null;
-      this.outputIndex = (!isNaN(vout) && vout >= 0) ? vout : null;
+      this.updateFragmentParams(fragment);
     });
 
     this.blocksSubscription = this.stateService.blocks$.subscribe((blocks) => {
@@ -499,7 +541,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
               catchError(() => {
                 return of({ audit: null });
               })
-            )
+            );
           } else {
             return this.apiService.getBlockTxAudit$(hash, txid).pipe(
               retry({ count: 3, delay: 2000 }),
@@ -507,7 +549,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
               catchError(() => {
                 return of({ audit: null });
               })
-            )
+            );
           }
         } else {
           const audit = isCoinbase ? { coinbase: true } : null;
@@ -665,6 +707,9 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
               });
             }
           }
+          if (this.network === '' && this.txId) {
+            this.duplicateTxBlocks = DUPLICATE_TX_BLOCKS[this.txId?.toLowerCase()];
+          }
           if (window.innerWidth <= 767.98) {
             this.router.navigate([this.relativeUrlPipe.transform('/tx'), this.txId], {
               queryParamsHandling: 'merge',
@@ -680,6 +725,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           const seoDescription = seoDescriptionNetwork(this.stateService.network);
           this.seoService.setDescription($localize`:@@meta.description.bitcoin.transaction:Get real-time status, addresses, fees, script info, and more for ${network}${seoDescription} transaction with txid ${this.txId}.`);
           this.resetTransaction();
+
           return merge(
             of(true),
             this.stateService.connectionState$.pipe(
@@ -806,8 +852,6 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
             })
           ).subscribe();
 
-          setTimeout(() => { this.applyFragment(); }, 0);
-
           this.cd.detectChanges();
         },
         (error) => {
@@ -910,6 +954,9 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       this.txChanged$,
     ]).pipe(
       map(([position, mempoolBlocks, da, isAccelerated]) => {
+        if (!this.tx || !position || position.txid !== this.tx.txid) {
+          return null;
+        }
         return this.etaService.calculateETA(
           this.network,
           this.tx,
@@ -920,12 +967,29 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           isAccelerated,
           this.accelerationPositions,
         );
+      }),
+      distinctUntilChanged((prev: ETA | null, curr: ETA | null) => {
+        return prev === curr || (prev && curr && prev.time === curr.time && prev.blocks === curr.blocks);
       })
     );
   }
 
   ngAfterViewInit(): void {
     this.setGraphSize();
+  }
+
+  toggleDetailsFromTxPage(): void {
+    this.isDetailsOpen = !this.isDetailsOpen;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { showDetails: this.isDetailsOpen ? 'true' : null },
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+      replaceUrl: true,
+    });
+    if (this.txList) {
+      this.txList.setDetailsOpen(this.isDetailsOpen);
+    }
   }
 
   dismissAccelAlert(): void {
@@ -938,7 +1002,6 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    document.location.hash = '#accelerate';
     this.openAccelerator();
     return false;
   }
@@ -996,10 +1059,6 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (this.notAcceleratedOnLoad === null) {
       this.notAcceleratedOnLoad = !this.isAcceleration;
-    }
-
-    if (!this.isAcceleration && this.fragmentParams.has('accelerate')) {
-      this.forceAccelerationSummary = true;
     }
 
     this.txChanged$.next(true);
@@ -1216,11 +1275,13 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showAccelerationDetails = false;
     this.accelerationFlowCompleted = false;
     this.accelerationInfo = null;
+    this.notAcceleratedOnLoad = null;
     this.txInBlockIndex = null;
     this.mempoolPosition = null;
     this.pool = null;
     this.auditStatus = null;
     this.accelerationPositions = null;
+    this.isDetailsOpen = this.route.snapshot.queryParams['showDetails'] === 'true';
     document.body.scrollTo(0, 0);
     this.isAcceleration = false;
     this.isAccelerated$.next(this.isAcceleration);
@@ -1266,12 +1327,24 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   // simulate normal anchor fragment behavior
   applyFragment(): void {
     const anchor = Array.from(this.fragmentParams.entries()).find(([frag, value]) => value === '');
-    if (anchor?.length && anchor[0] !== 'accelerate') {
+    if (anchor?.length) {
       const anchorElement = document.getElementById(anchor[0]);
       if (anchorElement) {
-        anchorElement.scrollIntoView();
+        anchorElement.scrollIntoView({ behavior: 'smooth' });
       }
     }
+  }
+
+  updateFragmentParams(fragment: string | null): void {
+    this.fragmentParams = new URLSearchParams(fragment || '');
+    const vin = parseInt(this.fragmentParams.get('vin'), 10);
+    const vout = parseInt(this.fragmentParams.get('vout'), 10);
+    this.inputIndex = (!isNaN(vin) && vin >= 0) ? vin : null;
+    this.outputIndex = (!isNaN(vout) && vout >= 0) ? vout : null;
+    if (this.fragmentParams.has('accelerate')) {
+      this.forceAccelerationSummary = true;
+    }
+    setTimeout(() => { this.applyFragment(); }, 0);
   }
 
   setHasAccelerationDetails(hasDetails: boolean): void {
@@ -1298,19 +1371,20 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onAccelerationCompleted(): void {
-    document.location.hash = '';
+    this.router.navigate([], { fragment: null, queryParamsHandling: 'merge' });
     this.accelerationFlowCompleted = true;
     this.forceAccelerationSummary = false;
   }
 
   closeAccelerator(): void {
-    document.location.hash = '';
+    this.router.navigate([], { fragment: null, queryParamsHandling: 'merge' });
     this.hideAccelerationSummary = true;
     this.forceAccelerationSummary = false;
     this.storageService.setValue('hide-accelerator-pref', 'true');
   }
 
   openAccelerator(): void {
+    this.router.navigate([], { fragment: 'accelerate', queryParamsHandling: 'merge' });
     this.accelerationFlowCompleted = false;
     this.hideAccelerationSummary = false;
     this.storageService.setValue('hide-accelerator-pref', 'false');

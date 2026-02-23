@@ -129,6 +129,7 @@ class BitcoinApi implements AbstractBitcoinApi {
       .then((rpcBlock: IBitcoinApi.Block) => rpcBlock.tx);
   }
 
+  /** @asyncUnsafe */
   async $getTxsForBlock(hash: string, fallbackToCore = false): Promise<IEsploraApi.Transaction[]> {
     const verboseBlock: IBitcoinApi.VerboseBlock = await this.bitcoindClient.getBlock(hash, 2);
     const transactions: IEsploraApi.Transaction[] = [];
@@ -265,6 +266,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     );
   }
 
+  /** @asyncUnsafe */
   async $getOutspend(
     txId: string,
     vout: number
@@ -278,6 +280,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     };
   }
 
+  /** @asyncUnsafe */
   async $getOutspends(txId: string): Promise<IEsploraApi.Outspend[]> {
     const outSpends: IEsploraApi.Outspend[] = [];
     const tx = await this.$getRawTransaction(txId, true, false);
@@ -296,6 +299,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return outSpends;
   }
 
+  /** @asyncUnsafe */
   async $getBatchedOutspends(
     txId: string[]
   ): Promise<IEsploraApi.Outspend[][]> {
@@ -313,6 +317,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return this.$getBatchedOutspends(txId);
   }
 
+  /** @asyncUnsafe */
   async $getOutSpendsByOutpoint(
     outpoints: { txid: string; vout: number }[]
   ): Promise<IEsploraApi.Outspend[]> {
@@ -324,6 +329,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return outspends;
   }
 
+  /** @asyncUnsafe */
   async $getCoinbaseTx(blockhash: string): Promise<IEsploraApi.Transaction> {
     const txids = await this.$getTxIdsForBlock(blockhash);
     return this.$getRawTransaction(txids[0]);
@@ -342,6 +348,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return this.bitcoindClient.getNetworkHashPs(120, blockHeight);
   }
 
+  /** @asyncUnsafe */
   protected async $convertTransaction(transaction: IBitcoinApi.Transaction, addPrevout: boolean, lazyPrevouts = false, allowMissingPrevouts = false): Promise<IEsploraApi.Transaction> {
     let esploraTransaction: IEsploraApi.Transaction = {
       txid: transaction.txid,
@@ -441,6 +448,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     }
   }
 
+  /** @asyncUnsafe */
   private async $appendMempoolFeeData(
     transaction: IEsploraApi.Transaction
   ): Promise<IEsploraApi.Transaction> {
@@ -460,6 +468,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return transaction;
   }
 
+  /** @asyncUnsafe */
   protected async $addPrevouts(transaction: TransactionExtended): Promise<TransactionExtended> {
     let addedPrevouts = false;
     for (const vin of transaction.vin) {
@@ -501,6 +510,7 @@ class BitcoinApi implements AbstractBitcoinApi {
     return this.bitcoindClient.getRawMemPool(true);
   }
 
+  /** @asyncUnsafe */
   private async $calculateFeeFromInputs(
     transaction: IEsploraApi.Transaction,
     addPrevout: boolean,

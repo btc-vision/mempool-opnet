@@ -267,14 +267,14 @@
   flex-wrap: wrap;
   align-content: center;
   @media (min-width: 850px) {
-    justify-content: left !important;    
+    justify-content: left !important;
   }
 }
 
 .accelerate {
   @media (min-width: 850px) {
     margin-left: auto;
-  }  
+  }
 }
 
 .etaDeepMempool {
@@ -309,6 +309,29 @@
 .disabled {
   opacity: 0.5;
   pointer-events: none;
+}
+
+.anchor {
+  scroll-margin-top: 105px;
+  @media (min-width: 564px) {
+    scroll-margin-top: 65px;
+  }
+}
+
+.duplicate-tx-alert {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-left: 3px solid var(--info);
+  margin-bottom: 1.5rem;
+
+  .icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--info);
+  }
 }
 
 // ===========================================

@@ -283,7 +283,7 @@ export class PoolComponent implements OnInit {
           axisLabel: {
             color: 'rgb(110, 112, 121)',
             formatter: (val) => {
-              return `${val}%`
+              return `${val}%`;
             }
           },
           splitLine: {

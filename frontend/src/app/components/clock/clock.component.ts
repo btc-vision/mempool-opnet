@@ -46,6 +46,7 @@ export class ClockComponent implements OnInit {
     testnet4: ['var(--testnet)', 'var(--testnet-alt)'],
     regtest: ['var(--testnet)', 'var(--testnet-alt)'],
     signet: ['var(--signet)', 'var(--signet-alt)'],
+    regtest: ['var(--regtest)', 'var(--regtest-alt)'],
   };
 
   constructor(
